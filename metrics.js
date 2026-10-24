@@ -165,6 +165,28 @@ export function faturadoLiquido(inicio, fim) {
     .sort((a, b) => (a.data < b.data ? -1 : 1));
 }
 
+// Pedidos captados ainda não faturados (status atual na VTEX), por status.
+const FATURADO = new Set(['invoiced', 'invoice']);
+export function aFaturar() {
+  const grupos = new Map();
+  for (const o of Object.values(state.orders)) {
+    if (o.status === 'canceled' || FATURADO.has(o.status)) continue;
+    const g = grupos.get(o.status) || { status: o.status, pedidos: new Set(), valor: 0, pecas: 0, mais_antigo: null };
+    g.pedidos.add(o.base);
+    if (o.detalhe) {
+      for (const it of o.itens) { g.valor += it.preco * it.q; g.pecas += it.q; }
+    } else g.valor += Math.max((o.total || 0) - (o.frete || 0), 0);
+    if (!g.mais_antigo || o.criado < g.mais_antigo) g.mais_antigo = o.criado;
+    grupos.set(o.status, g);
+  }
+  const aguardandoPagamento = new Set(['payment-pending', 'approve-payment', 'request-cancel', 'cancellation-requested']);
+  return [...grupos.values()].map((g) => ({
+    status: g.status,
+    grupo: aguardandoPagamento.has(g.status) ? 'aguardando pagamento ou cancelamento' : 'a faturar',
+    pedidos: g.pedidos.size, pecas: g.pecas, valor: r2(g.valor), mais_antigo: g.mais_antigo,
+  })).sort((a, b) => b.valor - a.valor);
+}
+
 export function status() {
   const orders = Object.values(state.orders);
   return [{
