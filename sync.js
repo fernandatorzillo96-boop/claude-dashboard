@@ -185,21 +185,25 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
     const ids = await allSkuIds();
     sweepProgress.total = ids.length;
     const wh = {};
-    let skusComEstoque = 0, total = 0, reservado = 0, ilimitados = 0;
+    let skusComEstoque = 0, total = 0, reservado = 0, ilimitados = 0, dispAtivo = 0, skusAtivosComEstoque = 0;
     await mapLimit(ids, config.sweepConcurrency, async (id) => {
       if (comCatalogo || !state.catalog[id]) await lookupSkus([id]);
       const inv = await vtexGet(`/api/logistics/pvt/inventory/skus/${id}`);
+      const cat = state.catalog[id];
+      const ativo = !!(cat && cat.active && cat.productActive !== false);
       let disp = 0;
       for (const b of inv?.balance || []) {
         const k = b.warehouseId;
-        if (!wh[k]) wh[k] = { warehouse_id: k, warehouse: b.warehouseName || k, total: 0, reservado: 0, disponivel: 0, skus_com_estoque: 0, ilimitado: 0 };
+        if (!wh[k]) wh[k] = { warehouse_id: k, warehouse: b.warehouseName || k, total: 0, reservado: 0, disponivel: 0, disponivel_ativo: 0, skus_com_estoque: 0, ilimitado: 0 };
         if (b.hasUnlimitedQuantity) { wh[k].ilimitado++; ilimitados++; continue; }
         const t = b.totalQuantity || 0, r = b.reservedQuantity || 0, d = Math.max(t - r, 0);
         wh[k].total += t; wh[k].reservado += r; wh[k].disponivel += d;
+        if (ativo) wh[k].disponivel_ativo += d;
         if (d > 0) wh[k].skus_com_estoque++;
         total += t; reservado += r; disp += d;
       }
       if (disp > 0) skusComEstoque++;
+      if (ativo) { dispAtivo += disp; if (disp > 0) skusAtivosComEstoque++; }
       sweepProgress.done++;
     });
     const cat = Object.values(state.catalog);
@@ -210,8 +214,12 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
       skus_varridos: ids.length,
       total, reservado, disponivel: Math.max(total - reservado, 0),
       skus_com_estoque: skusComEstoque,
+      disponivel_ativo: dispAtivo,
+      skus_ativos_com_estoque: skusAtivosComEstoque,
       skus_ilimitados: ilimitados,
-      warehouses: Object.values(wh).sort((a, b) => b.disponivel - a.disponivel),
+      warehouses: Object.values(wh)
+        .map((w) => ({ ...w, pct_disponivel_ativo: w.disponivel ? Math.round((w.disponivel_ativo / w.disponivel) * 10000) / 10000 : null }))
+        .sort((a, b) => b.disponivel - a.disponivel),
     };
     state.catalogSummary = {
       atualizado_em: new Date().toISOString(),
