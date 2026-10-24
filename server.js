@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { uploadPage } from './upload-page.js';
 
@@ -77,6 +77,12 @@ function buildServer() {
     description: 'Por dia, do relatório 3351 importado: vendido, devolvido, líquido, peças, CMV (Custo GEC), lucro e margem bruta; e-commerce e omni.',
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(faturadoLiquido(inicio, fim)));
+
+  s.registerTool('bf_a_faturar', {
+    title: 'Pedidos a faturar',
+    description: 'Pedidos captados desde o início do acompanhamento que ainda não foram faturados nem cancelados, pelo status atual na VTEX: pedidos, peças, valor e pedido mais antigo.',
+    inputSchema: {}, annotations: ro,
+  }, async () => json(aFaturar()));
 
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
