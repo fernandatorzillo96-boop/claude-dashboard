@@ -55,7 +55,7 @@ function buildServer() {
 
   s.registerTool('bf_resumo_catalogo', {
     title: 'Resumo de estoque e catálogo',
-    description: 'Uma linha: estoque disponível total (todos os estoques), SKUs com estoque, SKUs ativos, produtos ativos e produtos visíveis no site.',
+    description: 'Uma linha: estoque disponível total (todos os estoques), quanto dele está em SKUs ativos (%), SKUs com estoque, SKUs ativos, produtos ativos e produtos visíveis no site.',
     inputSchema: {}, annotations: ro,
   }, async () => json([{
     ...(state.catalogSummary || {}),
@@ -63,6 +63,10 @@ function buildServer() {
     estoque_reservado: state.inventory?.reservado ?? null,
     estoque_disponivel: state.inventory?.disponivel ?? null,
     skus_com_estoque: state.inventory?.skus_com_estoque ?? null,
+    estoque_disponivel_ativo: state.inventory?.disponivel_ativo ?? null,
+    pct_estoque_ativo: state.inventory?.disponivel ? Math.round(((state.inventory.disponivel_ativo ?? 0) / state.inventory.disponivel) * 10000) / 10000 : null,
+    estoque_disponivel_inativo: state.inventory?.disponivel_ativo != null ? state.inventory.disponivel - state.inventory.disponivel_ativo : null,
+    skus_ativos_com_estoque: state.inventory?.skus_ativos_com_estoque ?? null,
     estoque_atualizado_em: state.inventory?.atualizado_em ?? null,
     varredura_em_andamento: sweepProgress.running,
     varredura_progresso: sweepProgress.total ? Math.round((sweepProgress.done / sweepProgress.total) * 100) / 100 : null,
