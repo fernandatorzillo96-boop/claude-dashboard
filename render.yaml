@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: vtex-bf26
+    runtime: node
+    plan: starter
+    region: virginia
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /
+    disk:
+      name: dados
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: VTEX_ACCOUNT
+        value: lojaaguadecoco
+      - key: VTEX_APP_KEY
+        sync: false
+      - key: VTEX_APP_TOKEN
+        sync: false
+      - key: ACCESS_SECRET
+        generateValue: true
+      - key: BF_INICIO
+        value: "2026-10-01"
+      - key: DATA_DIR
+        value: /var/data
+      - key: NODE_VERSION
+        value: "22"

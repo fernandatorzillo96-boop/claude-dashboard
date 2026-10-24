@@ -1,0 +1,19 @@
+{
+  "name": "vtex-bf26-mcp",
+  "version": "1.0.0",
+  "description": "Servidor MCP somente leitura da VTEX para o painel Black Friday 2026",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "express": "^5.3.0",
+    "zod": "^3.25.76"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true
+}
