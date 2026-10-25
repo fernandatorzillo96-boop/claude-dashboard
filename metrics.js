@@ -1,6 +1,6 @@
 // Agregações que o painel consome.
 import { config } from './config.js';
-import { state, cmvDoItem } from './store.js';
+import { state, cmvDoItem, referenciaDoItem, atributosRef } from './store.js';
 import { local, hojeLocal, dataValida } from './tempo.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -157,6 +157,66 @@ export function resultadoPromocoes(inicio, fim) {
     .sort((a, b) => b.captado - a.captado);
 }
 
+// Vendas por atributo da referência (coleção, idade do estoque, grupo BF...).
+export const AGRUPAMENTOS = ['colecao', 'idade_estoque', 'grupo_bf', 'departamento', 'grupo', 'categoria', 'estamparia'];
+function porReferencia(i, f) {
+  const refs = new Map();
+  for (const { o } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe) continue;
+    for (const it of o.itens) {
+      const ref = referenciaDoItem(it) || null;
+      const k = ref || 'Sem referência';
+      if (!refs.has(k)) refs.set(k, { ref, b: novoBalde() });
+      const x = refs.get(k);
+      x.b.bases.add(o.base);
+      somaItens(x.b, [it]);
+    }
+  }
+  return refs;
+}
+export function vendasPorGrupo(inicio, fim, agrupar) {
+  const [i, f] = periodo(inicio, fim);
+  const campo = AGRUPAMENTOS.includes(agrupar) ? agrupar : 'colecao';
+  const grupos = new Map();
+  let total = 0;
+  for (const [, x] of porReferencia(i, f)) {
+    const a = x.ref ? atributosRef[x.ref] : null;
+    const g = x.ref ? (a && a[campo]) || 'Sem cadastro no plano' : 'Sem referência';
+    if (!grupos.has(g)) grupos.set(g, { b: novoBalde(), refs: 0 });
+    const y = grupos.get(g);
+    y.refs++;
+    for (const k of ['captado', 'pecas', 'valor_de', 'valor_por', 'cmv', 'captado_custo_exato', 'captado_sale']) y.b[k] += x.b[k];
+    for (const bs of x.b.bases) y.b.bases.add(bs);
+    total += x.b.captado;
+  }
+  return [...grupos.entries()].map(([grupo, y]) => {
+    const z = fecha(y.b);
+    return {
+      agrupamento: campo, grupo, referencias: y.refs, pedidos: z.pedidos, pecas: z.pecas, captado: z.captado,
+      participacao: total ? Math.round((y.b.captado / total) * 10000) / 10000 : null,
+      preco_medio: z.preco_medio, desconto_sobre_de: z.desconto_sobre_de, cmv: z.cmv, lucro_bruto: z.lucro_bruto,
+      margem_bruta: z.margem_bruta, pct_sale: y.b.captado ? Math.round((y.b.captado_sale / y.b.captado) * 10000) / 10000 : null,
+    };
+  }).sort((a, b) => b.captado - a.captado);
+}
+export function topReferencias(inicio, fim, limite) {
+  const [i, f] = periodo(inicio, fim);
+  const n = Math.min(Math.max(Number(limite) || 50, 1), 500);
+  return [...porReferencia(i, f).values()]
+    .filter((x) => x.ref)
+    .map((x) => {
+      const a = atributosRef[x.ref] || {};
+      const z = fecha(x.b);
+      return {
+        referencia: x.ref, produto: a.produto || null, colecao: a.colecao || null, idade_estoque: a.idade_estoque || null, grupo_bf: a.grupo_bf || null,
+        pedidos: z.pedidos, pecas: z.pecas, captado: z.captado, preco_medio: z.preco_medio, desconto_sobre_de: z.desconto_sobre_de,
+        margem_bruta: z.margem_bruta, pct_sale: x.b.captado ? Math.round((x.b.captado_sale / x.b.captado) * 10000) / 10000 : null,
+      };
+    })
+    .sort((a, b) => b.captado - a.captado)
+    .slice(0, n);
+}
+
 export function faturadoLiquido(inicio, fim) {
   const i = dataValida(inicio) ? inicio : '2000-01-01';
   const f = dataValida(fim) ? fim : '2999-12-31';
@@ -187,6 +247,20 @@ export function aFaturar() {
   })).sort((a, b) => b.valor - a.valor);
 }
 
+function amostraSemReferencia() {
+  const vistos = new Map();
+  const desde = new Date(Date.now() - 3 * 86400e3).toISOString();
+  for (const o of Object.values(state.orders)) {
+    if (!o.detalhe || o.criado < desde) continue;
+    for (const it of o.itens) {
+      if (referenciaDoItem(it) || vistos.has(it.sku)) continue;
+      const c = state.catalog[it.sku] || {};
+      vistos.set(it.sku, `${it.sku}|refId=${it.refId}|productRefId=${c.productRefId ?? '?'}`);
+    }
+  }
+  return [...vistos.values()].slice(0, 8).join('; ') || null;
+}
+
 export function status() {
   const orders = Object.values(state.orders);
   return [{
@@ -200,6 +274,7 @@ export function status() {
     intervalo_minutos: config.syncEveryMin,
     estoque_atualizado_em: state.inventory?.atualizado_em || null,
     faturado_dias_importados: Object.keys(state.faturado).length,
+    amostra_sem_referencia: amostraSemReferencia(),
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
   }];
 }
