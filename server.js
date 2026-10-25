@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { uploadPage } from './upload-page.js';
 
@@ -77,6 +77,18 @@ function buildServer() {
     description: 'Por dia, do relatório 3351 importado: vendido, devolvido, líquido, peças, CMV (Custo GEC), lucro e margem bruta; e-commerce e omni.',
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(faturadoLiquido(inicio, fim)));
+
+  s.registerTool('bf_vendas_por_grupo', {
+    title: 'Vendas por coleção, idade do estoque ou grupo',
+    description: 'Captado no período somado por um atributo da referência (cadastro do Planejamento BF): coleção, idade do estoque, grupo BF, departamento, grupo, categoria ou estamparia. Pedidos, peças, captado, participação, preço médio, desconto, CMV, margem e % SALE.',
+    inputSchema: { ...periodo, agrupar: z.enum(AGRUPAMENTOS).optional().describe('Atributo. Padrão: colecao.') }, annotations: ro,
+  }, async ({ inicio, fim, agrupar }) => json(vendasPorGrupo(inicio, fim, agrupar)));
+
+  s.registerTool('bf_top_referencias', {
+    title: 'Referências mais vendidas',
+    description: 'As referências com maior captado no período, com produto, coleção, idade do estoque, peças, preço médio, desconto, margem e % SALE.',
+    inputSchema: { ...periodo, limite: z.number().int().optional().describe('Quantas referências (padrão 50, máximo 500).') }, annotations: ro,
+  }, async ({ inicio, fim, limite }) => json(topReferencias(inicio, fim, limite)));
 
   s.registerTool('bf_a_faturar', {
     title: 'Pedidos a faturar',
