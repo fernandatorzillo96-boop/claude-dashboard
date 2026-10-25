@@ -21,6 +21,7 @@ export const state = {
 // Tabelas que vêm com o servidor (geradas dos arquivos do plano BF26).
 export const costByRef = bundled('custo_gec_por_referencia.json');
 export const bundledSkuRef = bundled('sku_para_referencia.json');
+export const atributosRef = bundled('atributos_referencia.json');
 
 const files = {
   orders: 'orders.json.gz',
