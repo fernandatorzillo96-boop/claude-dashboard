@@ -275,6 +275,7 @@ export function status() {
     estoque_atualizado_em: state.inventory?.atualizado_em || null,
     faturado_dias_importados: Object.keys(state.faturado).length,
     amostra_sem_referencia: amostraSemReferencia(),
+    url_importacao: process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/importar/${config.accessSecret}` : null,
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
   }];
 }
