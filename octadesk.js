@@ -94,7 +94,11 @@ async function get(pathQs) {
     }).catch((e) => ({ ok: false, status: 0, erro: e.message }));
     if (res.ok) return res.json();
     if ((res.status === 429 || res.status >= 500 || res.status === 0) && t < 5) { await sleep(1000 * 2 ** t); continue; }
-    throw new Error(`Octadesk ${res.status || res.erro} em ${pathQs.split('?')[0]}`);
+    let det = '';
+    try { det = (await res.text()).replace(/\s+/g, ' ').slice(0, 220); } catch {}
+    const e = new Error(`Octadesk ${res.status || res.erro} em ${pathQs.split('?')[0]}${det ? ' — ' + det : ''}`);
+    e.status = res.status;
+    throw e;
   }
 }
 
@@ -138,22 +142,61 @@ function compactChat(c) {
   };
 }
 
-async function baixarDia(recurso, data) {
-  const ini = isoBR(data), fim = isoBR(somaDia(data, 1));
+// Formatos de consulta, do preferido ao mais simples. O primeiro que a API aceitar fica guardado por recurso.
+const FORMATOS = [
+  { nome: 'br-lt-sort', tz: 'br', fim: 'lt', sort: true, limit: 100 },
+  { nome: 'br-lt', tz: 'br', fim: 'lt', sort: false, limit: 100 },
+  { nome: 'utc-lt', tz: 'utc', fim: 'lt', sort: false, limit: 100 },
+  { nome: 'br-le', tz: 'br', fim: 'le', sort: false, limit: 100 },
+  { nome: 'utc-le', tz: 'utc', fim: 'le', sort: false, limit: 100 },
+  { nome: 'br-lt-50', tz: 'br', fim: 'lt', sort: false, limit: 50 },
+  { nome: 'utc-lt-50', tz: 'utc', fim: 'lt', sort: false, limit: 50 },
+  { nome: 'data-lt', tz: 'data', fim: 'lt', sort: false, limit: 50 },
+];
+const valorData = (data, tz, fimLe) => {
+  if (tz === 'data') return data;
+  if (fimLe) {
+    const t = new Date(`${data}T00:00:00${OFF}`).getTime() - 1000;
+    return tz === 'utc' ? new Date(t).toISOString().replace('.000', '') : new Date(t - 3 * 3600e3).toISOString().slice(0, 19) + OFF;
+  }
+  return tz === 'utc' ? new Date(`${data}T00:00:00${OFF}`).toISOString().replace('.000', '') : isoBR(data);
+};
+
+async function baixarDiaCom(recurso, data, fm) {
+  const ini = valorData(data, fm.tz, false);
+  const fim = valorData(somaDia(data, 1), fm.tz, fm.fim === 'le');
   const itens = [];
-  for (let page = 1; page <= 200; page++) {
+  for (let page = 1; page <= 400; page++) {
     const qs = `?filters[0][property]=createdAt&filters[0][operator]=ge&filters[0][value]=${encodeURIComponent(ini)}`
-      + `&filters[1][property]=createdAt&filters[1][operator]=lt&filters[1][value]=${encodeURIComponent(fim)}`
-      + `&sort[property]=createdAt&sort[direction]=asc&page=${page}&limit=100`;
+      + `&filters[1][property]=createdAt&filters[1][operator]=${fm.fim}&filters[1][value]=${encodeURIComponent(fim)}`
+      + (fm.sort ? '&sort[property]=createdAt&sort[direction]=asc' : '')
+      + `&page=${page}&limit=${fm.limit}`;
     const r = await get(`/${recurso}${qs}`);
     const lista = Array.isArray(r) ? r : r?.data || r?.items || r?.results || [];
     itens.push(...lista);
-    if (lista.length < 100) break;
+    if (lista.length < fm.limit) break;
     await sleep(150);
   }
-  // O filtro foi respeitado? Se vier coisa de outro dia, não confia.
   const fora = itens.filter((x) => diaBR(x.createdAt) !== data).length;
   return { itens, fora };
+}
+
+async function baixarDia(recurso, data) {
+  octa.status.formato = octa.status.formato || {};
+  const salvo = FORMATOS.find((f) => f.nome === octa.status.formato[recurso]);
+  const ordem = salvo ? [salvo, ...FORMATOS.filter((f) => f !== salvo)] : FORMATOS;
+  let ultimo;
+  for (const fm of ordem) {
+    try {
+      const r = await baixarDiaCom(recurso, data, fm);
+      octa.status.formato[recurso] = fm.nome;
+      return r;
+    } catch (e) {
+      ultimo = e;
+      if (e.status !== 400 && e.status !== 422) throw e; // só troca de formato quando a API recusa a consulta
+    }
+  }
+  throw ultimo;
 }
 
 let rodando = false;
@@ -169,25 +212,39 @@ export async function syncOctadesk() {
       if (recente || !octa.diasOk[d]) dias.push(d);
     }
     let feitos = 0;
+    const falhou = {};
     for (const d of dias) {
+      let okDia = true;
       for (const [recurso, alvo, comp] of [['tickets', 'tickets', compactTicket], ['chat', 'chats', compactChat]]) {
-        const { itens, fora } = await baixarDia(recurso, d);
+        if (falhou[recurso]) { okDia = false; continue; }
+        let res;
+        try { res = await baixarDia(recurso, d); } catch (e) {
+          falhou[recurso] = `${recurso} (${d}): ${e.message}`; okDia = false; continue;
+        }
+        const { itens, fora } = res;
         if (fora > 0 && fora === itens.length && itens.length > 0) {
           octa.status.filtro_ok = false;
-          throw new Error(`O filtro por data de ${recurso} não foi aplicado pela API (${fora} itens de outros dias).`);
+          falhou[recurso] = `O filtro por data de ${recurso} não foi aplicado pela API (${fora} itens de outros dias).`;
+          okDia = false; continue;
         }
         for (const x of itens) if (diaBR(x.createdAt) === d) {
           octa[alvo][x.id] = comp(x);
-          if (!octa.status.exemplo_campos_personalizados && recurso === 'tickets' && x.customField) {
-            octa.status.exemplo_campos_personalizados = JSON.stringify(Array.isArray(x.customField) ? x.customField.map((c) => c && (c.name || c.key || c.label || c.id)) : Object.keys(x.customField)).slice(0, 400);
+          if (recurso === 'tickets' && x.customField) {
+            const ks = Array.isArray(x.customField) ? x.customField.map((c) => c && (c.name || c.key || c.label || c.id)) : Object.keys(x.customField);
+            const set = new Set(JSON.parse(octa.status.exemplo_campos_personalizados || '[]'));
+            ks.filter(Boolean).forEach((k) => set.add(String(k)));
+            octa.status.exemplo_campos_personalizados = JSON.stringify([...set].slice(0, 40));
           }
         }
       }
-      octa.status.filtro_ok = true;
-      if (d < somaDia(hoje, -3)) octa.diasOk[d] = true;
-      octa.status.backfill_ate = d;
+      if (!falhou.tickets && !falhou.chat) octa.status.filtro_ok = true;
+      if (okDia && d < somaDia(hoje, -3)) octa.diasOk[d] = true;
+      if (!falhou.tickets) octa.status.backfill_ate = d;
       if (++feitos % 15 === 0) salvar();
+      if (falhou.tickets && falhou.chat) break;
     }
+    if (!falhou.tickets) octa.status.ultima = new Date().toISOString();
+    if (falhou.tickets || falhou.chat) throw new Error(Object.values(falhou).join(' | '));
     octa.status.ultima = new Date().toISOString();
     octa.status.erro = null;
     salvar();
@@ -256,5 +313,6 @@ export function statusOctadesk() {
     octadesk_ultima_sincronizacao: octa.status.ultima, octadesk_erro: octa.status.erro, octadesk_filtro_por_data_ok: octa.status.filtro_ok,
     octadesk_carregado_ate: octa.status.backfill_ate, octadesk_tickets: Object.keys(octa.tickets).length, octadesk_conversas: Object.keys(octa.chats).length,
     octadesk_campos_personalizados: octa.status.exemplo_campos_personalizados,
+    octadesk_formato_consulta: octa.status.formato ? JSON.stringify(octa.status.formato) : null,
   };
 }
