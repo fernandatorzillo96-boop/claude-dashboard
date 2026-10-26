@@ -30,9 +30,40 @@ function compactOrder(o) {
       promos: [...new Set(tags)],
     };
   });
+  // Entregas (pacotes): por warehouse de origem e nota fiscal, com prazo prometido e eventos da transportadora.
+  const li = o.shippingData?.logisticsInfo || [];
+  const pk = o.packageAttachment?.packages || [];
+  const pacoteDoItem = {};
+  pk.forEach((p, pi) => (p.items || []).forEach((x) => { pacoteDoItem[x.itemIndex] = pi; }));
+  const grupos = {};
+  for (const l of li) {
+    const d = (l.deliveryIds || [])[0] || {};
+    const wh = d.warehouseId || d.dockId || 'sem-warehouse';
+    const pi = pacoteDoItem[l.itemIndex];
+    const key = wh + '|' + (pi ?? 'x');
+    const g = (grupos[key] ||= {
+      wh, courier: d.courierName || null, sla: l.selectedSla || null,
+      canal: l.selectedDeliveryChannel || l.deliveryChannel || null,
+      prometido: null, nf: null, emissao: null, entregue: null, finalizado: false, status_transp: null,
+    });
+    if (l.shippingEstimateDate && (!g.prometido || l.shippingEstimateDate > g.prometido)) g.prometido = l.shippingEstimateDate;
+    if (pi != null) {
+      const p = pk[pi];
+      const cs = p.courierStatus || {};
+      g.nf = p.invoiceNumber || null;
+      g.emissao = p.issuanceDate || null;
+      g.courier = p.courier || g.courier;
+      g.finalizado = !!cs.finished;
+      g.entregue = cs.deliveredDate || null;
+      g.status_transp = cs.status || null;
+    }
+  }
   return {
     id: o.orderId,
     base: o.orderId.replace(/-\d+$/, ''),
+    aprovado: o.authorizedDate || null,
+    entregas: Object.values(grupos),
+    atualizado: new Date().toISOString(),
     criado: o.creationDate,
     status: o.status,
     origin: o.origin,
@@ -94,9 +125,11 @@ export async function syncOrders() {
       await listWindow(new Date(a), new Date(Math.min(a + CHUNK_MS, now.getTime() + 60000)), listed);
     }
     const toFetch = [];
+    const refetch = new Set();
     for (const l of listed) {
       const cur = state.orders[l.orderId];
       if (cur) {
+        if (cur.detalhe && cur.status !== l.status && l.status !== 'canceled') refetch.add(l.orderId);
         cur.status = l.status;
       } else {
         state.orders[l.orderId] = {
@@ -112,6 +145,17 @@ export async function syncOrders() {
       }
       if (!state.orders[l.orderId].detalhe && l.status !== 'canceled') toFetch.push(l.orderId);
     }
+    // Pedidos faturados com entrega ainda em aberto: relê a cada 6 h para pegar a entrega.
+    const limite = Date.now() - 30 * 86400e3;
+    for (const o of Object.values(state.orders)) {
+      if (refetch.size >= 400) break;
+      if (!o.detalhe || o.status === 'canceled' || new Date(o.criado).getTime() < limite) continue;
+      const velho = !o.atualizado || Date.now() - new Date(o.atualizado).getTime() > 6 * 3600e3;
+      const semEntregas = !o.entregas;
+      const aberto = (o.entregas || []).some((e) => !e.finalizado);
+      if (velho && (semEntregas || aberto)) refetch.add(o.id);
+    }
+    for (const id of refetch) if (!toFetch.includes(id)) toFetch.push(id);
     let errors = 0;
     await mapLimit(toFetch, config.concurrency, async (id) => {
       const o = await vtexGet(`/api/oms/pvt/orders/${encodeURIComponent(id)}`);

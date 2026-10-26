@@ -217,6 +217,88 @@ export function topReferencias(inicio, fim, limite) {
     .slice(0, n);
 }
 
+// ---------- Logística: faturamento por loja e entrega no prazo por transportadora ----------
+const nomeWarehouse = () => Object.fromEntries((state.inventory?.warehouses || []).map((w) => [w.warehouse_id, w.warehouse]));
+const diaLocal = (iso) => (iso ? local(iso).data : null);
+
+function entregasNoPeriodo(i, f) {
+  const out = [];
+  for (const { o, data } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe || !o.entregas) continue;
+    for (const e of o.entregas) out.push({ o, e, data });
+  }
+  return out;
+}
+
+export function faturamentoPorLoja(inicio, fim, horas) {
+  const [i, f] = periodo(inicio, fim);
+  const sla = (Number(horas) > 0 ? Number(horas) : 24) * 3600e3;
+  const agora = Date.now();
+  const nomes = nomeWarehouse();
+  const g = new Map();
+  for (const { o, e } of entregasNoPeriodo(i, f)) {
+    if (!o.aprovado) continue;
+    const ap = new Date(o.aprovado).getTime();
+    const em = e.emissao ? new Date(e.emissao).getTime() : null;
+    const x = g.get(e.wh) || { entregas: 0, vencidas: 0, faturadas: 0, no_prazo: 0, pendentes: 0, pendentes_atrasadas: 0, horas: [], mais_antiga_pendente: null };
+    x.entregas++;
+    if (em) {
+      x.faturadas++;
+      x.horas.push((em - ap) / 3600e3);
+      if (em - ap <= sla) x.no_prazo++;
+      x.vencidas++;
+    } else {
+      x.pendentes++;
+      if (agora - ap > sla) {
+        x.pendentes_atrasadas++;
+        x.vencidas++;
+        if (!x.mais_antiga_pendente || o.aprovado < x.mais_antiga_pendente) x.mais_antiga_pendente = o.aprovado;
+      }
+    }
+    g.set(e.wh, x);
+  }
+  const med = (a) => { if (!a.length) return null; const s = [...a].sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
+  return [...g.entries()].map(([wh, x]) => ({
+    warehouse_id: wh, loja: nomes[wh] || wh, sla_horas: sla / 3600e3,
+    entregas: x.entregas, faturadas: x.faturadas, faturadas_no_prazo: x.no_prazo,
+    pct_no_prazo: x.vencidas ? Math.round((x.no_prazo / x.vencidas) * 10000) / 10000 : null,
+    pendentes: x.pendentes, pendentes_atrasadas: x.pendentes_atrasadas, mais_antiga_pendente: x.mais_antiga_pendente,
+    horas_mediana: x.horas.length ? Math.round(med(x.horas) * 10) / 10 : null,
+    horas_media: x.horas.length ? Math.round((x.horas.reduce((s, h) => s + h, 0) / x.horas.length) * 10) / 10 : null,
+  })).sort((a, b) => b.entregas - a.entregas);
+}
+
+export function entregaPorTransportadora(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const hoje = hojeLocal();
+  const g = new Map();
+  for (const { e } of entregasNoPeriodo(i, f)) {
+    if (!e.emissao) continue; // só o que já foi faturado e despachado
+    const k = e.courier || 'Sem transportadora';
+    const x = g.get(k) || { despachadas: 0, entregues: 0, no_prazo: 0, entregues_atrasadas: 0, abertas: 0, abertas_atrasadas: 0, sem_prazo: 0, retira: 0 };
+    x.despachadas++;
+    if (/pickup/i.test(e.canal || '')) x.retira++;
+    const prom = diaLocal(e.prometido);
+    if (!prom) x.sem_prazo++;
+    if (e.entregue || e.finalizado) {
+      x.entregues++;
+      const ent = diaLocal(e.entregue);
+      if (prom && ent) { if (ent <= prom) x.no_prazo++; else x.entregues_atrasadas++; }
+    } else {
+      x.abertas++;
+      if (prom && hoje > prom) x.abertas_atrasadas++;
+    }
+    g.set(k, x);
+  }
+  return [...g.entries()].map(([transportadora, x]) => {
+    const base = x.no_prazo + x.entregues_atrasadas + x.abertas_atrasadas;
+    return {
+      transportadora, ...x,
+      pct_no_prazo: base ? Math.round((x.no_prazo / base) * 10000) / 10000 : null,
+    };
+  }).sort((a, b) => b.despachadas - a.despachadas);
+}
+
 export function faturadoLiquido(inicio, fim) {
   const i = dataValida(inicio) ? inicio : '2000-01-01';
   const f = dataValida(fim) ? fim : '2999-12-31';
@@ -275,6 +357,8 @@ export function status() {
     estoque_atualizado_em: state.inventory?.atualizado_em || null,
     faturado_dias_importados: Object.keys(state.faturado).length,
     amostra_sem_referencia: amostraSemReferencia(),
+    entregas_lidas: Object.values(state.orders).filter((o) => o.entregas).length,
+    entregas_com_data_de_entrega: Object.values(state.orders).reduce((n, o) => n + (o.entregas || []).filter((e) => e.entregue).length, 0),
     url_importacao: process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/importar/${config.accessSecret}` : null,
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
   }];

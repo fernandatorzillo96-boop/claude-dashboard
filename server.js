@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { uploadPage } from './upload-page.js';
 
@@ -89,6 +89,18 @@ function buildServer() {
     description: 'As referências com maior captado no período, com produto, coleção, idade do estoque, peças, preço médio, desconto, margem e % SALE.',
     inputSchema: { ...periodo, limite: z.number().int().optional().describe('Quantas referências (padrão 50, máximo 500).') }, annotations: ro,
   }, async ({ inicio, fim, limite }) => json(topReferencias(inicio, fim, limite)));
+
+  s.registerTool('bf_faturamento_por_loja', {
+    title: 'Faturamento por loja (SLA)',
+    description: 'Por warehouse (loja ou CD), das entregas de pedidos aprovados no período: quantas foram faturadas dentro do SLA (padrão 24 h após a aprovação do pagamento), % no prazo, pendentes, pendentes atrasadas e horas até faturar.',
+    inputSchema: { ...periodo, horas: z.number().optional().describe('SLA em horas. Padrão 24.') }, annotations: ro,
+  }, async ({ inicio, fim, horas }) => json(faturamentoPorLoja(inicio, fim, horas)));
+
+  s.registerTool('bf_entrega_por_transportadora', {
+    title: 'Entrega no prazo por transportadora',
+    description: 'Por transportadora, das entregas já faturadas de pedidos do período: entregues, entregues no prazo prometido ao cliente (só a data), entregues com atraso, em aberto e em aberto já atrasadas, e % no prazo.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(entregaPorTransportadora(inicio, fim)));
 
   s.registerTool('bf_a_faturar', {
     title: 'Pedidos a faturar',
