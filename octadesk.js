@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import { config } from './config.js';
 // Octadesk: diagnóstico de conexão (só leitura). Testa a API nova (x-api-key) e o token de integração (octa.).
 const env = (k) => (process.env[k] || '').trim();
 
@@ -29,6 +33,7 @@ async function tenta(nome, url, opts = {}) {
 export async function diagnosticoOctadesk() {
   const token = env('OCTADESK_TOKEN'), sub = env('OCTADESK_SUBDOMINIO'), email = env('OCTADESK_EMAIL');
   let base = env('OCTADESK_API_URL').replace(/\/$/, '');
+  if (!base && /^o\d+-[a-z0-9]+$/i.test(sub)) base = `${sub}.api001.octadesk.services`;
   if (base && !/^https?:\/\//.test(base)) base = 'https://' + base;
   const out = [{ tentativa: 'variaveis', token: token ? `preenchido (${token.length} caracteres, começa com ${token.slice(0, 5)})` : 'vazio', subdominio: sub || 'vazio', email: email ? 'preenchido' : 'vazio', api_url: base || 'vazio' }];
   if (!token) return out;
@@ -57,3 +62,199 @@ export async function diagnosticoOctadesk() {
   return out;
 }
 
+// ---------------- Sincronização diária de tickets e conversas ----------------
+
+const ARQ = () => path.join(config.dataDir, 'octadesk.json.gz');
+export const octa = { tickets: {}, chats: {}, diasOk: {}, status: { ultima: null, erro: null, filtro_ok: null, backfill_ate: null, exemplo_campos_personalizados: null } };
+
+function carregar() {
+  try { Object.assign(octa, JSON.parse(zlib.gunzipSync(fs.readFileSync(ARQ())).toString('utf8'))); } catch {}
+}
+function salvar() {
+  const tmp = ARQ() + '.tmp';
+  fs.writeFileSync(tmp, zlib.gzipSync(JSON.stringify(octa)));
+  fs.renameSync(tmp, ARQ());
+}
+
+function baseUrl() {
+  let base = env('OCTADESK_API_URL').replace(/\/$/, '');
+  const sub = env('OCTADESK_SUBDOMINIO');
+  if (!base && /^o\d+-[a-z0-9]+$/i.test(sub)) base = `${sub}.api001.octadesk.services`;
+  if (base && !/^https?:\/\//.test(base)) base = 'https://' + base;
+  return base;
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function get(pathQs) {
+  const url = baseUrl() + pathQs;
+  for (let t = 1; ; t++) {
+    const res = await fetch(url, {
+      headers: { 'x-api-key': env('OCTADESK_TOKEN'), 'octa-agent-email': env('OCTADESK_EMAIL'), Accept: 'application/json' },
+      signal: AbortSignal.timeout(30000),
+    }).catch((e) => ({ ok: false, status: 0, erro: e.message }));
+    if (res.ok) return res.json();
+    if ((res.status === 429 || res.status >= 500 || res.status === 0) && t < 5) { await sleep(1000 * 2 ** t); continue; }
+    throw new Error(`Octadesk ${res.status || res.erro} em ${pathQs.split('?')[0]}`);
+  }
+}
+
+const nomeDe = (x) => (x == null ? null : typeof x === 'object' ? x.name || x.title || x.label || x.value || null : String(x));
+const OFF = '-03:00';
+const isoBR = (data) => `${data}T00:00:00${OFF}`;
+const diaBR = (iso) => (iso ? new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString().slice(0, 10) : null);
+const somaDia = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+
+// "motivo" pode vir como objeto {motivo: ...}, como lista [{name/key, value}] ou aninhado.
+function motivoDe(cf) {
+  if (!cf) return null;
+  const re = /motivo/i;
+  if (Array.isArray(cf)) {
+    for (const c of cf) {
+      const k = c && (c.name || c.key || c.label || c.field || c.id || '');
+      if (re.test(String(k))) return nomeDe(c.value ?? c.values ?? c.text);
+    }
+    return null;
+  }
+  if (typeof cf === 'object') {
+    for (const [k, v] of Object.entries(cf)) {
+      if (re.test(k)) return Array.isArray(v) ? v.map(nomeDe).join(', ') : nomeDe(v);
+      if (v && typeof v === 'object') { const m = motivoDe(v); if (m) return m; }
+    }
+  }
+  return null;
+}
+
+function compactTicket(t) {
+  return {
+    id: t.id, n: t.number, criado: t.createdAt, resolvido: t.resolutionDate || null,
+    status: nomeDe(t.status), canal: nomeDe(t.channel), grupo: nomeDe(t.group),
+    motivo: motivoDe(t.customField), tags: (t.tags || []).map(nomeDe).filter(Boolean),
+  };
+}
+function compactChat(c) {
+  return {
+    id: c.id, n: c.number, criado: c.createdAt, status: nomeDe(c.status), canal: nomeDe(c.channel),
+    bot: !!c.withBot, origem: nomeDe(c.origin) || nomeDe(c.conversationOrigin), tags: (c.tags || []).map(nomeDe).filter(Boolean),
+  };
+}
+
+async function baixarDia(recurso, data) {
+  const ini = isoBR(data), fim = isoBR(somaDia(data, 1));
+  const itens = [];
+  for (let page = 1; page <= 200; page++) {
+    const qs = `?filters[0][property]=createdAt&filters[0][operator]=ge&filters[0][value]=${encodeURIComponent(ini)}`
+      + `&filters[1][property]=createdAt&filters[1][operator]=lt&filters[1][value]=${encodeURIComponent(fim)}`
+      + `&sort[property]=createdAt&sort[direction]=asc&page=${page}&limit=100`;
+    const r = await get(`/${recurso}${qs}`);
+    const lista = Array.isArray(r) ? r : r?.data || r?.items || r?.results || [];
+    itens.push(...lista);
+    if (lista.length < 100) break;
+    await sleep(150);
+  }
+  // O filtro foi respeitado? Se vier coisa de outro dia, não confia.
+  const fora = itens.filter((x) => diaBR(x.createdAt) !== data).length;
+  return { itens, fora };
+}
+
+let rodando = false;
+export async function syncOctadesk() {
+  if (rodando || !env('OCTADESK_TOKEN') || !baseUrl()) return;
+  rodando = true;
+  try {
+    const hoje = diaBR(new Date().toISOString());
+    const inicio = env('OCTADESK_INICIO') || '2025-10-01';
+    const dias = [];
+    for (let d = inicio; d <= hoje; d = somaDia(d, 1)) {
+      const recente = d >= somaDia(hoje, -3);
+      if (recente || !octa.diasOk[d]) dias.push(d);
+    }
+    let feitos = 0;
+    for (const d of dias) {
+      for (const [recurso, alvo, comp] of [['tickets', 'tickets', compactTicket], ['chat', 'chats', compactChat]]) {
+        const { itens, fora } = await baixarDia(recurso, d);
+        if (fora > 0 && fora === itens.length && itens.length > 0) {
+          octa.status.filtro_ok = false;
+          throw new Error(`O filtro por data de ${recurso} não foi aplicado pela API (${fora} itens de outros dias).`);
+        }
+        for (const x of itens) if (diaBR(x.createdAt) === d) {
+          octa[alvo][x.id] = comp(x);
+          if (!octa.status.exemplo_campos_personalizados && recurso === 'tickets' && x.customField) {
+            octa.status.exemplo_campos_personalizados = JSON.stringify(Array.isArray(x.customField) ? x.customField.map((c) => c && (c.name || c.key || c.label || c.id)) : Object.keys(x.customField)).slice(0, 400);
+          }
+        }
+      }
+      octa.status.filtro_ok = true;
+      if (d < somaDia(hoje, -3)) octa.diasOk[d] = true;
+      octa.status.backfill_ate = d;
+      if (++feitos % 15 === 0) salvar();
+    }
+    octa.status.ultima = new Date().toISOString();
+    octa.status.erro = null;
+    salvar();
+    console.log(`Octadesk ok: ${dias.length} dias, ${Object.keys(octa.tickets).length} tickets, ${Object.keys(octa.chats).length} conversas`);
+  } catch (err) {
+    octa.status.erro = `${new Date().toISOString()}: ${err.message}`;
+    console.error('Octadesk falhou:', err.message);
+    try { salvar(); } catch {}
+  } finally {
+    rodando = false;
+  }
+}
+
+export function startOctadesk() {
+  carregar();
+  setTimeout(syncOctadesk, 30000);
+  setInterval(syncOctadesk, Number(env('OCTADESK_EVERY_MIN') || 30) * 60000);
+}
+
+// ---------------- Agregações ----------------
+const r4 = (x) => Math.round(x * 10000) / 10000;
+function noPeriodo(mapa, i, f) { return Object.values(mapa).filter((x) => { const d = diaBR(x.criado); return d >= i && d <= f; }); }
+
+export function atendimentoPorDia(inicio, fim) {
+  const hoje = diaBR(new Date().toISOString());
+  const i = /^\d{4}-\d{2}-\d{2}$/.test(inicio || '') ? inicio : '2026-10-01';
+  const f = /^\d{4}-\d{2}-\d{2}$/.test(fim || '') ? fim : hoje;
+  const conta = (mapa, filtro = () => true) => {
+    const m = {};
+    for (const x of Object.values(mapa)) if (filtro(x)) { const d = diaBR(x.criado); m[d] = (m[d] || 0) + 1; }
+    return m;
+  };
+  const t = conta(octa.tickets), c = conta(octa.chats), cb = conta(octa.chats, (x) => x.bot), ch = conta(octa.chats, (x) => !x.bot);
+  const out = [];
+  for (let d = i; d <= f; d = somaDia(d, 1)) {
+    const ly = somaDia(d, -364);
+    out.push({
+      data: d, data_2025: ly,
+      tickets: t[d] || 0, conversas: c[d] || 0, conversas_humanas: ch[d] || 0, conversas_bot: cb[d] || 0, total: (t[d] || 0) + (c[d] || 0),
+      tickets_2025: t[ly] || 0, conversas_2025: c[ly] || 0, total_2025: (t[ly] || 0) + (c[ly] || 0),
+    });
+  }
+  return out;
+}
+
+export function atendimentoPorGrupo(inicio, fim, agrupar, origem) {
+  const hoje = diaBR(new Date().toISOString());
+  const i = /^\d{4}-\d{2}-\d{2}$/.test(inicio || '') ? inicio : '2026-10-01';
+  const f = /^\d{4}-\d{2}-\d{2}$/.test(fim || '') ? fim : hoje;
+  const campo = ['motivo', 'canal', 'grupo', 'status', 'tag'].includes(agrupar) ? agrupar : 'motivo';
+  const fonte = origem === 'chat' ? octa.chats : octa.tickets;
+  const chave = (x) => (campo === 'tag' ? (x.tags.length ? x.tags : ['Sem tag']) : [x[campo] || 'Não informado']);
+  const contar = (lista) => { const m = new Map(); for (const x of lista) for (const k of chave(x)) m.set(k, (m.get(k) || 0) + 1); return m; };
+  const atual = noPeriodo(fonte, i, f);
+  const ant = noPeriodo(fonte, somaDia(i, -364), somaDia(f, -364));
+  const a = contar(atual), b = contar(ant);
+  return [...new Set([...a.keys(), ...b.keys()])].map((k) => ({
+    agrupamento: campo, origem: origem === 'chat' ? 'chat' : 'tickets', grupo: k,
+    quantidade: a.get(k) || 0, participacao: atual.length ? r4((a.get(k) || 0) / atual.length) : null,
+    quantidade_2025: b.get(k) || 0, variacao: b.get(k) ? r4((a.get(k) || 0) / b.get(k) - 1) : null,
+  })).sort((p, q) => q.quantidade - p.quantidade);
+}
+
+export function statusOctadesk() {
+  return {
+    octadesk_ultima_sincronizacao: octa.status.ultima, octadesk_erro: octa.status.erro, octadesk_filtro_por_data_ok: octa.status.filtro_ok,
+    octadesk_carregado_ate: octa.status.backfill_ate, octadesk_tickets: Object.keys(octa.tickets).length, octadesk_conversas: Object.keys(octa.chats).length,
+    octadesk_campos_personalizados: octa.status.exemplo_campos_personalizados,
+  };
+}

@@ -8,7 +8,7 @@ import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
 import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora } from './metrics.js';
 import { importar3351 } from './erp3351.js';
-import { diagnosticoOctadesk } from './octadesk.js';
+import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
@@ -93,9 +93,9 @@ function buildServer() {
 
   s.registerTool('bf_faturamento_por_loja', {
     title: 'Faturamento por loja (SLA)',
-    description: 'Por warehouse (loja ou CD), das entregas de pedidos aprovados no período: quantas foram faturadas dentro do SLA (padrão 24 h após a aprovação do pagamento), % no prazo, pendentes, pendentes atrasadas e horas até faturar.',
-    inputSchema: { ...periodo, horas: z.number().optional().describe('SLA em horas. Padrão 24.') }, annotations: ro,
-  }, async ({ inicio, fim, horas }) => json(faturamentoPorLoja(inicio, fim, horas)));
+    description: 'Por warehouse (loja ou CD), das entregas de pedidos aprovados no período: quantas tiveram nota emitida até o prazo (padrão 1 dia útil após a aprovação do pagamento, pela data), % no prazo, % no mesmo dia, pendentes, pendentes atrasadas e dias até faturar.',
+    inputSchema: { ...periodo, dias: z.number().optional().describe('Prazo em dias úteis após a aprovação. 0 = mesmo dia. Padrão 1.') }, annotations: ro,
+  }, async ({ inicio, fim, dias }) => json(faturamentoPorLoja(inicio, fim, dias)));
 
   s.registerTool('bf_entrega_por_transportadora', {
     title: 'Entrega no prazo por transportadora',
@@ -115,11 +115,27 @@ function buildServer() {
     inputSchema: {}, annotations: ro,
   }, async () => json(await diagnosticoOctadesk()));
 
+  s.registerTool('bf_atendimento_por_dia', {
+    title: 'Chamados do Octadesk por dia',
+    description: 'Tickets e conversas (chat/WhatsApp) abertos por dia no Octadesk, com o mesmo dia da semana de 2025 (364 dias antes): tickets, conversas, conversas com humano e com bot, total.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(atendimentoPorDia(inicio, fim)));
+
+  s.registerTool('bf_atendimento_por_grupo', {
+    title: 'Chamados do Octadesk por motivo, canal ou grupo',
+    description: 'Quantidade de tickets (ou conversas) no período por motivo (campo personalizado), canal, grupo, status ou tag, com a participação e o mesmo período de 2025.',
+    inputSchema: {
+      ...periodo,
+      agrupar: z.enum(['motivo', 'canal', 'grupo', 'status', 'tag']).optional().describe('Padrão: motivo.'),
+      origem: z.enum(['tickets', 'chat']).optional().describe('Padrão: tickets.'),
+    }, annotations: ro,
+  }, async ({ inicio, fim, agrupar, origem }) => json(atendimentoPorGrupo(inicio, fim, agrupar, origem)));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
     inputSchema: {}, annotations: ro,
-  }, async () => json(status()));
+  }, async () => json([{ ...status()[0], ...statusOctadesk() }]));
 
   return s;
 }
@@ -161,6 +177,7 @@ app.get('/', (req, res) => res.send('ok'));
 
 load();
 start();
+startOctadesk();
 app.listen(config.port, () => {
   console.log(`Servidor no ar na porta ${config.port}`);
   const base = (process.env.RENDER_EXTERNAL_URL || `http://localhost:${config.port}`).replace(/\/$/, '');

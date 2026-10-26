@@ -220,6 +220,8 @@ export function topReferencias(inicio, fim, limite) {
 // ---------- Logística: faturamento por loja e entrega no prazo por transportadora ----------
 const nomeWarehouse = () => Object.fromEntries((state.inventory?.warehouses || []).map((w) => [w.warehouse_id, w.warehouse]));
 const diaLocal = (iso) => (iso ? local(iso).data : null);
+// Data da nota: '2026-10-20T00:00:00' (sem horário) vale como a própria data; com horário, converte para Brasília.
+const diaLocalNota = (iso) => (/T00:00:00(\.0+)?(Z|\+00:00)?$/.test(iso) || /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.slice(0, 10) : local(iso).data);
 
 function entregasNoPeriodo(i, f) {
   const out = [];
@@ -230,26 +232,36 @@ function entregasNoPeriodo(i, f) {
   return out;
 }
 
-export function faturamentoPorLoja(inicio, fim, horas) {
+// Prazo de faturamento em dias úteis após a aprovação (a data da nota da VTEX costuma vir sem horário).
+const somaDiasUteis = (data, n) => {
+  const d = new Date(data + 'T12:00:00Z');
+  let k = 0;
+  while (k < n) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) k++; }
+  return d.toISOString().slice(0, 10);
+};
+const difDias = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400e3);
+
+export function faturamentoPorLoja(inicio, fim, dias) {
   const [i, f] = periodo(inicio, fim);
-  const sla = (Number(horas) > 0 ? Number(horas) : 24) * 3600e3;
-  const agora = Date.now();
+  const n = Number(dias) >= 0 && dias !== undefined && dias !== null && dias !== '' ? Math.round(Number(dias)) : 1;
+  const hoje = hojeLocal();
   const nomes = nomeWarehouse();
   const g = new Map();
   for (const { o, e } of entregasNoPeriodo(i, f)) {
     if (!o.aprovado) continue;
-    const ap = new Date(o.aprovado).getTime();
-    const em = e.emissao ? new Date(e.emissao).getTime() : null;
-    const x = g.get(e.wh) || { entregas: 0, vencidas: 0, faturadas: 0, no_prazo: 0, pendentes: 0, pendentes_atrasadas: 0, horas: [], mais_antiga_pendente: null };
+    const ap = local(o.aprovado).data;
+    const prazo = somaDiasUteis(ap, n);
+    const em = e.emissao ? diaLocalNota(e.emissao) : null;
+    const x = g.get(e.wh) || { entregas: 0, vencidas: 0, faturadas: 0, no_prazo: 0, pendentes: 0, pendentes_atrasadas: 0, dias: [], mais_antiga_pendente: null };
     x.entregas++;
     if (em) {
       x.faturadas++;
-      x.horas.push((em - ap) / 3600e3);
-      if (em - ap <= sla) x.no_prazo++;
+      x.dias.push(Math.max(difDias(ap, em), 0));
+      if (em <= prazo) x.no_prazo++;
       x.vencidas++;
     } else {
       x.pendentes++;
-      if (agora - ap > sla) {
+      if (hoje > prazo) {
         x.pendentes_atrasadas++;
         x.vencidas++;
         if (!x.mais_antiga_pendente || o.aprovado < x.mais_antiga_pendente) x.mais_antiga_pendente = o.aprovado;
@@ -259,12 +271,13 @@ export function faturamentoPorLoja(inicio, fim, horas) {
   }
   const med = (a) => { if (!a.length) return null; const s = [...a].sort((p, q) => p - q); return s[Math.floor(s.length / 2)]; };
   return [...g.entries()].map(([wh, x]) => ({
-    warehouse_id: wh, loja: nomes[wh] || wh, sla_horas: sla / 3600e3,
+    warehouse_id: wh, loja: nomes[wh] || wh, sla_dias_uteis: n,
     entregas: x.entregas, faturadas: x.faturadas, faturadas_no_prazo: x.no_prazo,
     pct_no_prazo: x.vencidas ? Math.round((x.no_prazo / x.vencidas) * 10000) / 10000 : null,
+    pct_mesmo_dia: x.faturadas ? Math.round((x.dias.filter((d) => d === 0).length / x.faturadas) * 10000) / 10000 : null,
     pendentes: x.pendentes, pendentes_atrasadas: x.pendentes_atrasadas, mais_antiga_pendente: x.mais_antiga_pendente,
-    horas_mediana: x.horas.length ? Math.round(med(x.horas) * 10) / 10 : null,
-    horas_media: x.horas.length ? Math.round((x.horas.reduce((s, h) => s + h, 0) / x.horas.length) * 10) / 10 : null,
+    dias_mediana: med(x.dias),
+    dias_media: x.dias.length ? Math.round((x.dias.reduce((s, d) => s + d, 0) / x.dias.length) * 10) / 10 : null,
   })).sort((a, b) => b.entregas - a.entregas);
 }
 
