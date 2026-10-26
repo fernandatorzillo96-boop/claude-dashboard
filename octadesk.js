@@ -67,8 +67,12 @@ export async function diagnosticoOctadesk() {
 const ARQ = () => path.join(config.dataDir, 'octadesk.json.gz');
 export const octa = { tickets: {}, chats: {}, diasOk: {}, status: { ultima: null, erro: null, filtro_ok: null, backfill_ate: null, exemplo_campos_personalizados: null } };
 
+const VERSAO = 2; // v2: motivo pelo campo "motivo_do_contato" e campos de motivo guardados
 function carregar() {
   try { Object.assign(octa, JSON.parse(zlib.gunzipSync(fs.readFileSync(ARQ())).toString('utf8'))); } catch {}
+  if (octa.versao !== VERSAO) {
+    octa.tickets = {}; octa.diasOk = {}; octa.status.backfill_ate = null; octa.versao = VERSAO;
+  }
 }
 function salvar() {
   const tmp = ARQ() + '.tmp';
@@ -93,7 +97,7 @@ async function get(pathQs) {
       signal: AbortSignal.timeout(30000),
     }).catch((e) => ({ ok: false, status: 0, erro: e.message }));
     if (res.ok) return res.json();
-    if ((res.status === 429 || res.status >= 500 || res.status === 0) && t < 5) { await sleep(1000 * 2 ** t); continue; }
+    if ((res.status === 429 || res.status === 409 || res.status >= 500 || res.status === 0) && t < 5) { await sleep(1000 * 2 ** t); continue; }
     let det = '';
     try { det = (await res.text()).replace(/\s+/g, ' ').slice(0, 220); } catch {}
     const e = new Error(`Octadesk ${res.status || res.erro} em ${pathQs.split('?')[0]}${det ? ' — ' + det : ''}`);
@@ -108,31 +112,36 @@ const isoBR = (data) => `${data}T00:00:00${OFF}`;
 const diaBR = (iso) => (iso ? new Date(new Date(iso).getTime() - 3 * 3600e3).toISOString().slice(0, 10) : null);
 const somaDia = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 
-// "motivo" pode vir como objeto {motivo: ...}, como lista [{name/key, value}] ou aninhado.
-function motivoDe(cf) {
-  if (!cf) return null;
-  const re = /motivo/i;
+// Campos de motivo do Octadesk da Água de Coco, em ordem de preferência.
+const CAMPOS_MOTIVO = ['motivo', 'motivo_do_contato', 'motivos_dos_contatos', 'lojas_motivo_de_contato', 'assuntos'];
+const valorCampo = (v) => (v == null || v === '' ? null : Array.isArray(v) ? (v.map(nomeDe).filter(Boolean).join(', ') || null) : nomeDe(v));
+// customField pode vir como objeto {chave: valor} ou lista [{name/key, value}]. Devolve só os campos de motivo/assunto.
+function camposMotivo(cf) {
+  const out = {};
+  if (!cf) return out;
+  const re = /motivo|assunto/i;
   if (Array.isArray(cf)) {
     for (const c of cf) {
-      const k = c && (c.name || c.key || c.label || c.field || c.id || '');
-      if (re.test(String(k))) return nomeDe(c.value ?? c.values ?? c.text);
+      const k = c && (c.key || c.name || c.label || c.field || c.id);
+      if (k && re.test(String(k))) { const v = valorCampo(c.value ?? c.values ?? c.text); if (v) out[String(k)] = v; }
     }
-    return null;
+  } else if (typeof cf === 'object') {
+    for (const [k, v] of Object.entries(cf)) if (re.test(k)) { const x = valorCampo(v); if (x) out[k] = x; }
   }
-  if (typeof cf === 'object') {
-    for (const [k, v] of Object.entries(cf)) {
-      if (re.test(k)) return Array.isArray(v) ? v.map(nomeDe).join(', ') : nomeDe(v);
-      if (v && typeof v === 'object') { const m = motivoDe(v); if (m) return m; }
-    }
-  }
-  return null;
+  return out;
+}
+function motivoDe(cm) {
+  for (const k of CAMPOS_MOTIVO) if (cm[k]) return cm[k];
+  const outro = Object.keys(cm).find((k) => /motivo/i.test(k));
+  return outro ? cm[outro] : null;
 }
 
 function compactTicket(t) {
+  const cm = camposMotivo(t.customField);
   return {
     id: t.id, n: t.number, criado: t.createdAt, resolvido: t.resolutionDate || null,
     status: nomeDe(t.status), canal: nomeDe(t.channel), grupo: nomeDe(t.group),
-    motivo: motivoDe(t.customField), tags: (t.tags || []).map(nomeDe).filter(Boolean),
+    motivo: motivoDe(cm), cm, tags: (t.tags || []).map(nomeDe).filter(Boolean),
   };
 }
 function compactChat(c) {
@@ -217,6 +226,8 @@ export async function syncOctadesk() {
       let okDia = true;
       for (const [recurso, alvo, comp] of [['tickets', 'tickets', compactTicket], ['chat', 'chats', compactChat]]) {
         if (falhou[recurso]) { okDia = false; continue; }
+        // A API de conversas só aceita datas de até um ano atrás.
+        if (recurso === 'chat' && d < somaDia(hoje, -364)) { octa.status.chat_desde = somaDia(hoje, -364); continue; }
         let res;
         try { res = await baixarDia(recurso, d); } catch (e) {
           falhou[recurso] = `${recurso} (${d}): ${e.message}`; okDia = false; continue;
@@ -313,6 +324,8 @@ export function statusOctadesk() {
     octadesk_ultima_sincronizacao: octa.status.ultima, octadesk_erro: octa.status.erro, octadesk_filtro_por_data_ok: octa.status.filtro_ok,
     octadesk_carregado_ate: octa.status.backfill_ate, octadesk_tickets: Object.keys(octa.tickets).length, octadesk_conversas: Object.keys(octa.chats).length,
     octadesk_campos_personalizados: octa.status.exemplo_campos_personalizados,
+    octadesk_conversas_disponiveis_desde: octa.status.chat_desde || null,
+    octadesk_motivos_preenchidos: Object.values(octa.tickets).filter((x) => x.motivo).length,
     octadesk_formato_consulta: octa.status.formato ? JSON.stringify(octa.status.formato) : null,
   };
 }
