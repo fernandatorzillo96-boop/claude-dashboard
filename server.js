@@ -8,6 +8,7 @@ import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
 import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora } from './metrics.js';
 import { importar3351 } from './erp3351.js';
+import { diagnosticoOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
@@ -107,6 +108,12 @@ function buildServer() {
     description: 'Pedidos captados desde o início do acompanhamento que ainda não foram faturados nem cancelados, pelo status atual na VTEX: pedidos, peças, valor e pedido mais antigo.',
     inputSchema: {}, annotations: ro,
   }, async () => json(aFaturar()));
+
+  s.registerTool('bf_octadesk_diagnostico', {
+    title: 'Diagnóstico da conexão com o Octadesk',
+    description: 'Testa as credenciais do Octadesk cadastradas no servidor (API nova e token de integração) e mostra o formato das respostas de tickets e chat, sem dados de clientes.',
+    inputSchema: {}, annotations: ro,
+  }, async () => json(await diagnosticoOctadesk()));
 
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
