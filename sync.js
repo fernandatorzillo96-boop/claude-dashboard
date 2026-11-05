@@ -1,4 +1,5 @@
 // Sincronização com a VTEX: pedidos (a cada SYNC_EVERY_MIN), catálogo e estoque.
+import { registrarEstoqueVtex } from './estoque_match.js';
 import { config } from './config.js';
 import { vtexGet, mapLimit } from './vtex.js';
 import { state, save, referenciaDoItem } from './store.js';
@@ -236,12 +237,16 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
     let skusComEstoque = 0, total = 0, reservado = 0, ilimitados = 0, dispAtivo = 0, skusAtivosComEstoque = 0;
     // Sem foto: peças disponíveis em SKUs sem nenhuma imagem na VTEX.
     const sf = { disp: 0, skus: 0, dispAtivo: 0, skusAtivos: 0, dispSale: 0, dispNaoSale: 0, dispDesconhecido: 0 };
+    // Estoque de cada SKU por warehouse, para o match com o estoque do ERP.
+    const porSku = {};
     await mapLimit(ids, config.sweepConcurrency, async (id) => {
       if (comCatalogo || !state.catalog[id]) await lookupSkus([id]);
       const inv = await vtexGet(`/api/logistics/pvt/inventory/skus/${id}`);
       const cat = state.catalog[id];
       const ativo = !!(cat && cat.active && cat.productActive !== false);
       let disp = 0;
+      porSku[id] = { refId: cat?.refId || null, ativo, balance: (inv?.balance || []).filter((b) => !b.hasUnlimitedQuantity)
+        .map((b) => ({ warehouseId: b.warehouseId, warehouseName: b.warehouseName, total: b.totalQuantity || 0, reservado: b.reservedQuantity || 0 })) };
       for (const b of inv?.balance || []) {
         const k = b.warehouseId;
         if (!wh[k]) wh[k] = { warehouse_id: k, warehouse: b.warehouseName || k, total: 0, reservado: 0, disponivel: 0, disponivel_ativo: 0, disponivel_sem_foto: 0, disponivel_sem_foto_ativo: 0, skus_com_estoque: 0, ilimitado: 0 };
@@ -300,6 +305,7 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
       produtos_sale_visiveis_site: visiveisSale,
     };
     save('inventory', 'catalogSummary', 'catalog');
+    registrarEstoqueVtex(porSku, state.inventory.atualizado_em);
     console.log(`Varredura de estoque ok: ${ids.length} SKUs`);
   } catch (err) {
     state.sync.lastSweepError = { at: new Date().toISOString(), message: err.message };

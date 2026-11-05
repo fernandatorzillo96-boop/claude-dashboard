@@ -10,6 +10,8 @@ import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, statu
 import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
+import { estoquePage } from './estoque-page.js';
+import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
   console.error('Defina ACCESS_SECRET com pelo menos 24 caracteres.');
@@ -26,6 +28,8 @@ const periodo = {
   fim: z.string().optional().describe('Último dia, AAAA-MM-DD. Padrão: hoje.'),
 };
 const ro = { readOnlyHint: true, openWorldHint: false };
+const baseUrl = () => (process.env.RENDER_EXTERNAL_URL ? process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '') : null);
+const urlEstoque = () => (baseUrl() ? `${baseUrl()}/estoque/${config.accessSecret}` : null);
 
 function buildServer() {
   const s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' });
@@ -140,11 +144,27 @@ function buildServer() {
     }, annotations: ro,
   }, async ({ inicio, fim, agrupar, origem }) => json(atendimentoPorGrupo(inicio, fim, agrupar, origem)));
 
+  s.registerTool('bf_match_estoque_resumo', {
+    title: 'Match de estoque por loja (ERP × VTEX)',
+    description: 'Para cada loja e o CD do e-commerce: SKUs comparados entre o estoque do ERP (último arquivo importado) e o da VTEX (última varredura), iguais, divergentes, % de match, quantidade diferente, só no ERP, só na VTEX, SKU que não existe na VTEX, peças de cada lado.',
+    inputSchema: {}, annotations: ro,
+  }, async () => json(matchResumo()));
+
+  s.registerTool('bf_match_estoque_divergencias', {
+    title: 'Divergências de estoque (ERP × VTEX)',
+    description: 'SKUs com estoque diferente entre o ERP e a VTEX, da maior diferença para a menor: loja, código reduzido, SKU VTEX, referência, produto, tamanho, cor, estoque ERP, estoque VTEX, reservado, diferença e tipo.',
+    inputSchema: {
+      loja: z.union([z.number(), z.string()]).nullable().optional().describe('Número da loja (cd_empresa; 64 = CD do e-commerce). Vazio = todas.'),
+      tipo: z.enum(TIPOS_DIVERGENCIA).nullable().optional().describe('Tipo de divergência. Vazio = todos.'),
+      limite: z.number().int().optional().describe('Máximo de linhas (padrão 300, até 2000).'),
+    }, annotations: ro,
+  }, async ({ loja, tipo, limite }) => json(matchDivergencias(loja, tipo, limite)));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
     inputSchema: {}, annotations: ro,
-  }, async () => json([{ ...status()[0], ...statusOctadesk() }]));
+  }, async () => json([{ ...status()[0], ...statusOctadesk(), ...statusMatch(), url_estoque: urlEstoque(), url_estoque_csv: urlEstoque() ? urlEstoque() + '/divergencias.csv' : null }]));
 
   return s;
 }
@@ -182,9 +202,27 @@ app.post('/importar/:secret', checkSecret, express.text({ type: '*/*', limit: '8
   }
 });
 
+app.get('/estoque/:secret', checkSecret, (req, res) => res.type('html').send(estoquePage({ ...statusMatch(), csv: `/estoque/${config.accessSecret}/divergencias.csv` })));
+app.post('/estoque/:secret', checkSecret, express.json({ limit: '60mb' }), (req, res) => {
+  try {
+    res.json({ ok: true, ...importarEstoqueErp(req.body) });
+  } catch (err) {
+    res.status(400).json({ ok: false, erro: err.message });
+  }
+});
+app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
+  const loja = req.query.loja ? String(req.query.loja) : null;
+  const tipo = req.query.tipo && TIPOS_DIVERGENCIA.includes(String(req.query.tipo)) ? String(req.query.tipo) : null;
+  const dia = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="divergencias_estoque${loja ? '_loja' + loja.replace(/\D/g, '') : ''}_${dia}.csv"`);
+  res.send(matchCsv(loja, tipo));
+});
+
 app.get('/', (req, res) => res.send('ok'));
 
 load();
+carregarMatch();
 start();
 startOctadesk();
 app.listen(config.port, () => {
@@ -192,4 +230,5 @@ app.listen(config.port, () => {
   const base = (process.env.RENDER_EXTERNAL_URL || `http://localhost:${config.port}`).replace(/\/$/, '');
   console.log(`URL do conector (cole no Claude): ${base}/mcp/${config.accessSecret}`);
   console.log(`Página para importar o 3351: ${base}/importar/${config.accessSecret}`);
+  console.log(`Página do estoque das lojas: ${base}/estoque/${config.accessSecret}`);
 });
