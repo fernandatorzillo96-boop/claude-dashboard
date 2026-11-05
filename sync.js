@@ -320,11 +320,14 @@ export function start() {
   const loop = async () => { await syncOrders(); };
   loop();
   setInterval(loop, config.syncEveryMin * 60000);
-  let lastCatalog = 0;
+  // Lembra a última releitura do catálogo entre reinícios, para um deploy não refazer tudo (a varredura completa leva horas).
   const sweep = async () => {
-    const comCatalogo = Date.now() - lastCatalog > config.catalogoEveryMin * 60000;
+    // Primeira vez com esta versão: se já há catálogo lido, conta a partir da última varredura salva.
+    const ref = state.sync.lastCatalog || (Object.keys(state.catalog).length > 1000 ? state.catalogSummary?.atualizado_em : null);
+    const last = ref ? Date.parse(ref) : 0;
+    const comCatalogo = Date.now() - last > config.catalogoEveryMin * 60000;
     await sweepEstoque({ comCatalogo });
-    if (comCatalogo) lastCatalog = Date.now();
+    if (comCatalogo && !(state.sync.lastSweepError && Date.parse(state.sync.lastSweepError.at) > Date.now() - 6 * 3600e3)) { state.sync.lastCatalog = new Date().toISOString(); save('sync'); }
   };
   setTimeout(sweep, 20000);
   setInterval(sweep, config.estoqueEveryMin * 60000);

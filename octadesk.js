@@ -44,6 +44,8 @@ export async function diagnosticoOctadesk() {
     out.push(await tenta('nova: tickets', `${base}/tickets?page=1&limit=2`, { headers: h }));
     out.push(await tenta('nova: chat', `${base}/chat?page=1&limit=2`, { headers: h }));
     out.push(await tenta('nova: tickets status', `${base}/tickets/status`, { headers: h }));
+    const um = Object.values(octa.tickets).filter((x) => x.ie > 0).sort((a, b) => (a.criado < b.criado ? 1 : -1))[0];
+    if (um) out.push(await tenta('nova: interações do ticket', `${base}/tickets/${um.n}/interactions`, { headers: h }));
   }
 
   // Token de integração (API antiga)
@@ -67,11 +69,13 @@ export async function diagnosticoOctadesk() {
 const ARQ = () => path.join(config.dataDir, 'octadesk.json.gz');
 export const octa = { tickets: {}, chats: {}, diasOk: {}, status: { ultima: null, erro: null, filtro_ok: null, backfill_ate: null, exemplo_campos_personalizados: null } };
 
-const VERSAO = 2; // v2: motivo pelo campo "motivo_do_contato" e campos de motivo guardados
+const VERSAO = 3; // v2: motivo pelo campo "motivo_do_contato"; v3: atendente e interações do ticket
 function carregar() {
   try { Object.assign(octa, JSON.parse(zlib.gunzipSync(fs.readFileSync(ARQ())).toString('utf8'))); } catch {}
   if (octa.versao !== VERSAO) {
-    octa.tickets = {}; octa.diasOk = {}; octa.status.backfill_ate = null; octa.versao = VERSAO;
+    // v2 → v3: mantém o que já tem e baixa tudo de novo por cima (para pegar o atendente).
+    if (octa.versao !== 2) octa.tickets = {};
+    octa.diasOk = {}; octa.status.backfill_ate = null; octa.versao = VERSAO;
   }
 }
 function salvar() {
@@ -142,6 +146,8 @@ function compactTicket(t) {
     id: t.id, n: t.number, criado: t.createdAt, resolvido: t.resolutionDate || null,
     status: nomeDe(t.status), canal: nomeDe(t.channel), grupo: nomeDe(t.group),
     motivo: motivoDe(cm), cm, tags: (t.tags || []).map(nomeDe).filter(Boolean),
+    at: nomeDe(t.assigned) || (t.assigned && typeof t.assigned === 'object' ? t.assigned.email || null : null),
+    ie: Number(t.totalEmployeeInteractions) || 0, ic: Number(t.interactionsCount) || 0,
   };
 }
 function compactChat(c) {
@@ -216,10 +222,13 @@ export async function syncOctadesk() {
     const hoje = diaBR(new Date().toISOString());
     const inicio = env('OCTADESK_INICIO') || '2025-10-01';
     const dias = [];
+    // Dias dos últimos 45 com ticket ainda sem resolução: baixa de novo para pegar a data de resolução.
+    const comAberto = new Set(Object.values(octa.tickets).filter((x) => !x.resolvido).map((x) => diaBR(x.criado)).filter((d) => d >= somaDia(hoje, -45)));
     for (let d = inicio; d <= hoje; d = somaDia(d, 1)) {
       const recente = d >= somaDia(hoje, -3);
-      if (recente || !octa.diasOk[d]) dias.push(d);
+      if (recente || !octa.diasOk[d] || (octa.diasOk[d] && comAberto.has(d) && octa.status.revisto_em !== hoje)) dias.push(d);
     }
+    octa.status.revisto_em = hoje;
     let feitos = 0;
     const falhou = {};
     for (const d of dias) {
@@ -319,6 +328,36 @@ export function atendimentoPorGrupo(inicio, fim, agrupar, origem) {
   })).sort((p, q) => q.quantidade - p.quantidade);
 }
 
+// Tempo de resolução dos tickets (abertura → resolução, em horas corridas) por atendente ou motivo.
+export function atendimentoTempo(inicio, fim, agrupar) {
+  const hoje = diaBR(new Date().toISOString());
+  const i = /^\d{4}-\d{2}-\d{2}$/.test(inicio || '') ? inicio : '2026-10-01';
+  const f = /^\d{4}-\d{2}-\d{2}$/.test(fim || '') ? fim : hoje;
+  const campo = agrupar === 'motivo' ? 'motivo' : 'at';
+  const horas = (x) => (x.resolvido ? (new Date(x.resolvido) - new Date(x.criado)) / 3600e3 : null);
+  const med = (a) => { if (!a.length) return null; const s = [...a].sort((p, q) => p - q); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const r1 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10) / 10);
+  const agrupa = (lista) => {
+    const g = new Map();
+    for (const x of lista) { const k = x[campo] || (campo === 'at' ? 'Sem atendente' : 'Não informado'); if (!g.has(k)) g.set(k, []); g.get(k).push(x); }
+    return g;
+  };
+  const atual = agrupa(noPeriodo(octa.tickets, i, f)), ant = agrupa(noPeriodo(octa.tickets, somaDia(i, -364), somaDia(f, -364)));
+  const linha = (xs) => {
+    const hs = xs.map(horas).filter((h) => h != null && h >= 0);
+    return {
+      tickets: xs.length, resolvidos: hs.length, em_aberto: xs.length - hs.length,
+      tempo_medio_h: r1(hs.length ? hs.reduce((a, b) => a + b, 0) / hs.length : null), tempo_mediano_h: r1(med(hs)),
+      pct_resolvido_24h: hs.length ? r4(hs.filter((h) => h <= 24).length / xs.length) : null,
+      interacoes_atendente_media: xs.length ? r1(xs.reduce((a, x) => a + (x.ie || 0), 0) / xs.length) : null,
+    };
+  };
+  return [...atual.entries()].map(([k, xs]) => {
+    const a = linha(xs), b = ant.has(k) ? linha(ant.get(k)) : null;
+    return { agrupamento: campo === 'at' ? 'atendente' : 'motivo', grupo: k, ...a, tempo_medio_h_2025: b ? b.tempo_medio_h : null, tickets_2025: b ? b.tickets : 0 };
+  }).sort((p, q) => q.tickets - p.tickets);
+}
+
 export function statusOctadesk() {
   return {
     octadesk_ultima_sincronizacao: octa.status.ultima, octadesk_erro: octa.status.erro, octadesk_filtro_por_data_ok: octa.status.filtro_ok,
@@ -326,6 +365,7 @@ export function statusOctadesk() {
     octadesk_campos_personalizados: octa.status.exemplo_campos_personalizados,
     octadesk_conversas_disponiveis_desde: octa.status.chat_desde || null,
     octadesk_motivos_preenchidos: Object.values(octa.tickets).filter((x) => x.motivo).length,
+    octadesk_tickets_com_atendente: Object.values(octa.tickets).filter((x) => x.at).length,
     octadesk_formato_consulta: octa.status.formato ? JSON.stringify(octa.status.formato) : null,
   };
 }

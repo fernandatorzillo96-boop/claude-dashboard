@@ -8,7 +8,7 @@ import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
 import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora } from './metrics.js';
 import { importar3351 } from './erp3351.js';
-import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, statusOctadesk } from './octadesk.js';
+import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
 import { estoquePage } from './estoque-page.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
@@ -159,6 +159,12 @@ function buildServer() {
       limite: z.number().int().optional().describe('Máximo de linhas (padrão 300, até 2000).'),
     }, annotations: ro,
   }, async ({ loja, tipo, limite }) => json(matchDivergencias(loja, tipo, limite)));
+
+  s.registerTool('bf_atendimento_tempo', {
+    title: 'Tempo de resolução dos tickets por atendente ou motivo',
+    description: 'Tickets do Octadesk abertos no período por atendente responsável ou por motivo: tickets, resolvidos, em aberto, tempo médio e mediano da abertura até a resolução (horas corridas), % resolvido em até 24 h, interações do atendente por ticket e o tempo médio do mesmo período de 2025.',
+    inputSchema: { ...periodo, agrupar: z.enum(['atendente', 'motivo']).optional().describe('Padrão: atendente.') }, annotations: ro,
+  }, async ({ inicio, fim, agrupar }) => json(atendimentoTempo(inicio, fim, agrupar)));
 
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
