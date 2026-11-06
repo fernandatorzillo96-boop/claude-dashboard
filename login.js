@@ -11,15 +11,17 @@ const COOKIE = 'painel_sessao';
 
 export function usuarios() {
   const out = new Map();
-  for (const item of String(process.env.PAINEL_USUARIOS || '').split(/[;\n]/)) {
-    const t = item.trim();
+  // tolera aspas em volta, espaços, quebras de linha e ";" sobrando
+  const bruto = String(process.env.PAINEL_USUARIOS || '').trim().replace(/^["']|["']$/g, '');
+  for (const item of bruto.split(/[;\n\r]+/)) {
+    const t = item.trim().replace(/^["']|["']$/g, '');
     if (!t) continue;
     const partes = t.split(':');
     if (partes.length < 2) continue;
-    const email = partes.shift().trim().toLowerCase();
+    const email = partes.shift().replace(/\s+/g, '').toLowerCase();
     let perfil = 'leitura';
     if (partes.length > 1 && /^(admin|leitura)$/i.test(partes[partes.length - 1].trim())) perfil = partes.pop().trim().toLowerCase();
-    const senha = partes.join(':');
+    const senha = partes.join(':').trim();
     if (email && senha) out.set(email, { email, senha, perfil });
   }
   return out;
@@ -115,13 +117,15 @@ const destinoSeguro = (d) => (typeof d === 'string' && /^\/painel(\/|$)/.test(d)
 
 export async function fazerLogin(req, res) {
   const ip = ipDe(req);
-  const email = String(req.body?.email || '').trim().toLowerCase();
+  const email = String(req.body?.email || '').replace(/\s+/g, '').toLowerCase();
   const destino = destinoSeguro(req.body?.destino);
   if (bloqueado(ip)) return res.status(429).type('html').send(paginaLogin('Muitas tentativas. Espere 15 minutos.', email, destino));
   const u = usuarios().get(email);
-  const ok = u && igual(String(req.body?.senha || ''), u.senha);
+  const ok = u && igual(String(req.body?.senha || '').trim(), u.senha);
   if (!ok) {
     falhou(ip);
+    // aparece nos Logs do Render (sem a senha) para saber o que deu errado
+    console.log(`Login recusado: ${email || '(sem e-mail)'} · ${u ? 'senha diferente da cadastrada' : 'e-mail não está em PAINEL_USUARIOS'} · usuários cadastrados: ${[...usuarios().keys()].join(', ') || 'nenhum'}`);
     await new Promise((r) => setTimeout(r, 600));
     return res.status(401).type('html').send(paginaLogin('E-mail ou senha incorretos.', email, destino));
   }

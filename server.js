@@ -310,5 +310,5 @@ app.listen(config.port, () => {
   console.log(`URL do conector (cole no Claude): ${base}/mcp/${config.accessSecret}`);
   console.log(`Página para importar o 3351: ${base}/importar/${config.accessSecret}`);
   console.log(`Página do estoque das lojas: ${base}/estoque/${config.accessSecret}`);
-  console.log(`Site do painel (com login): ${base}/painel/ · usuários cadastrados: ${usuarios().size}`);
+  console.log(`Site do painel (com login): ${base}/painel/ · usuários: ${[...usuarios().values()].map((u) => u.email + ' (' + u.perfil + ')').join(', ') || 'nenhum — defina PAINEL_USUARIOS'}`);
 });
