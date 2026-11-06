@@ -13,6 +13,7 @@ import { uploadPage } from './upload-page.js';
 import { estoquePage } from './estoque-page.js';
 import { usuarios, paginaLogin, fazerLogin, sair, exigirLogin, exigirAdmin } from './login.js';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
@@ -294,7 +295,19 @@ painel.get('/estoque/divergencias.csv', (req, res) => {
   res.send(matchCsv(loja, tipo));
 });
 painel.get('/d3.min.js', (req, res) => res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'node_modules', 'd3', 'dist', 'd3.min.js')));
-painel.use(express.static(pastaSite, { index: 'index.html' }));
+// Arquivos do site: procura em site/ e, se tiverem sido enviados soltos na raiz do repositório, na raiz.
+// Só os arquivos desta lista são servidos (o resto do repositório nunca vai para o navegador).
+const raiz = path.dirname(fileURLToPath(import.meta.url));
+const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css',
+  'data/base_2025_por_hora.json', 'data/meta_diaria.json', 'data/plano_bf26_site_diario_v2.json', 'data/promocoes_bf25.json'];
+const acharArquivo = (rel) => [path.join(pastaSite, rel), path.join(raiz, 'site', path.basename(rel)), path.join(raiz, path.basename(rel))].find((f) => fs.existsSync(f));
+painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {
+  const rel = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+  if (!ARQUIVOS_SITE.includes(rel)) return next();
+  const f = acharArquivo(rel);
+  if (!f) return res.status(404).send('Arquivo do site não encontrado no servidor: ' + rel);
+  res.sendFile(f);
+});
 app.use('/painel', (req, res, next) => (req.originalUrl === '/painel' ? res.redirect(301, '/painel/') : next()), painel);
 
 // 200 para o health check do Render; no navegador, segue para o painel
