@@ -310,9 +310,26 @@
       </div>
       <div class="bf-card bf-wide" id="card-md-entrada">
         <h2>Páginas de entrada</h2>
+        <p class="bf-sub">Toque numa página para ver de onde vêm as sessões dela.</p>
         <div class="bf-tablebox">
           <table class="bf-table" id="tb-md-entrada" data-source="ga4_paginas_entrada" data-row-key="pagina">
             <thead><tr><th data-field="pagina">Página</th><th data-field="sessoes" class="n">Sessões</th><th data-field="taxa_engajamento" class="n">Engaj.</th><th data-field="add_to_cart" class="n">Carrinhos</th><th data-field="compras" class="n">Compras</th><th data-field="receita" class="n">Receita</th><th data-field="conversao" class="n">Conv.</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-md-det">
+        <h2>De onde vêm as sessões de <span id="md-det-pag">—</span></h2>
+        <p class="bf-sub">Toque numa linha de Páginas de entrada para trocar a página. Engajamento muito baixo com muitas sessões costuma ser robô, link quebrado ou anúncio apontando para produto que não existe mais.</p>
+        <div class="bf-bar">
+          <label class="bf-ctl">Abrir por <select id="sel-md-det" aria-label="Abrir por">
+            <option value="origem">Origem / mídia</option><option value="campanha">Campanha</option><option value="canal">Canal</option><option value="url">URL completa (com a busca)</option>
+            <option value="dispositivo">Dispositivo</option><option value="navegador">Navegador</option><option value="pais">País</option><option value="cidade">Cidade</option>
+            <option value="novo">Novo × recorrente</option><option value="dia">Dia</option><option value="hora">Hora</option>
+          </select></label>
+        </div>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-md-det" data-source="ga4_entrada_det" data-row-key="chave">
+            <thead><tr><th data-field="grupo">Grupo</th><th data-field="sessoes" class="n">Sessões</th><th data-field="pct_sessoes" class="n">% das sessões</th><th data-field="taxa_engajamento" class="n">Engaj.</th><th data-field="usuarios" class="n">Usuários</th><th data-field="novos_usuarios" class="n">Novos</th><th data-field="compras" class="n">Compras</th><th data-field="receita" class="n">Receita</th></tr></thead><tbody></tbody>
           </table>
         </div>
       </div>

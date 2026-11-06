@@ -98,8 +98,14 @@ async function ga4PorDia(inicio, fim) {
   // que pode ainda não existir para hoje: dias fechados numa consulta e hoje à parte (se falhar, hoje fica sem custo).
   const pagos = { dimensionFilter: { filter: { fieldName: 'sessionDefaultChannelGroup', inListFilter: { values: ['Paid Search', 'Paid Shopping', 'Paid Video', 'Display', 'Cross-network', 'Paid Other'] } } } };
   const custoGoogle = async (a, b) => {
-    const ads = await relatorio(a, b, ['date'], ['advertiserAdCost', 'advertiserAdClicks', 'advertiserAdImpressions']);
-    for (const x of ads) Object.assign((out[dataGa(x.date)] ||= {}), { google_investimento: r2(x.advertiserAdCost), google_cliques: x.advertiserAdClicks, google_impressoes: x.advertiserAdImpressions });
+    // o GA4 só entrega custo de anúncio junto com a campanha: soma as campanhas de cada dia
+    const ads = await relatorio(a, b, ['date', 'sessionCampaignName'], ['advertiserAdCost', 'advertiserAdClicks', 'advertiserAdImpressions']);
+    for (const x of ads) {
+      const o = (out[dataGa(x.date)] ||= {});
+      o.google_investimento = r2((o.google_investimento || 0) + x.advertiserAdCost);
+      o.google_cliques = (o.google_cliques || 0) + x.advertiserAdClicks;
+      o.google_impressoes = (o.google_impressoes || 0) + x.advertiserAdImpressions;
+    }
   };
   const h = hoje(), ontem = new Date(Date.parse(h + 'T12:00:00Z') - 86400e3).toISOString().slice(0, 10);
   const fimFechado = fim >= h ? ontem : fim;
@@ -149,6 +155,28 @@ export async function ga4Paginas(inicio, fim, tipo = 'entrada', limite = 50) {
     pagina: x.landingPage, sessoes: x.sessions, taxa_engajamento: x.sessions ? p4(x.engagedSessions / x.sessions) : null, add_to_cart: x.addToCarts,
     compras: x.transactions, receita: r2(x.purchaseRevenue), conversao: x.sessions ? p4(x.transactions / x.sessions) : null,
   }));
+}
+
+// Detalhe de uma página de entrada: de onde vêm as sessões que começam nela
+const DIM_DETALHE = {
+  origem: ['sessionSourceMedium'], campanha: ['sessionSourceMedium', 'sessionCampaignName'], canal: ['sessionDefaultChannelGroup'],
+  dispositivo: ['deviceCategory'], pais: ['country'], cidade: ['city'], url: ['landingPagePlusQueryString'], navegador: ['browser'],
+  dia: ['date'], hora: ['hour'], novo: ['newVsReturning'],
+};
+export async function ga4EntradaDetalhe(pagina, inicio, fim, agrupar = 'origem', limite = 50) {
+  [inicio, fim] = periodo(inicio, fim);
+  if (!ga4Configurado() || !pagina) return [];
+  const dims = DIM_DETALHE[agrupar] || DIM_DETALHE.origem;
+  const rows = await relatorio(inicio, fim, dims, ['sessions', 'engagedSessions', 'totalUsers', 'newUsers', 'transactions', 'purchaseRevenue'], {
+    dimensionFilter: { filter: { fieldName: 'landingPage', stringFilter: { matchType: 'EXACT', value: String(pagina) } } },
+    orderBys: [{ metric: { metricName: 'sessions' }, desc: true }], limit: Math.min(Number(limite) || 50, 500),
+  });
+  const tot = rows.reduce((t, x) => t + x.sessions, 0);
+  return rows.map((x) => {
+    const grupo = dims.map((d) => (d === 'date' ? dataGa(x[d]) : x[d])).join(' · ');
+    return { chave: grupo, grupo, sessoes: x.sessions, pct_sessoes: tot ? p4(x.sessions / tot) : null, taxa_engajamento: x.sessions ? p4(x.engagedSessions / x.sessions) : null,
+      usuarios: x.totalUsers, novos_usuarios: x.newUsers, compras: x.transactions, receita: r2(x.purchaseRevenue) };
+  });
 }
 
 const ETAPAS = [['session_start', 'Sessões'], ['view_item', 'Viu produto'], ['add_to_cart', 'Adicionou ao carrinho'], ['begin_checkout', 'Iniciou checkout'], ['add_shipping_info', 'Informou entrega'], ['add_payment_info', 'Informou pagamento'], ['purchase', 'Comprou']];

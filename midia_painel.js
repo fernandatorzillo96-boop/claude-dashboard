@@ -66,6 +66,14 @@ dash.loader('google_campanhas', { description: 'Lê a resposta JSON do servidor 
   return a;
 } });
 
+dash.loader('ga4_entrada_det', { description: 'Lê a resposta JSON do servidor VTEX BF26 como linhas', fn: ({ answer }) => {
+  let a = answer;
+  if (a && !Array.isArray(a) && Array.isArray(a.content)) a = a.content.map((c) => c.text || '').join('');
+  if (typeof a === 'string') a = JSON.parse(a);
+  if (!Array.isArray(a)) throw new Error('Resposta inesperada do servidor VTEX BF26');
+  return a;
+} });
+
 dash.calc('midia_roi_dia', {
   title: 'Mídia × venda por dia',
   description: 'Por dia do período de mídia: investimento Google Ads (da API do Google Ads quando conectada; senão o custo importado no GA4) e Meta Ads, captado VTEX e venda bruta das lojas do mesmo dia, ROI de mídia (receita bruta ÷ investimento) do site e da rede, ROAS de cada plataforma, sessões do GA4 e conversão (pedidos VTEX ÷ sessões).',
@@ -134,6 +142,13 @@ dash.calc('midia_resumo', {
     if (i >= 0) sel.value = String(i);
   };
   document.getElementById('btn-rt').addEventListener('click', () => dash.refresh('ga4_tempo_real'));
+  const selDet = document.getElementById('sel-md-det');
+  selDet.addEventListener('change', () => dash.setParams({ md_det: selDet.value }));
+  document.getElementById('tb-md-entrada').addEventListener('click', (ev) => {
+    if (ev.target.closest('th')) return;
+    const tr = ev.target.closest('tr[data-key]');
+    if (tr) { dash.setParams({ md_pagina: tr.dataset.key }); document.getElementById('card-md-det').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
 
   function avisos() {
     const st = B.linhas('status')[0] || {};
@@ -207,6 +222,10 @@ dash.calc('midia_resumo', {
     });
     B.tabela(document.getElementById('tb-md-origens'), B.linhas('ga4_origens'), { sessoes: 'int', compras: 'int', receita: 'brl0', conversao: 'pct' });
     B.tabela(document.getElementById('tb-md-entrada'), B.linhas('ga4_paginas_entrada'), { sessoes: 'int', taxa_engajamento: 'pct', add_to_cart: 'int', compras: 'int', receita: 'brl0', conversao: 'pct' });
+    const pr = dash.params();
+    document.getElementById('md-det-pag').textContent = pr.md_pagina || '—';
+    selDet.value = pr.md_det || 'origem';
+    B.tabela(document.getElementById('tb-md-det'), B.linhas('ga4_entrada_det'), { sessoes: 'int', pct_sessoes: 'pct', taxa_engajamento: 'pct', usuarios: 'int', novos_usuarios: 'int', compras: 'int', receita: 'brl0' });
     B.tabela(document.getElementById('tb-md-vistas'), B.linhas('ga4_paginas_vistas'), { visualizacoes: 'int', usuarios: 'int', tempo_medio_s: 'int' });
   }
   window.BF_ABAS = window.BF_ABAS || {};

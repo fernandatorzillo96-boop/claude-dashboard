@@ -35,6 +35,7 @@
     ga4_funil: { tool: 'bf_ga4_funil', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     ga4_tempo_real: { tool: 'bf_ga4_tempo_real' },
     google_campanhas: { tool: 'bf_google_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    ga4_entrada_det: { tool: 'bf_ga4_entrada_detalhe', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', pagina: '{{md_pagina}}', agrupar: '{{md_det}}', limite: 50 } },
     meta_campanhas: { tool: 'bf_meta_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     plano_canais: { file: 'data/plano_bf_canais.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
@@ -45,7 +46,7 @@
   const PADRAO = {
     promo_inicio: '2026-11-01', promo_fim: '2026-11-30', col_inicio: '2026-11-01', col_fim: '2026-11-30',
     log_inicio: '2026-11-01', log_fim: '2026-11-30', at_inicio: '2026-11-01', at_fim: '2026-11-30',
-    sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30',
+    sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30', md_pagina: '/Sistema/buscavazia', md_det: 'origem',
   };
   const ATUALIZA_MIN = 5;
 

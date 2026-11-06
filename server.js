@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
 import { lojasPage } from './lojas-page.js';
-import { midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
+import { ga4EntradaDetalhe, midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
 import { googleAdsCampanhas, statusGoogleAds, urlConectar, concluirConexao, googleAdsTemCliente } from './googleads.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
@@ -227,6 +227,12 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(await googleAdsCampanhas(inicio, fim)));
 
+  s.registerTool('bf_ga4_entrada_detalhe', {
+    title: 'GA4: de onde vêm as sessões de uma página de entrada',
+    description: 'Para uma página de entrada (ex.: /Sistema/buscavazia), sessões, % do total, engajamento, usuários, novos, compras e receita por origem/mídia, campanha, canal, dispositivo, país, cidade, URL completa (com a busca), navegador, dia, hora ou novo × recorrente.',
+    inputSchema: { ...periodo, pagina: z.string().describe('Caminho da página de entrada, como aparece no GA4.'), agrupar: z.enum(['origem', 'campanha', 'canal', 'dispositivo', 'pais', 'cidade', 'url', 'navegador', 'dia', 'hora', 'novo']).optional(), limite: z.number().int().optional() }, annotations: ro,
+  }, async ({ inicio, fim, pagina, agrupar, limite }) => json(await ga4EntradaDetalhe(pagina, inicio, fim, agrupar, limite)));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
@@ -297,7 +303,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 // As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_a_faturar',
-  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas',
+  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
   'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
