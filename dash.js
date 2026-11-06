@@ -24,6 +24,17 @@
     atend_tempo_mot: { tool: 'bf_atendimento_tempo', args: { agrupar: 'motivo', inicio: '{{at_inicio}}', fim: '{{at_fim}}' } },
     est_resumo: { tool: 'bf_match_estoque_resumo' },
     est_div: { tool: 'bf_match_estoque_divergencias', args: { loja: '{{est_loja}}', tipo: '{{est_tipo}}', limite: 500 } },
+    lojas_venda: { tool: 'bf_venda_lojas', args: { inicio: '2026-11-01', fim: '2026-11-30', agrupar: 'dia' } },
+    lojas_por_loja: { tool: 'bf_venda_lojas', args: { inicio: '2026-11-01', fim: '2026-11-30', agrupar: 'loja' } },
+    midia_dia: { tool: 'bf_midia_por_dia', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    ga4_canais: { tool: 'bf_ga4_canais', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    ga4_origens: { tool: 'bf_ga4_origens', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', limite: 30 } },
+    ga4_paginas_entrada: { tool: 'bf_ga4_paginas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', tipo: 'entrada', limite: 50 } },
+    ga4_paginas_vistas: { tool: 'bf_ga4_paginas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', tipo: 'vistas', limite: 50 } },
+    ga4_funil: { tool: 'bf_ga4_funil', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    ga4_tempo_real: { tool: 'bf_ga4_tempo_real' },
+    meta_campanhas: { tool: 'bf_meta_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    plano_canais: { file: 'data/plano_bf_canais.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
     meta: { file: 'data/meta_diaria.json' },
     plano: { file: 'data/plano_bf26_site_diario_v2.json' },
@@ -32,7 +43,7 @@
   const PADRAO = {
     promo_inicio: '2026-11-01', promo_fim: '2026-11-30', col_inicio: '2026-11-01', col_fim: '2026-11-30',
     log_inicio: '2026-11-01', log_fim: '2026-11-30', at_inicio: '2026-11-01', at_fim: '2026-11-30',
-    sla_dias: 1, est_loja: null, est_tipo: null,
+    sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30',
   };
   const ATUALIZA_MIN = 5;
 
@@ -132,5 +143,7 @@
   // novembro fixo nos períodos: se o mês virar, os presets do app.js continuam valendo
   todos();
   setInterval(() => { if (!document.hidden) Object.entries(DATASETS).forEach(([id, d]) => { if (!d.file) buscar(id); }); }, ATUALIZA_MIN * 60e3);
+  // tempo real do GA4: a cada minuto, só com a aba Mídia aberta
+  setInterval(() => { if (!document.hidden && location.hash === '#midia') buscar('ga4_tempo_real'); }, 60e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) Object.entries(DATASETS).forEach(([id, d]) => { if (!d.file) buscar(id); }); });
 })();

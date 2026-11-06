@@ -235,7 +235,7 @@ const falhou = (el, id) => {
     if (!el.querySelector('.bf-fail')) {
       const f = document.createElement('div'); f.className = 'bf-fail';
       const dot = document.createElement('span'); dot.className = 'dot';
-      f.append(dot, document.createTextNode('Falha ao carregar'));
+      f.append(dot, document.createTextNode(s === 'error' ? 'Falha ao carregar' : 'Conecte o conector Dashboard Vendas'));
       el.appendChild(f);
     }
     return true;
@@ -576,7 +576,11 @@ function desenhar() {
   if (aba === 'atendimento') desenharAtendimento();
   if (aba === 'faturado') desenharFaturado();
   if (aba === 'match') desenharMatch();
+  const extra = (window.BF_ABAS || {})[aba];
+  if (extra) extra();
 }
+// usado pelas abas que ficam em arquivos próprios (plano_bf.js, midia_painel.js)
+window.BF = { F, nf0, nf1, vazio, tomDelta, preencher, fillStatic, combo, tabela, cores, falhou, linhas, dataCurta, hojeBR, presets, periodoDe, okUrl, desenhar: () => desenhar(), aba: () => aba, ordem };
 
 dash.onData(desenhar);
 let larg = window.innerWidth;

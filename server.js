@@ -15,6 +15,9 @@ import { usuarios, paginaLogin, fazerLogin, sair, exigirLogin, exigirAdmin } fro
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
+import { lojasPage } from './lojas-page.js';
+import { midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
@@ -169,11 +172,59 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: { ...periodo, agrupar: z.enum(['atendente', 'motivo']).optional().describe('Padrão: atendente.') }, annotations: ro,
   }, async ({ inicio, fim, agrupar }) => json(atendimentoTempo(inicio, fim, agrupar)));
 
+  s.registerTool('bf_venda_lojas', {
+    title: 'Venda das lojas físicas (base comercial)',
+    description: 'Venda das lojas importada da base comercial do varejo, por dia ou por loja: venda bruta (linhas de venda), peças, venda SALE (desconto ≥ 40% sobre a tabela), valor DE, CMV (custo GEC do plano), margem, desconto, venda líquida e devoluções.',
+    inputSchema: { ...periodo, agrupar: z.enum(['dia', 'loja']).optional().describe('Padrão: dia.') }, annotations: ro,
+  }, async ({ inicio, fim, agrupar }) => json(vendaLojas(inicio, fim, agrupar)));
+
+  s.registerTool('bf_midia_por_dia', {
+    title: 'Mídia e site por dia (GA4 + Meta Ads)',
+    description: 'Por dia: sessões, usuários, compras e receita do GA4, carrinhos e checkouts; investimento, cliques e impressões do Google Ads (pelo GA4); investimento, compras, receita e ROAS do Meta Ads; investimento total.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await midiaPorDia(inicio, fim)));
+
+  s.registerTool('bf_ga4_canais', {
+    title: 'GA4 por canal',
+    description: 'Sessões, usuários, engajamento, carrinhos, compras, receita, conversão e ticket médio do GA4 por canal (agrupamento padrão), no período.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await ga4Canais(inicio, fim)));
+
+  s.registerTool('bf_ga4_origens', {
+    title: 'GA4 por origem/mídia e campanha',
+    description: 'Sessões, compras, receita e conversão do GA4 por origem/mídia e campanha, no período.',
+    inputSchema: { ...periodo, limite: z.number().int().optional() }, annotations: ro,
+  }, async ({ inicio, fim, limite }) => json(await ga4Origens(inicio, fim, limite)));
+
+  s.registerTool('bf_ga4_paginas', {
+    title: 'GA4 páginas do site',
+    description: 'Páginas de entrada (sessões, engajamento, carrinhos, compras, receita, conversão) ou páginas mais vistas (visualizações, usuários, tempo médio), no período.',
+    inputSchema: { ...periodo, tipo: z.enum(['entrada', 'vistas']).optional(), limite: z.number().int().optional() }, annotations: ro,
+  }, async ({ inicio, fim, tipo, limite }) => json(await ga4Paginas(inicio, fim, tipo, limite)));
+
+  s.registerTool('bf_ga4_funil', {
+    title: 'Funil de compra (GA4)',
+    description: 'Usuários e eventos em cada etapa do funil no período: sessões, viu produto, carrinho, checkout, entrega, pagamento e compra, com % do início e da etapa anterior.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await ga4Funil(inicio, fim)));
+
+  s.registerTool('bf_ga4_tempo_real', {
+    title: 'GA4 em tempo real',
+    description: 'Últimos 30 minutos no site: usuários ativos (total, por minuto, por página e por dispositivo) e eventos de carrinho, checkout e compra.',
+    inputSchema: {}, annotations: ro,
+  }, async () => json(await ga4TempoReal()));
+
+  s.registerTool('bf_meta_campanhas', {
+    title: 'Meta Ads por campanha',
+    description: 'Investimento, impressões, cliques, CTR, CPC, compras, receita, ROAS e custo por compra de cada campanha do Meta Ads no período.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await metaCampanhas(inicio, fim)));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
     inputSchema: {}, annotations: ro,
-  }, async () => json([{ ...status()[0], ...statusOctadesk(), ...statusMatch(), url_estoque: urlEstoque(), url_estoque_csv: urlEstoque() ? urlEstoque() + '/divergencias.csv' : null }]));
+  }, async () => json([{ ...status()[0], ...statusOctadesk(), ...statusMatch(), ...statusLojas(), ...statusMidia(), url_lojas: baseUrl() ? `${baseUrl()}/lojas/${config.accessSecret}` : null, url_estoque: urlEstoque(), url_estoque_csv: urlEstoque() ? urlEstoque() + '/divergencias.csv' : null }]));
 
   return s;
 }
@@ -212,6 +263,11 @@ app.post('/importar/:secret', checkSecret, express.text({ type: '*/*', limit: '8
   }
 });
 
+app.get('/lojas/:secret', checkSecret, (req, res) => res.type('html').send(lojasPage(statusLojas())));
+app.post('/lojas/:secret', checkSecret, express.json({ limit: '80mb' }), (req, res) => {
+  try { res.json({ ok: true, ...importarLojas(req.body) }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
+});
+
 app.get('/estoque/:secret', checkSecret, (req, res) => res.type('html').send(estoquePage({ ...statusMatch(), csv: `/estoque/${config.accessSecret}/divergencias.csv` })));
 app.post('/estoque/:secret', checkSecret, express.json({ limit: '60mb' }), (req, res) => {
   try {
@@ -234,6 +290,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 // As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_a_faturar',
+  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas',
   'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
@@ -269,6 +326,7 @@ painel.get('/api/:tool', async (req, res) => {
         const y = Object.fromEntries(Object.entries(x).filter(([k]) => !k.startsWith('url_')));
         y.url_importacao = adm ? '/painel/importar' : null;
         y.url_estoque = adm ? '/painel/estoque' : null;
+        y.url_lojas = adm ? '/painel/lojas' : null;
         y.url_estoque_csv = '/painel/estoque/divergencias.csv';
         return y;
       });
@@ -281,6 +339,10 @@ painel.get('/api/:tool', async (req, res) => {
 painel.get('/importar', exigirAdmin, (req, res) => res.type('html').send(uploadPage(status()[0])));
 painel.post('/importar', exigirAdmin, express.text({ type: '*/*', limit: '80mb' }), (req, res) => {
   try { res.json({ ok: true, ...importar3351(req.body || '') }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
+});
+painel.get('/lojas', exigirAdmin, (req, res) => res.type('html').send(lojasPage(statusLojas())));
+painel.post('/lojas', exigirAdmin, express.json({ limit: '80mb' }), (req, res) => {
+  try { res.json({ ok: true, ...importarLojas(req.body) }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
 });
 painel.get('/estoque', exigirAdmin, (req, res) => res.type('html').send(estoquePage({ ...statusMatch(), csv: '/painel/estoque/divergencias.csv' })));
 painel.post('/estoque', exigirAdmin, express.json({ limit: '60mb' }), (req, res) => {
@@ -298,7 +360,7 @@ painel.get('/d3.min.js', (req, res) => res.sendFile(path.join(path.dirname(fileU
 // Arquivos do site: procura em site/ e, se tiverem sido enviados soltos na raiz do repositório, na raiz.
 // Só os arquivos desta lista são servidos (o resto do repositório nunca vai para o navegador).
 const raiz = path.dirname(fileURLToPath(import.meta.url));
-const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css',
+const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css', 'plano_bf.js', 'midia_painel.js', 'data/plano_bf_canais.json',
   'data/base_2025_por_hora.json', 'data/meta_diaria.json', 'data/plano_bf26_site_diario_v2.json', 'data/promocoes_bf25.json'];
 const acharArquivo = (rel) => [path.join(pastaSite, rel), path.join(raiz, 'site', path.basename(rel)), path.join(raiz, path.basename(rel))].find((f) => fs.existsSync(f));
 painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {
@@ -315,6 +377,7 @@ app.get('/', (req, res) => res.type('html').send('<!doctype html><meta http-equi
 
 load();
 carregarMatch();
+carregarLojas();
 start();
 startOctadesk();
 app.listen(config.port, () => {
@@ -322,6 +385,7 @@ app.listen(config.port, () => {
   const base = (process.env.RENDER_EXTERNAL_URL || `http://localhost:${config.port}`).replace(/\/$/, '');
   console.log(`URL do conector (cole no Claude): ${base}/mcp/${config.accessSecret}`);
   console.log(`Página para importar o 3351: ${base}/importar/${config.accessSecret}`);
+  console.log(`Página da venda das lojas: ${base}/lojas/${config.accessSecret}`);
   console.log(`Página do estoque das lojas: ${base}/estoque/${config.accessSecret}`);
   console.log(`Site do painel (com login): ${base}/painel/ · usuários: ${[...usuarios().values()].map((u) => u.email + ' (' + u.perfil + ')').join(', ') || 'nenhum — defina PAINEL_USUARIOS'}`);
 });
