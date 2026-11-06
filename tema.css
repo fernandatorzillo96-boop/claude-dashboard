@@ -1,0 +1,37 @@
+/* Tema do site: as variáveis que o painel usa dentro do Claude, com claro e escuro. */
+:root {
+  --font-anthropic-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-anthropic-serif: Georgia, "Times New Roman", serif;
+  --color-bg: #faf9f5;
+  --color-fg: #1f1e1d;
+  --color-fg-muted: #6b6a66;
+  --color-panel: #ffffff;
+  --color-border-line: #e6e3da;
+  --color-ok: #2e7d4f;
+  --color-bad: #b3261e;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 16px;
+  --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 12px; --cds-pad-lg: 16px;
+  --cds-radius: 8px;
+  --cds-font-size-caption: 12px; --cds-font-size-body: 14px; --cds-font-size-heading: 18px; --cds-font-size-title: 28px;
+  --cds-font-weight-medium: 600;
+  --cds-chart-grid: #ece9e1; --cds-chart-reference: #9a978f; --cds-chart-muted: #b4b1a8;
+  --cds-surface-popover: #ffffff; --cds-border: #dcd8ce; --cds-shadow-popover: 0 4px 16px rgba(0,0,0,.10);
+  --cds-text-secondary: #6b6a66;
+  --cds-dur-slow: .3s;
+  --serie-a: #2f6fb3; --serie-b: #d97a2b; --serie-c: #2e9a6b; --serie-d: #8a5cc2;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1c1b19; --color-fg: #f2f0ea; --color-fg-muted: #a8a59d; --color-panel: #262522; --color-border-line: #3a3834;
+    --color-ok: #6cc28f; --color-bad: #f08a80;
+    --cds-chart-grid: #34322e; --cds-chart-reference: #7d7a73; --cds-chart-muted: #6f6c65;
+    --cds-surface-popover: #2e2d2a; --cds-border: #45433e; --cds-text-secondary: #a8a59d;
+    --serie-a: #6aa6e8; --serie-b: #f0a35e; --serie-c: #5cc596; --serie-d: #b392e6;
+  }
+}
+html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); }
+body { padding: 20px 16px 48px; }
+.topo { max-width: 1280px; margin: 0 auto 12px; display: flex; justify-content: flex-end; gap: 12px; align-items: center; font: 12px var(--font-anthropic-sans); color: var(--color-fg-muted); }
+.topo a { color: inherit; }
+.dash-skeleton { color: transparent; background: var(--color-border-line); border-radius: 4px; }

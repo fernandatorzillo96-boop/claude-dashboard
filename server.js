@@ -11,6 +11,9 @@ import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
 import { estoquePage } from './estoque-page.js';
+import { usuarios, paginaLogin, fazerLogin, sair, exigirLogin, exigirAdmin } from './login.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
@@ -31,8 +34,7 @@ const ro = { readOnlyHint: true, openWorldHint: false };
 const baseUrl = () => (process.env.RENDER_EXTERNAL_URL ? process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '') : null);
 const urlEstoque = () => (baseUrl() ? `${baseUrl()}/estoque/${config.accessSecret}` : null);
 
-function buildServer() {
-  const s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' });
+function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' })) {
 
   s.registerTool('bf_vendas_por_hora', {
     title: 'Vendas captadas por hora',
@@ -177,6 +179,7 @@ function buildServer() {
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 const checkSecret = (req, res, next) => {
   if (req.params.secret !== config.accessSecret) return res.status(404).send('Not found');
@@ -225,7 +228,77 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
   res.send(matchCsv(loja, tipo));
 });
 
-app.get('/', (req, res) => res.send('ok'));
+
+// ---------- Site do painel com login (/login, /painel) ----------
+// As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
+const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
+  'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_a_faturar',
+  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
+const ferramentas = new Map();
+buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
+
+const pastaSite = path.join(path.dirname(fileURLToPath(import.meta.url)), 'site');
+const urlenc = express.urlencoded({ extended: false, limit: '10kb' });
+
+app.get('/login', (req, res) => {
+  res.set('X-Robots-Tag', 'noindex, nofollow');
+  if (!usuarios().size) return res.status(503).type('html').send(paginaLogin('Nenhum usuário cadastrado: defina PAINEL_USUARIOS no Render.'));
+  res.type('html').send(paginaLogin('', '', String(req.query.destino || '/painel/')));
+});
+app.post('/login', urlenc, fazerLogin);
+app.get('/sair', sair);
+app.get('/robots.txt', (req, res) => res.type('text').send('User-agent: *\nDisallow: /\n'));
+
+const painel = express.Router();
+painel.use(exigirLogin);
+painel.get('/api/eu', (req, res) => res.json({ email: req.usuario.email, perfil: req.usuario.perfil }));
+painel.get('/api/:tool', async (req, res) => {
+  const t = ferramentas.get(req.params.tool);
+  if (!t) return res.status(404).json({ erro: 'Ferramenta desconhecida' });
+  try {
+    let args = {};
+    if (req.query.args) args = JSON.parse(String(req.query.args));
+    for (const k of Object.keys(args)) if (args[k] === null || args[k] === '') delete args[k];
+    const r = await t.fn(t.schema.parse(args));
+    let dados = JSON.parse(r.content.map((c) => c.text || '').join(''));
+    if (req.params.tool === 'bf_status') {
+      // no site, os links de importação são as páginas com login (só admin), nunca as URLs com o código secreto
+      const adm = req.usuario.perfil === 'admin';
+      dados = dados.map((x) => {
+        const y = Object.fromEntries(Object.entries(x).filter(([k]) => !k.startsWith('url_')));
+        y.url_importacao = adm ? '/painel/importar' : null;
+        y.url_estoque = adm ? '/painel/estoque' : null;
+        y.url_estoque_csv = '/painel/estoque/divergencias.csv';
+        return y;
+      });
+    }
+    res.json(dados);
+  } catch (err) {
+    res.status(400).json({ erro: err.message });
+  }
+});
+painel.get('/importar', exigirAdmin, (req, res) => res.type('html').send(uploadPage(status()[0])));
+painel.post('/importar', exigirAdmin, express.text({ type: '*/*', limit: '80mb' }), (req, res) => {
+  try { res.json({ ok: true, ...importar3351(req.body || '') }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
+});
+painel.get('/estoque', exigirAdmin, (req, res) => res.type('html').send(estoquePage({ ...statusMatch(), csv: '/painel/estoque/divergencias.csv' })));
+painel.post('/estoque', exigirAdmin, express.json({ limit: '60mb' }), (req, res) => {
+  try { res.json({ ok: true, ...importarEstoqueErp(req.body) }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
+});
+painel.get('/estoque/divergencias.csv', (req, res) => {
+  const loja = req.query.loja ? String(req.query.loja) : null;
+  const tipo = req.query.tipo && TIPOS_DIVERGENCIA.includes(String(req.query.tipo)) ? String(req.query.tipo) : null;
+  const dia = new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
+  res.set('Content-Type', 'text/csv; charset=utf-8');
+  res.set('Content-Disposition', `attachment; filename="divergencias_estoque${loja ? '_loja' + loja.replace(/\D/g, '') : ''}_${dia}.csv"`);
+  res.send(matchCsv(loja, tipo));
+});
+painel.get('/d3.min.js', (req, res) => res.sendFile(path.join(path.dirname(fileURLToPath(import.meta.url)), 'node_modules', 'd3', 'dist', 'd3.min.js')));
+painel.use(express.static(pastaSite, { index: 'index.html' }));
+app.use('/painel', (req, res, next) => (req.originalUrl === '/painel' ? res.redirect(301, '/painel/') : next()), painel);
+
+// 200 para o health check do Render; no navegador, segue para o painel
+app.get('/', (req, res) => res.type('html').send('<!doctype html><meta http-equiv="refresh" content="0;url=/painel/"><a href="/painel/">ok</a>'));
 
 load();
 carregarMatch();
@@ -237,4 +310,5 @@ app.listen(config.port, () => {
   console.log(`URL do conector (cole no Claude): ${base}/mcp/${config.accessSecret}`);
   console.log(`Página para importar o 3351: ${base}/importar/${config.accessSecret}`);
   console.log(`Página do estoque das lojas: ${base}/estoque/${config.accessSecret}`);
+  console.log(`Site do painel (com login): ${base}/painel/ · usuários cadastrados: ${usuarios().size}`);
 });

@@ -245,8 +245,10 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
       const cat = state.catalog[id];
       const ativo = !!(cat && cat.active && cat.productActive !== false);
       let disp = 0;
-      porSku[id] = { refId: cat?.refId || null, ativo, balance: (inv?.balance || []).filter((b) => !b.hasUnlimitedQuantity)
-        .map((b) => ({ warehouseId: b.warehouseId, warehouseName: b.warehouseName, total: b.totalQuantity || 0, reservado: b.reservedQuantity || 0 })) };
+      // Só os warehouses com estoque, em formato compacto (o catálogo tem ~75 mil SKUs × 30 warehouses).
+      const bs = (inv?.balance || []).filter((b) => !b.hasUnlimitedQuantity && ((b.totalQuantity || 0) > 0 || (b.reservedQuantity || 0) > 0))
+        .map((b) => [b.warehouseId, b.totalQuantity || 0, b.reservedQuantity || 0]);
+      if (bs.length) porSku[id] = [cat?.refId || null, ativo ? 1 : 0, bs];
       for (const b of inv?.balance || []) {
         const k = b.warehouseId;
         if (!wh[k]) wh[k] = { warehouse_id: k, warehouse: b.warehouseName || k, total: 0, reservado: 0, disponivel: 0, disponivel_ativo: 0, disponivel_sem_foto: 0, disponivel_sem_foto_ativo: 0, skus_com_estoque: 0, ilimitado: 0 };
@@ -305,7 +307,9 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
       produtos_sale_visiveis_site: visiveisSale,
     };
     save('inventory', 'catalogSummary', 'catalog');
-    registrarEstoqueVtex(porSku, state.inventory.atualizado_em);
+    try {
+      registrarEstoqueVtex(porSku, Object.fromEntries(Object.values(wh).map((w) => [w.warehouse_id, w.warehouse])), state.inventory.atualizado_em);
+    } catch (e) { console.error('Match de estoque:', e.message); }
     console.log(`Varredura de estoque ok: ${ids.length} SKUs`);
   } catch (err) {
     state.sync.lastSweepError = { at: new Date().toISOString(), message: err.message };

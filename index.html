@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Black Friday 2026 · E-commerce</title>
+<link rel="stylesheet" href="tema.css">
+<link rel="stylesheet" href="estilo.css">
+<script src="d3.min.js"></script>
+<script src="dash.js"></script>
+</head>
+<body>
+<div class="topo"><span id="quem"></span><a href="/sair">Sair</a></div>
+<div class="bf">
+  <header class="bf-head">
+    <div class="bf-titlebar">
+      <h1 class="bf-title">Black Friday 2026 · E-commerce</h1>
+      <a class="bf-btn" id="btn-importar" data-source="status" target="_blank" rel="noopener" hidden>Importar 3351</a>
+    </div>
+    <p class="bf-take" id="resumo-topo">
+      <span class="bf-take-txt" data-take></span>
+    </p>
+    <p class="bf-status">Pedidos VTEX atualizados às <span class="dash-skeleton" data-source="status" data-field="ultima_sincronizacao" data-row="0" id="st-sync">—</span> · a cada 5 min · captado = pedidos não cancelados, todos os canais</p>
+    <div class="bf-strip" id="mes">
+      <div><span class="bf-lbl">Venda de hoje (captado)</span><b class="dash-skeleton" data-source="mes_resumo" data-field="captado_hoje" data-row="0" data-fmt="brl">—</b><small><span data-source="mes_resumo" data-field="pedidos_hoje" data-row="0" data-fmt="int">—</span> pedidos</small></div>
+      <div><span class="bf-lbl">% SALE hoje</span><b class="dash-skeleton" data-source="mes_resumo" data-field="pct_sale_hoje" data-row="0" data-fmt="pct">—</b><small>2025: <span data-source="mes_resumo" data-field="pct_sale_hoje_2025" data-row="0" data-fmt="pct">—</span> até a mesma hora</small></div>
+      <div><span class="bf-lbl">% SALE no mês</span><b class="dash-skeleton" data-source="mes_resumo" data-field="pct_sale_mes" data-row="0" data-fmt="pct">—</b><small>2025: <span data-source="mes_resumo" data-field="pct_sale_mes_2025" data-row="0" data-fmt="pct">—</span> nos mesmos dias</small></div>
+      <div><span class="bf-lbl">A faturar agora (VTEX)</span><b class="dash-skeleton" data-source="afaturar_resumo" data-field="valor" data-row="0" data-fmt="brl">—</b><small><span data-source="afaturar_resumo" data-field="pedidos" data-row="0" data-fmt="int">—</span> pedidos · mais antigo <span data-source="afaturar_resumo" data-field="mais_antigo" data-row="0" data-fmt="dt">—</span></small></div>
+      <div><span class="bf-lbl">Captado no mês</span><b class="dash-skeleton" data-source="mes_resumo" data-field="captado_mes" data-row="0" data-fmt="brl">—</b><small>VTEX, sem cancelados</small></div>
+      <div><span class="bf-lbl">Faturado líquido do dia</span><b class="dash-skeleton" data-source="mes_resumo" data-field="faturado_liquido_dia" data-row="0" data-fmt="brl">—</b><small>3351 de <span data-source="mes_resumo" data-field="faturado_dia" data-row="0" data-fmt="data">—</span></small></div>
+      <div><span class="bf-lbl">Faturado líquido no mês</span><b class="dash-skeleton" data-source="mes_resumo" data-field="faturado_liquido_mes" data-row="0" data-fmt="brl">—</b><small>3351, vendido − devolvido</small></div>
+      <div id="ate-ontem-cap"><span class="bf-lbl">Captado: meta até ontem (<span data-source="ate_ontem" data-field="de" data-row="0" data-fmt="data">—</span> a <span data-source="ate_ontem" data-field="ate" data-row="0" data-fmt="data">—</span>)</span><b class="dash-skeleton" data-source="ate_ontem" data-field="pct_meta_captado" data-row="0" data-fmt="pct">—</b><small>foi <span data-source="ate_ontem" data-field="captado" data-row="0" data-fmt="brl">—</span>, era pra ser <span data-source="ate_ontem" data-field="meta_captado" data-row="0" data-fmt="brl">—</span> · super meta: <span data-source="ate_ontem" data-field="pct_super_captado" data-row="0" data-fmt="pct">—</span> de <span data-source="ate_ontem" data-field="super_captado" data-row="0" data-fmt="brl">—</span></small></div>
+      <div id="ate-ontem-fat"><span class="bf-lbl">Faturado líquido: meta até <span data-source="ate_ontem" data-field="faturado_ate" data-row="0" data-fmt="data">—</span> (dias fechados)</span><b class="dash-skeleton" data-source="ate_ontem" data-field="pct_meta_liquido" data-row="0" data-fmt="pct">—</b><small>foi <span data-source="ate_ontem" data-field="liquido" data-row="0" data-fmt="brl">—</span>, era pra ser <span data-source="ate_ontem" data-field="meta_liquido" data-row="0" data-fmt="brl">—</span> · super meta: <span data-source="ate_ontem" data-field="pct_super_liquido" data-row="0" data-fmt="pct">—</span> de <span data-source="ate_ontem" data-field="super_liquido" data-row="0" data-fmt="brl">—</span></small></div>
+      <div><span class="bf-lbl">% da meta até <span data-source="meta_resumo" data-field="ate" data-row="0" data-fmt="data">—</span> (último 3351)</span><b class="dash-skeleton" data-source="meta_resumo" data-field="pct_meta_ate_dia" data-row="0" data-fmt="pct">—</b><small>acumulado <span data-source="meta_resumo" data-field="realizado" data-row="0" data-fmt="brl">—</span> · meta <span data-source="meta_resumo" data-field="meta_ate_dia" data-row="0" data-fmt="brl">—</span> · super meta <span data-source="meta_resumo" data-field="pct_super_ate_dia" data-row="0" data-fmt="pct">—</span></small></div>
+      <div><span class="bf-lbl">Falta para a meta do mês</span><b class="dash-skeleton" data-source="meta_resumo" data-field="falta" data-row="0" data-fmt="brl">—</b><small><span data-source="meta_resumo" data-field="pct_meta_mes" data-row="0" data-fmt="pct">—</span> de <span data-source="meta_resumo" data-field="meta_mes" data-row="0" data-fmt="brl">—</span> · <span data-source="meta_resumo" data-field="ritmo_necessario" data-row="0" data-fmt="brl">—</span>/dia · super meta (<span data-source="meta_resumo" data-field="super_mes" data-row="0" data-fmt="brl">—</span>): falta <span data-source="meta_resumo" data-field="falta_super" data-row="0" data-fmt="brl">—</span>, <span data-source="meta_resumo" data-field="ritmo_super" data-row="0" data-fmt="brl">—</span>/dia</small></div>
+    </div>
+  </header>
+
+  <nav class="bf-tabs" role="tablist">
+    <button role="tab" data-tab="curva" id="tab-curva">Curva do dia</button>
+    <button role="tab" data-tab="plano" id="tab-plano">Meta BF</button>
+    <button role="tab" data-tab="promos" id="tab-promos">Promoções</button>
+    <button role="tab" data-tab="margem" id="tab-margem">Margem e preço</button>
+    <button role="tab" data-tab="colecoes" id="tab-colecoes">Coleções</button>
+    <button role="tab" data-tab="logistica" id="tab-logistica">Logística</button>
+    <button role="tab" data-tab="atendimento" id="tab-atendimento">Atendimento</button>
+    <button role="tab" data-tab="estoque" id="tab-estoque">Estoque</button>
+    <button role="tab" data-tab="match" id="tab-match">Match de estoque</button>
+    <button role="tab" data-tab="faturado" id="tab-faturado">Faturado líquido</button>
+  </nav>
+
+  <!-- CURVA -->
+  <section class="bf-page" data-page="curva" id="curva">
+    <div class="bf-bar">
+      <label class="bf-ctl">Dia <select id="sel-dia" aria-label="Dia" data-source="resumo_dia"></select></label>
+      <span class="bf-note" id="nota-dia">Comparado com o mesmo dia da semana de 2025 (364 dias antes), até a mesma hora.</span>
+    </div>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">Captado até <span data-source="resumo_dia" data-field="ate_hora" class="k-ate" data-k="ate_hora">—</span>h</div>
+        <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="captado" data-k="captado">—</div>
+        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_captado" data-k="var_captado" data-fmt="delta">—</span> vs 2025 (<span data-source="resumo_dia" data-field="captado_2025" data-k="captado_2025" data-fmt="brl">—</span>)</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Pedidos</div>
+        <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="pedidos" data-k="pedidos" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_pedidos" data-k="var_pedidos" data-fmt="delta">—</span> vs 2025 (<span data-source="resumo_dia" data-field="pedidos_2025" data-k="pedidos_2025" data-fmt="int">—</span>)</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Ticket médio</div>
+        <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="ticket_medio" data-k="ticket_medio" data-fmt="brl0">—</div>
+        <div class="bf-delta">2025: <span data-source="resumo_dia" data-field="ticket_medio_2025" data-k="ticket_medio_2025" data-fmt="brl0">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Margem bruta</div>
+        <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="margem_bruta" data-k="margem_bruta" data-fmt="pct">—</div>
+        <div class="bf-delta">Desconto médio s/ DE: <span data-source="resumo_dia" data-field="desconto_sobre_de" data-k="desconto_sobre_de" data-fmt="pct">—</span></div></div>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card bf-wide" id="card-hora">
+        <h2>Captado acumulado no dia, hora a hora</h2>
+        <p class="bf-sub">2026 em destaque; 2025 no mesmo dia da semana. Passe o dedo ou o mouse para ver cada hora.</p>
+        <div class="bf-chart" id="ch-hora" data-source="curva_hora hora base25"></div>
+      </div>
+      <div class="bf-card bf-wide" id="card-dias">
+        <h2>Dia a dia: captado × 2025 × meta</h2>
+        <p class="bf-sub">Barras: captado 2026. Linhas: mesmo dia da semana de 2025 e meta de captado (R$ 2,97 mi no mês, equivalente à meta de R$ 2,7 mi líquido) e super meta (R$ 3,6 mi).</p>
+        <div class="bf-chart" id="ch-dias" data-source="curva_dia dia meta"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLANO -->
+  <section class="bf-page" data-page="plano" id="plano" hidden>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">BF em novembro (01–30/11) · captado até agora</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="captado" data-where="periodo=bf" data-fmt="brl">—</div>
+        <div class="bf-delta"><span data-source="bf_resumo" data-field="atingimento" data-where="periodo=bf" data-fmt="pct">—</span> da meta de captado até agora · super meta: <span data-source="bf_resumo" data-field="atingimento_super" data-where="periodo=bf" data-fmt="pct">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Meta de captado até agora</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="plano" data-where="periodo=bf" data-fmt="brl">—</div>
+        <div class="bf-delta">Super meta até agora: <span data-source="bf_resumo" data-field="super_ate_agora" data-where="periodo=bf" data-fmt="brl">—</span> · Meta de captado do mês: <span data-source="bf_resumo" data-field="plano_total" data-where="periodo=bf" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Vs 2025, mesmos dias</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="var_vs_2025" data-where="periodo=bf" data-fmt="delta">—</div>
+        <div class="bf-delta">2025: <span data-source="bf_resumo" data-field="captado_2025" data-where="periodo=bf" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Mês corrente · captado até agora</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="captado" data-where="periodo=mes" data-fmt="brl">—</div>
+        <div class="bf-delta"><span data-source="bf_resumo" data-field="atingimento" data-where="periodo=mes" data-fmt="pct">—</span> da meta · <span data-source="bf_resumo" data-field="var_vs_2025" data-where="periodo=mes" data-fmt="delta">—</span> vs 2025</div></div>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card bf-wide" id="card-acum">
+        <h2>Acumulado de novembro: realizado × meta × 2025</h2>
+        <p class="bf-sub">Captado acumulado dia a dia contra a meta de captado (R$ 2,97 mi), a super meta (R$ 3,6 mi) e o mesmo dia da semana de 2025.</p>
+        <div class="bf-chart" id="ch-acum" data-source="curva_dia"></div>
+      </div>
+      <div class="bf-card bf-wide" id="card-etapas">
+        <h2>Por etapa da campanha</h2>
+        <p class="bf-sub">Só novembro: o Esquenta Compre 3 Pague 2, que começou em 23/10, conta a partir de 01/11. Inclui hoje até agora: a meta e o 2025 de hoje entram só até a mesma hora (curva horária de 2025).</p>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-etapas" data-source="etapas" data-row-key="etapa">
+            <thead><tr>
+              <th data-field="etapa">Etapa</th><th data-field="inicio">Início</th><th data-field="fim">Fim</th>
+              <th data-field="captado" class="n">Captado</th><th data-field="plano_ate_ontem" class="n">Meta até agora</th>
+              <th data-field="atingimento" class="n">Atingimento</th><th data-field="atingimento_super" class="n">% super meta</th><th data-field="var_vs_2025" class="n">Vs 2025</th>
+              <th data-field="margem_bruta" class="n">MB</th><th data-field="plano_total" class="n">Meta total</th><th data-field="situacao">Situação</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROMOÇÕES -->
+  <section class="bf-page" data-page="promos" id="promos" hidden>
+    <div class="bf-bar">
+      <label class="bf-ctl">Período <select id="sel-promo" aria-label="Período das promoções"></select></label>
+      <input class="bf-search" id="busca-promo" type="search" placeholder="Buscar promoção" aria-label="Buscar promoção">
+    </div>
+    <div class="bf-card" id="card-promos">
+      <h2>Resultado por promoção e cupom</h2>
+      <p class="bf-sub">Captado dos itens que receberam cada desconto (um item pode ter mais de uma promoção, então as linhas não somam o total). Frete grátis fica de fora. Toque no título da coluna para ordenar.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-promos" data-source="promos" data-row-key="promocao">
+          <thead><tr>
+            <th data-field="promocao">Promoção</th><th data-field="captado_hoje" class="n">Hoje</th><th data-field="captado" class="n">Captado</th>
+            <th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">TM</th>
+            <th data-field="desconto_sobre_de" class="n">Desc. s/ DE</th><th data-field="desconto_concedido" class="n">Desconto dado</th>
+            <th data-field="lucro_bruto" class="n">LB</th><th data-field="margem_bruta" class="n">MB</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bf-card" id="card-promos25">
+      <h2>Referência: promoções da BF 2025 (20/10 a 07/12/2025)</h2>
+      <p class="bf-sub">Do export Captado completo. Desconto sobre o preço de tabela do pedido.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-promos25" data-source="promos25" data-row-key="promo">
+          <thead><tr>
+            <th data-field="promo">Promoção</th><th data-field="inicio">De</th><th data-field="fim">Até</th>
+            <th data-field="captado" class="n">Captado</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th>
+            <th data-field="ticket_medio" class="n">TM</th><th data-field="desconto_medio_sobre_de" class="n">Desconto</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MARGEM E PREÇO -->
+  <section class="bf-page" data-page="margem" id="margem" hidden>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">MB da BF até agora</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="margem_bruta" data-where="periodo=bf" data-fmt="pct">—</div>
+        <div class="bf-delta">Plano BF: <span data-source="bf_resumo" data-field="margem_plano" data-where="periodo=bf" data-fmt="pct">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">MB do mês até agora</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="margem_bruta" data-where="periodo=mes" data-fmt="pct">—</div>
+        <div class="bf-delta">Plano: <span data-source="bf_resumo" data-field="margem_plano" data-where="periodo=mes" data-fmt="pct">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Lucro bruto do mês</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="lucro_bruto" data-where="periodo=mes" data-fmt="brl">—</div>
+        <div class="bf-delta">CMV: <span data-source="bf_resumo" data-field="cmv" data-where="periodo=mes" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Custo GEC exato</div>
+        <div class="bf-big dash-skeleton" data-source="bf_resumo" data-field="cobertura_custo" data-where="periodo=mes" data-fmt="pct">—</div>
+        <div class="bf-delta">da receita do mês; o resto é estimado</div></div>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card" id="card-mb">
+        <h2>Margem bruta por dia</h2>
+        <p class="bf-sub">Captado − CMV (Custo GEC) ÷ captado. Plano e 2025 em venda líquida.</p>
+        <div class="bf-chart" id="ch-mb" data-source="curva_dia"></div>
+      </div>
+      <div class="bf-card" id="card-desc">
+        <h2>Desconto médio por dia</h2>
+        <p class="bf-sub">Sobre o DE (preço cheio) e só das promoções (sobre o POR), com 2025.</p>
+        <div class="bf-chart" id="ch-desc" data-source="curva_dia"></div>
+      </div>
+      <div class="bf-card" id="card-tm">
+        <h2>Ticket médio por dia</h2>
+        <p class="bf-sub">Captado ÷ pedidos sem sufixo, com 2025.</p>
+        <div class="bf-chart" id="ch-tm" data-source="curva_dia"></div>
+      </div>
+      <div class="bf-card" id="card-pm">
+        <h2>Preço médio por peça</h2>
+        <p class="bf-sub">Captado ÷ peças, com 2025.</p>
+        <div class="bf-chart" id="ch-pm" data-source="curva_dia"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLEÇÕES -->
+  <section class="bf-page" data-page="colecoes" id="colecoes" hidden>
+    <div class="bf-bar">
+      <label class="bf-ctl">Período <select id="sel-col" aria-label="Período das coleções"></select></label>
+      <span class="bf-note">Captado VTEX, sem cancelados. Coleção e idade do estoque pelo cadastro do Planejamento BF (BASE | REFERÊNCIAS).</span>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card" id="card-colecao">
+        <h2>Por coleção</h2>
+        <p class="bf-sub">Participação no captado do período. Toque no título para ordenar.</p>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-colecao" data-source="colecao" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Coleção</th><th data-field="captado" class="n">Captado</th><th data-field="participacao" class="n">Part.</th>
+              <th data-field="pecas" class="n">Peças</th><th data-field="preco_medio" class="n">PM</th><th data-field="desconto_sobre_de" class="n">Desc. s/ DE</th>
+              <th data-field="margem_bruta" class="n">MB</th><th data-field="pct_sale" class="n">% SALE</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card" id="card-idade">
+        <h2>Por tempo de estoque</h2>
+        <p class="bf-sub">Idade da referência no cadastro do plano.</p>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-idade" data-source="idade" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Idade do estoque</th><th data-field="captado" class="n">Captado</th><th data-field="participacao" class="n">Part.</th>
+              <th data-field="pecas" class="n">Peças</th><th data-field="preco_medio" class="n">PM</th><th data-field="desconto_sobre_de" class="n">Desc. s/ DE</th>
+              <th data-field="margem_bruta" class="n">MB</th><th data-field="pct_sale" class="n">% SALE</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-toprefs">
+        <h2>Referências mais vendidas</h2>
+        <p class="bf-sub">As 50 maiores em captado no período.</p>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-toprefs" data-source="toprefs" data-row-key="referencia">
+            <thead><tr>
+              <th data-field="referencia">Referência</th><th data-field="produto">Produto</th><th data-field="colecao">Coleção</th><th data-field="idade_estoque">Idade</th>
+              <th data-field="captado" class="n">Captado</th><th data-field="pecas" class="n">Peças</th><th data-field="preco_medio" class="n">PM</th>
+              <th data-field="desconto_sobre_de" class="n">Desc. s/ DE</th><th data-field="margem_bruta" class="n">MB</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGÍSTICA -->
+  <section class="bf-page" data-page="logistica" id="logistica" hidden>
+    <div class="bf-bar">
+      <label class="bf-ctl">Pedidos de <select id="sel-log" aria-label="Período da logística"></select></label>
+      <label class="bf-ctl">Prazo de faturamento <select id="sel-sla" aria-label="Prazo de faturamento"><option value="0">mesmo dia</option><option value="1">1 dia útil</option><option value="2">2 dias úteis</option></select></label>
+    </div>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">Faturado dentro do SLA</div>
+        <div class="bf-big dash-skeleton" data-source="log_resumo" data-field="pct_faturado_no_prazo" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta">das entregas com prazo vencido · <span data-source="log_resumo" data-field="entregas" data-row="0" data-fmt="int">—</span> entregas no período</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Pendentes fora do SLA</div>
+        <div class="bf-big dash-skeleton" data-source="log_resumo" data-field="pendentes_atrasadas" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">de <span data-source="log_resumo" data-field="pendentes" data-row="0" data-fmt="int">—</span> ainda sem nota</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Entregue no prazo prometido</div>
+        <div class="bf-big dash-skeleton" data-source="log_resumo" data-field="pct_entregue_no_prazo" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta"><span data-source="log_resumo" data-field="entregues" data-row="0" data-fmt="int">—</span> entregues de <span data-source="log_resumo" data-field="despachadas" data-row="0" data-fmt="int">—</span> despachadas</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Em trânsito já atrasadas</div>
+        <div class="bf-big dash-skeleton" data-source="log_resumo" data-field="abertas_atrasadas" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">entregues com atraso: <span data-source="log_resumo" data-field="entregues_atrasadas" data-row="0" data-fmt="int">—</span></div></div>
+    </div>
+    <div class="bf-card" id="card-lojas">
+      <h2>Faturamento por loja</h2>
+      <p class="bf-sub">Cada pacote conta na loja ou CD de onde sai. No prazo = data da nota até o prazo escolhido, em dias úteis após a aprovação do pagamento (a VTEX guarda a data da nota sem horário). % sobre as entregas cujo prazo já venceu.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-lojas" data-source="lojas" data-row-key="warehouse_id">
+          <thead><tr>
+            <th data-field="loja">Loja / CD</th><th data-field="pct_no_prazo" class="n">% no prazo</th><th data-field="pct_mesmo_dia" class="n">% mesmo dia</th><th data-field="entregas" class="n">Entregas</th>
+            <th data-field="faturadas" class="n">Faturadas</th><th data-field="faturadas_no_prazo" class="n">No prazo</th><th data-field="pendentes" class="n">Pendentes</th>
+            <th data-field="pendentes_atrasadas" class="n">Pend. atrasadas</th><th data-field="dias_mediana" class="n">Dias (mediana)</th><th data-field="mais_antiga_pendente" class="n">Pendente mais antiga</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bf-card" id="card-transp">
+      <h2>Entrega por transportadora</h2>
+      <p class="bf-sub">Entregas já faturadas. No prazo = data de entrega até a data prometida ao cliente (sem horário). % sobre entregues + em aberto já atrasadas.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-transp" data-source="transp_agrupada" data-row-key="transportadora">
+          <thead><tr>
+            <th data-field="transportadora">Transportadora</th><th data-field="variacoes" class="n">Nomes na VTEX</th><th data-field="pct_no_prazo" class="n">% no prazo</th><th data-field="despachadas" class="n">Despachadas</th>
+            <th data-field="entregues" class="n">Entregues</th><th data-field="no_prazo" class="n">No prazo</th><th data-field="entregues_atrasadas" class="n">Entregues c/ atraso</th>
+            <th data-field="abertas" class="n">Em aberto</th><th data-field="abertas_atrasadas" class="n">Em aberto atrasadas</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ATENDIMENTO -->
+  <section class="bf-page" data-page="atendimento" id="atendimento" hidden>
+    <div class="bf-bar">
+      <label class="bf-ctl">Período <select id="sel-at" aria-label="Período do atendimento"></select></label>
+      <span class="bf-note">Octadesk: tickets + conversas abertos por dia, contra o mesmo dia da semana de 2025. Atualiza a cada 30 min. O Octadesk só libera conversas de até 1 ano atrás, então o comparativo de conversas com 2025 começa em 27/10/2025 (tickets têm o histórico completo).</span>
+    </div>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">Chamados em <span data-source="atend_resumo" data-field="dia" data-row="0" data-fmt="data">—</span></div>
+        <div class="bf-big dash-skeleton" data-source="atend_resumo" data-field="total_dia" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="atend_resumo" data-field="var_dia" data-row="0" data-fmt="delta">—</span> vs 2025 (<span data-source="atend_resumo" data-field="total_dia_2025" data-row="0" data-fmt="int">—</span>) · <span data-source="atend_resumo" data-field="tickets_dia" data-row="0" data-fmt="int">—</span> tickets, <span data-source="atend_resumo" data-field="conversas_dia" data-row="0" data-fmt="int">—</span> conversas</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Chamados no período</div>
+        <div class="bf-big dash-skeleton" data-source="atend_resumo" data-field="total_periodo" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="atend_resumo" data-field="var_periodo" data-row="0" data-fmt="delta">—</span> vs 2025 (<span data-source="atend_resumo" data-field="total_periodo_2025" data-row="0" data-fmt="int">—</span>)</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Tickets no período</div>
+        <div class="bf-big dash-skeleton" data-source="atend_resumo" data-field="tickets_periodo" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">2025: <span data-source="atend_resumo" data-field="tickets_periodo_2025" data-row="0" data-fmt="int">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Conversas no período</div>
+        <div class="bf-big dash-skeleton" data-source="atend_resumo" data-field="conversas_periodo" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">2025: <span data-source="atend_resumo" data-field="conversas_periodo_2025" data-row="0" data-fmt="int">—</span> · <span data-source="atend_resumo" data-field="pct_bot" data-row="0" data-fmt="pct">—</span> com bot</div></div>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card bf-wide" id="card-atend">
+        <h2>Chamados por dia × 2025</h2>
+        <p class="bf-sub">Barras: tickets + conversas abertos em 2026. Linha: mesmo dia da semana de 2025 (aparece também nos dias que ainda vão chegar).</p>
+        <div class="bf-chart" id="ch-atend" data-source="atend_dia"></div>
+      </div>
+      <div class="bf-card bf-wide" id="card-motivos">
+        <h2>Tickets por motivo</h2>
+        <p class="bf-sub">Campo “Motivo do contato” do ticket, no período, contra o mesmo período de 2025.</p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-motivos" data-source="atend_motivos" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Motivo</th><th data-field="quantidade" class="n">Tickets</th><th data-field="participacao" class="n">Part.</th>
+              <th data-field="quantidade_2025" class="n">2025</th><th data-field="variacao" class="n">Var.</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-tempo-at">
+        <h2>Tempo de resolução por atendente</h2>
+        <p class="bf-sub">Tickets abertos no período, pelo atendente responsável: horas corridas da abertura até a resolução (média e mediana), % resolvido em até 24 h e o tempo médio do mesmo período de 2025.</p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-tempo-at" data-source="atend_tempo_at" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Atendente</th><th data-field="tickets" class="n">Tickets</th><th data-field="resolvidos" class="n">Resolvidos</th><th data-field="em_aberto" class="n">Em aberto</th>
+              <th data-field="tempo_medio_h" class="n">Tempo médio (h)</th><th data-field="tempo_mediano_h" class="n">Mediana (h)</th><th data-field="pct_resolvido_24h" class="n">Resolvido em 24 h</th>
+              <th data-field="interacoes_atendente_media" class="n">Interações/ticket</th><th data-field="tempo_medio_h_2025" class="n">Tempo médio 2025 (h)</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-tempo-mot">
+        <h2>Tempo de resolução por motivo</h2>
+        <p class="bf-sub">Mesmo cálculo, por motivo do contato.</p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-tempo-mot" data-source="atend_tempo_mot" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Motivo</th><th data-field="tickets" class="n">Tickets</th><th data-field="resolvidos" class="n">Resolvidos</th><th data-field="em_aberto" class="n">Em aberto</th>
+              <th data-field="tempo_medio_h" class="n">Tempo médio (h)</th><th data-field="tempo_mediano_h" class="n">Mediana (h)</th><th data-field="pct_resolvido_24h" class="n">Resolvido em 24 h</th>
+              <th data-field="interacoes_atendente_media" class="n">Interações/ticket</th><th data-field="tempo_medio_h_2025" class="n">Tempo médio 2025 (h)</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-canais">
+        <h2>Conversas por canal</h2>
+        <p class="bf-sub">Chat, WhatsApp e outros, contra o mesmo período de 2025.</p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-canais" data-source="atend_canais" data-row-key="grupo">
+            <thead><tr>
+              <th data-field="grupo">Canal</th><th data-field="quantidade" class="n">Conversas</th><th data-field="participacao" class="n">Part.</th>
+              <th data-field="quantidade_2025" class="n">2025</th><th data-field="variacao" class="n">Var.</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ESTOQUE -->
+  <section class="bf-page" data-page="estoque" id="estoque" hidden>
+    <p class="bf-status">Varredura de estoque de <span data-source="catalogo" data-field="estoque_atualizado_em" data-row="0" data-fmt="dt">—</span> · roda a cada 3 h em todos os SKUs</p>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">Estoque disponível (todos os estoques)</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="estoque_disponivel" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">Total <span data-source="catalogo" data-field="estoque_total" data-row="0" data-fmt="int">—</span> · reservado <span data-source="catalogo" data-field="estoque_reservado" data-row="0" data-fmt="int">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Estoque em SKUs ativos</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="pct_estoque_ativo" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta"><span data-source="catalogo" data-field="estoque_disponivel_ativo" data-row="0" data-fmt="int">—</span> peças ativas · <span data-source="catalogo" data-field="estoque_disponivel_inativo" data-row="0" data-fmt="int">—</span> em SKUs inativos</div></div>
+      <div class="bf-tile"><div class="bf-lbl">SKUs com estoque</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="skus_com_estoque" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">de <span data-source="catalogo" data-field="skus_total" data-row="0" data-fmt="int">—</span> SKUs no catálogo</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Produtos ativos</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="produtos_ativos" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">SKUs ativos: <span data-source="catalogo" data-field="skus_ativos" data-row="0" data-fmt="int">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Produtos visíveis no site</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="produtos_visiveis_site" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">Na SALE: <span data-source="catalogo" data-field="produtos_sale_visiveis_site" data-row="0" data-fmt="int">—</span></div></div>
+    </div>
+    <div class="bf-tiles" id="sem-foto">
+      <div class="bf-tile"><div class="bf-lbl">Peças em estoque sem foto</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="estoque_sem_foto" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="catalogo" data-field="pct_estoque_sem_foto" data-row="0" data-fmt="pct">—</span> do disponível · <span data-source="catalogo" data-field="skus_sem_foto_com_estoque" data-row="0" data-fmt="int">—</span> SKUs</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Sem foto em SKUs ativos</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="estoque_sem_foto_ativo" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="catalogo" data-field="skus_sem_foto_ativos_com_estoque" data-row="0" data-fmt="int">—</span> SKUs ativos · inativos: <span data-source="catalogo" data-field="estoque_sem_foto_inativo" data-row="0" data-fmt="int">—</span> peças</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Sem foto: SALE × não SALE</div>
+        <div class="bf-big dash-skeleton" data-source="catalogo" data-field="estoque_sem_foto_sale" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">peças SALE · não SALE: <span data-source="catalogo" data-field="estoque_sem_foto_nao_sale" data-row="0" data-fmt="int">—</span></div></div>
+    </div>
+    <p class="bf-note">Sem foto = SKU sem nenhuma imagem cadastrada na VTEX. SALE = categoria principal /3/. Atualiza junto com a varredura de estoque.</p>
+    <p class="bf-note" id="nota-varredura" hidden>A primeira varredura de estoque ainda está rodando (<span data-source="catalogo" data-field="varredura_progresso" data-row="0" data-fmt="pct0">—</span>). Os números aparecem quando ela terminar.</p>
+    <div class="bf-card" id="card-wh">
+      <h2>Por estoque (warehouse)</h2>
+      <p class="bf-sub">Lojas e CD. Disponível = total − reservado. Ativo = SKU ativo de produto ativo na VTEX.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-wh" data-source="warehouses" data-row-key="warehouse_id">
+          <thead><tr>
+            <th data-field="warehouse">Estoque</th><th data-field="disponivel" class="n">Disponível</th><th data-field="disponivel_ativo" class="n">Em SKUs ativos</th><th data-field="pct_disponivel_ativo" class="n">% ativo</th><th data-field="disponivel_sem_foto" class="n">Sem foto</th><th data-field="pct_sem_foto" class="n">% sem foto</th><th data-field="reservado" class="n">Reservado</th>
+            <th data-field="total" class="n">Total</th><th data-field="skus_com_estoque" class="n">SKUs com estoque</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- MATCH DE ESTOQUE -->
+  <section class="bf-page" data-page="match" id="match" hidden>
+    <p class="bf-status">ERP: <span data-source="status" data-field="estoque_erp_arquivo" data-row="0" data-fmt="txt">—</span>, importado <span data-source="status" data-field="estoque_erp_importado_em" data-row="0" data-fmt="dt">—</span> · VTEX: varredura de <span data-source="status" data-field="estoque_vtex_match_em" data-row="0" data-fmt="dt">—</span> (a cada 3 h). Pedidos e transferências entre os dois horários também aparecem como diferença.</p>
+    <div class="bf-bar">
+      <a class="bf-btn" id="btn-est-importar" target="_blank" rel="noopener" hidden>Importar estoque do ERP</a>
+      <a class="bf-btn" id="btn-est-exportar" target="_blank" rel="noopener" hidden>Exportar divergências (Excel)</a>
+      <label class="bf-ctl">Loja <select id="sel-est-loja" aria-label="Loja" data-source="est_resumo"></select></label>
+      <label class="bf-ctl">Tipo <select id="sel-est-tipo" aria-label="Tipo de divergência">
+        <option value="">Todos</option><option>Quantidade diferente</option><option>Só no ERP</option><option>Só na VTEX</option><option>SKU não existe na VTEX</option>
+      </select></label>
+    </div>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">SKUs com estoque igual</div>
+        <div class="bf-big dash-skeleton" data-source="est_total" data-field="pct_match" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta"><span data-source="est_total" data-field="skus_iguais" data-row="0" data-fmt="int">—</span> de <span data-source="est_total" data-field="skus_comparados" data-row="0" data-fmt="int">—</span> SKUs com estoque em algum lado</div></div>
+      <div class="bf-tile"><div class="bf-lbl">SKUs divergentes</div>
+        <div class="bf-big dash-skeleton" data-source="est_total" data-field="skus_divergentes" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta"><span data-source="est_total" data-field="pecas_divergentes" data-row="0" data-fmt="int">—</span> peças de diferença somando cada SKU</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Peças ERP × VTEX</div>
+        <div class="bf-big dash-skeleton" data-source="est_total" data-field="pecas_erp" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">VTEX: <span data-source="est_total" data-field="pecas_vtex" data-row="0" data-fmt="int">—</span> (<span data-source="est_total" data-field="diferenca_pecas" data-row="0" data-fmt="int">—</span>)</div></div>
+      <div class="bf-tile"><div class="bf-lbl">Por tipo</div>
+        <div class="bf-big dash-skeleton" data-source="est_total" data-field="qtd_diferente" data-row="0" data-fmt="int">—</div>
+        <div class="bf-delta">qtd. diferente · só no ERP <span data-source="est_total" data-field="so_erp" data-row="0" data-fmt="int">—</span> · só na VTEX <span data-source="est_total" data-field="so_vtex" data-row="0" data-fmt="int">—</span> · não existe na VTEX <span data-source="est_total" data-field="sem_cadastro_vtex" data-row="0" data-fmt="int">—</span></div></div>
+    </div>
+    <div class="bf-card" id="card-est-lojas">
+      <h2>Por loja</h2>
+      <p class="bf-sub">Estoque atual do ERP × estoque total da VTEX, SKU a SKU (código reduzido = RefId). Toque numa loja para ver as divergências dela.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-est-lojas" data-source="est_resumo" data-row-key="empresa">
+          <thead><tr>
+            <th data-field="loja">Loja</th><th data-field="pct_match" class="n">% match</th><th data-field="skus_comparados" class="n">SKUs</th>
+            <th data-field="skus_divergentes" class="n">Divergentes</th><th data-field="qtd_diferente" class="n">Qtd. diferente</th><th data-field="so_erp" class="n">Só ERP</th>
+            <th data-field="so_vtex" class="n">Só VTEX</th><th data-field="sem_cadastro_vtex" class="n">Não existe VTEX</th>
+            <th data-field="pecas_erp" class="n">Peças ERP</th><th data-field="pecas_vtex" class="n">Peças VTEX</th><th data-field="diferenca_pecas" class="n">Dif.</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="bf-card" id="card-est-div">
+      <h2>Divergências</h2>
+      <p class="bf-sub">As 500 maiores diferenças da loja e do tipo escolhidos. A lista completa sai no botão Exportar. Diferença = VTEX − ERP.</p>
+      <div class="bf-tablebox">
+        <table class="bf-table" id="tb-est-div" data-source="est_div" data-row-key="chave">
+          <thead><tr>
+            <th data-field="loja">Loja</th><th data-field="cd_produto">Cód. reduzido</th><th data-field="referencia">Referência</th><th data-field="produto">Produto</th>
+            <th data-field="tamanho">Tam.</th><th data-field="cor">Cor</th><th data-field="estoque_erp" class="n">ERP</th><th data-field="estoque_vtex" class="n">VTEX</th>
+            <th data-field="diferenca" class="n">Dif.</th><th data-field="tipo">Tipo</th><th data-field="ativo_vtex">Ativo VTEX</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- FATURADO -->
+  <section class="bf-page" data-page="faturado" id="faturado" hidden>
+    <p class="bf-status">Do relatório 3351 do ERP, importado na página de importação do servidor. Última importação: <span data-source="status" data-field="faturado_ultima_importacao" data-row="0" data-fmt="dt">—</span></p>
+    <div class="bf-tiles">
+      <div class="bf-tile"><div class="bf-lbl">Faturado líquido no mês</div>
+        <div class="bf-big dash-skeleton" data-source="faturado_resumo" data-field="liquido" data-row="0" data-fmt="brl">—</div>
+        <div class="bf-delta">até <span data-source="faturado_resumo" data-field="ate" data-row="0" data-fmt="data">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">% da meta até o último dia do 3351 (Quadros)</div>
+        <div class="bf-big dash-skeleton" data-source="meta_resumo" data-field="pct_meta_ate_dia" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta">Meta do mês: <span data-source="meta_resumo" data-field="meta_mes" data-row="0" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Devolução</div>
+        <div class="bf-big dash-skeleton" data-source="faturado_resumo" data-field="taxa_devolucao" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta">Devolvido: <span data-source="faturado_resumo" data-field="devolvido" data-row="0" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Margem bruta líquida</div>
+        <div class="bf-big dash-skeleton" data-source="faturado_resumo" data-field="margem_bruta" data-row="0" data-fmt="pct">—</div>
+        <div class="bf-delta">Plano: <span data-source="faturado_resumo" data-field="margem_plano" data-row="0" data-fmt="pct">—</span></div></div>
+    </div>
+    <div class="bf-grid">
+      <div class="bf-card bf-wide" id="card-fat">
+        <h2>Faturado líquido por dia × meta</h2>
+        <p class="bf-sub">Mês corrente. Barras: vendido − devolvido, pela data de emissão, até o último dia do 3351 (hoje entra parcial quando o 3351 trouxer o dia). Linhas: meta diária de faturado líquido do Quadros (R$ 2,7 mi) e super meta (R$ 3,276 mi = R$ 3,6 mi captado − 9% de devolução), o mês inteiro.</p>
+        <div class="bf-chart" id="ch-fat" data-source="faturado_dia faturado meta"></div>
+      </div>
+      <div class="bf-card bf-wide" id="card-fat-acum">
+        <h2>Curva acumulada do mês</h2>
+        <p class="bf-sub">Faturado líquido acumulado × meta acumulada × super meta acumulada.</p>
+        <div class="bf-chart" id="ch-fat-acum" data-source="faturado_dia"></div>
+      </div>
+      <div class="bf-card bf-wide" id="card-fat-tb">
+        <h2>Dia a dia</h2>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-fat" data-source="faturado_dia" data-row-key="data">
+            <thead><tr>
+              <th data-field="data">Data</th><th data-field="vendido" class="n">Vendido</th><th data-field="devolvido" class="n">Devolvido</th>
+              <th data-field="liquido" class="n">Líquido</th><th data-field="meta" class="n">Meta</th><th data-field="var_vs_meta" class="n">Vs meta</th><th data-field="super_meta" class="n">Super meta</th><th data-field="var_vs_super" class="n">Vs super</th>
+              <th data-field="margem_bruta" class="n">MB</th><th data-field="liquido_ecommerce" class="n">E-commerce</th><th data-field="liquido_omni" class="n">Omni</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<script src="calculos.js"></script>
+<script src="app.js"></script>
+<script>
+fetch('api/eu', { credentials: 'same-origin' }).then((r) => r.ok ? r.json() : null).then((u) => { if (u) document.getElementById('quem').textContent = u.email; });
+</script>
+</body>
+</html>

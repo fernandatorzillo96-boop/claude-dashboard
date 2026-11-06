@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { config } from './config.js';
+import { state } from './store.js';
 
 const ARQ = () => path.join(config.dataDir, 'estoque_match.json.gz');
 
@@ -32,23 +33,28 @@ export function empresaDoWarehouse(id, nome) {
 const empresaErp = (cd) => (cd === 58 ? 64 : cd);
 
 // Chamado no fim de cada varredura de estoque da VTEX (sync.js).
-// porSku: {skuId: {refId, ativo, balance: [{warehouseId, warehouseName, total, reservado}]}}
-export function registrarEstoqueVtex(porSku, atualizadoEm) {
-  const lojas = {}, itens = {}, refIds = new Set();
+// porSku: {skuId: [refId, ativo(0/1), [[warehouseId, total, reservado], ...]]} só com warehouses com estoque;
+// nomes: {warehouseId: nome}.
+export function registrarEstoqueVtex(porSku, nomes, atualizadoEm) {
+  const lojas = {}, itens = {}, refIds = [];
+  const empDe = {};
+  for (const [wid, nome] of Object.entries(nomes || {})) {
+    const emp = empresaDoWarehouse(wid, nome);
+    empDe[wid] = emp;
+    if (emp != null && !lojas[emp]) lojas[emp] = { warehouse_id: wid, nome };
+  }
   for (const [skuId, s] of Object.entries(porSku)) {
-    const ref = String(s.refId || skuId);
-    refIds.add(ref);
-    for (const b of s.balance) {
-      const emp = empresaDoWarehouse(b.warehouseId, b.warehouseName);
+    const ref = String(s[0] || skuId);
+    refIds.push(ref);
+    for (const [wid, total, res] of s[2]) {
+      const emp = empDe[wid];
       if (emp == null) continue;
-      lojas[emp] = lojas[emp] || { warehouse_id: b.warehouseId, nome: b.warehouseName };
-      if (!b.total && !b.reservado) continue;
       itens[emp] = itens[emp] || {};
       const cur = itens[emp][ref];
-      if (cur) { cur[0] += b.total; cur[1] += b.reservado; } else itens[emp][ref] = [b.total, b.reservado, skuId, s.ativo ? 1 : 0];
+      if (cur) { cur[0] += total; cur[1] += res; } else itens[emp][ref] = [total, res, skuId, s[1]];
     }
   }
-  est.vtex = { atualizado_em: atualizadoEm, lojas, itens, refIds: [...refIds] };
+  est.vtex = { atualizado_em: atualizadoEm, lojas, itens, refIds };
   try { salvar(); } catch (e) { console.error('Match de estoque: não salvei', e.message); }
 }
 
@@ -87,6 +93,18 @@ export function importarEstoqueErp(body) {
   return { lojas: Object.keys(lojas).length, linhas: lidas, ignoradas, pecas };
 }
 
+// RefIds cadastrados na VTEX (catálogo inteiro, não só os com estoque).
+let cacheRefs = null, cacheN = -1;
+function refsVtex() {
+  const n = Object.keys(state.catalog).length;
+  if (!cacheRefs || n !== cacheN) {
+    cacheRefs = new Set(Object.values(state.catalog).map((c) => c && c.refId).filter(Boolean).map(String));
+    for (const r of est.vtex?.refIds || []) cacheRefs.add(r);
+    cacheN = n;
+  }
+  return cacheRefs;
+}
+
 const TIPOS = ['Quantidade diferente', 'Só no ERP', 'Só na VTEX', 'SKU não existe na VTEX'];
 export { TIPOS as TIPOS_DIVERGENCIA };
 
@@ -111,8 +129,8 @@ const nomeLoja = (emp) => est.erp?.lojas?.[emp] || est.vtex?.lojas?.[emp]?.nome 
 const lojasDoMatch = () => [...new Set([...Object.keys(est.erp?.lojas || {}), ...Object.keys(est.vtex?.lojas || {})])].map(Number).sort((a, b) => a - b);
 
 export function matchResumo() {
-  if (!est.erp) return [];
-  const refSet = new Set(est.vtex?.refIds || []);
+  if (!est.erp || !est.vtex) return [];
+  const refSet = refsVtex();
   const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
   return lojasDoMatch().map((emp) => {
     const rows = compararLoja(emp, refSet);
@@ -132,8 +150,8 @@ export function matchResumo() {
 }
 
 function linhasDivergentes(loja, tipo) {
-  if (!est.erp) return [];
-  const refSet = new Set(est.vtex?.refIds || []);
+  if (!est.erp || !est.vtex) return [];
+  const refSet = refsVtex();
   const emps = loja != null && loja !== '' ? [Number(loja)] : lojasDoMatch();
   const out = [];
   for (const emp of emps) {
