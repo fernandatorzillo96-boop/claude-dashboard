@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
 import { lojasPage } from './lojas-page.js';
 import { midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
+import { googleAdsCampanhas, statusGoogleAds, urlConectar, concluirConexao, googleAdsTemCliente } from './googleads.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
 if (!config.accessSecret || config.accessSecret.length < 24) {
@@ -220,11 +221,17 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(await metaCampanhas(inicio, fim)));
 
+  s.registerTool('bf_google_campanhas', {
+    title: 'Google Ads por campanha',
+    description: 'Direto da API do Google Ads: investimento, impressões, cliques, CTR, CPC, conversões, valor de conversão, ROAS e custo por conversão de cada campanha no período.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await googleAdsCampanhas(inicio, fim)));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
     inputSchema: {}, annotations: ro,
-  }, async () => json([{ ...status()[0], ...statusOctadesk(), ...statusMatch(), ...statusLojas(), ...statusMidia(), url_lojas: baseUrl() ? `${baseUrl()}/lojas/${config.accessSecret}` : null, url_estoque: urlEstoque(), url_estoque_csv: urlEstoque() ? urlEstoque() + '/divergencias.csv' : null }]));
+  }, async () => json([{ ...status()[0], ...statusOctadesk(), ...statusMatch(), ...statusLojas(), ...statusMidia(), ...statusGoogleAds(), url_lojas: baseUrl() ? `${baseUrl()}/lojas/${config.accessSecret}` : null, url_estoque: urlEstoque(), url_estoque_csv: urlEstoque() ? urlEstoque() + '/divergencias.csv' : null }]));
 
   return s;
 }
@@ -290,7 +297,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 // As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_a_faturar',
-  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas',
+  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas',
   'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
@@ -327,6 +334,7 @@ painel.get('/api/:tool', async (req, res) => {
         y.url_importacao = adm ? '/painel/importar' : null;
         y.url_estoque = adm ? '/painel/estoque' : null;
         y.url_lojas = adm ? '/painel/lojas' : null;
+        y.url_google_ads = adm && googleAdsTemCliente() ? '/painel/google-ads/conectar' : null;
         y.url_estoque_csv = '/painel/estoque/divergencias.csv';
         return y;
       });
@@ -343,6 +351,23 @@ painel.post('/importar', exigirAdmin, express.text({ type: '*/*', limit: '80mb' 
 painel.get('/lojas', exigirAdmin, (req, res) => res.type('html').send(lojasPage(statusLojas())));
 painel.post('/lojas', exigirAdmin, express.json({ limit: '80mb' }), (req, res) => {
   try { res.json({ ok: true, ...importarLojas(req.body) }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
+});
+// Google Ads: conectar a conta Google (OAuth) uma vez; o acesso fica guardado no servidor
+const retornoGoogle = (req) => `https://${req.get('host')}/painel/google-ads/retorno`;
+painel.get('/google-ads/conectar', exigirAdmin, (req, res) => {
+  if (!googleAdsTemCliente()) return res.status(400).type('text').send('Faltam GOOGLE_ADS_CLIENT_ID e GOOGLE_ADS_CLIENT_SECRET no Render.');
+  res.redirect(302, urlConectar(retornoGoogle(req)));
+});
+painel.get('/google-ads/retorno', exigirAdmin, async (req, res) => {
+  const pagina = (titulo, msg, ok) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${titulo}</title><body style="font-family:system-ui;max-width:560px;margin:60px auto;padding:0 20px;line-height:1.5"><h1 style="font-size:22px;color:${ok ? '#21733d' : '#b3261e'}">${titulo}</h1><p>${msg}</p><p><a href="/painel/#midia">Voltar ao painel</a></p>`;
+  const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  if (req.query.error) return res.status(400).type('html').send(pagina('Conexão cancelada', 'O Google respondeu: ' + esc(req.query.error) + '.', false));
+  try {
+    const c = await concluirConexao(String(req.query.code || ''), String(req.query.state || ''), retornoGoogle(req));
+    res.type('html').send(pagina('Google Ads conectado', `Conta: <b>${esc(c.conta || 'sem nome')}</b>${c.moeda ? ' (' + esc(c.moeda) + ')' : ''}. O investimento do Google passa a vir direto da API na aba Mídia e site.`, true));
+  } catch (err) {
+    res.status(400).type('html').send(pagina('Não conectou', esc(err.message), false));
+  }
 });
 painel.get('/estoque', exigirAdmin, (req, res) => res.type('html').send(estoquePage({ ...statusMatch(), csv: '/painel/estoque/divergencias.csv' })));
 painel.post('/estoque', exigirAdmin, express.json({ limit: '60mb' }), (req, res) => {

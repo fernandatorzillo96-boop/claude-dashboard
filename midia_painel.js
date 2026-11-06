@@ -58,9 +58,17 @@ dash.loader('meta_campanhas', { description: 'Lê a resposta JSON do servidor VT
   return a;
 } });
 
+dash.loader('google_campanhas', { description: 'Lê a resposta JSON do servidor VTEX BF26 como linhas', fn: ({ answer }) => {
+  let a = answer;
+  if (a && !Array.isArray(a) && Array.isArray(a.content)) a = a.content.map((c) => c.text || '').join('');
+  if (typeof a === 'string') a = JSON.parse(a);
+  if (!Array.isArray(a)) throw new Error('Resposta inesperada do servidor VTEX BF26');
+  return a;
+} });
+
 dash.calc('midia_roi_dia', {
   title: 'Mídia × venda por dia',
-  description: 'Por dia do período de mídia: investimento Google Ads (pelo GA4) e Meta Ads, captado VTEX e venda bruta das lojas do mesmo dia, ROI de mídia (receita bruta ÷ investimento) do site e da rede, ROAS de cada plataforma, sessões do GA4 e conversão (pedidos VTEX ÷ sessões).',
+  description: 'Por dia do período de mídia: investimento Google Ads (da API do Google Ads quando conectada; senão o custo importado no GA4) e Meta Ads, captado VTEX e venda bruta das lojas do mesmo dia, ROI de mídia (receita bruta ÷ investimento) do site e da rede, ROAS de cada plataforma, sessões do GA4 e conversão (pedidos VTEX ÷ sessões).',
   inputs: ['midia_dia', 'dia', 'lojas_venda'],
   fn: (midia_dia, dia, lojas_venda) => {
     const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
@@ -74,7 +82,7 @@ dash.calc('midia_roi_dia', {
         data: x.data, google_investimento: x.google_investimento ?? null, meta_investimento: x.meta_investimento ?? null, investimento_total: inv,
         captado_site: cap, pedidos_site: s.pedidos ?? null, venda_lojas: loja,
         roi_site: inv && cap != null ? r(cap / inv) : null, roi_rede: inv && cap != null && loja != null ? r((cap + loja) / inv) : null,
-        meta_roas: x.meta_roas ?? null, google_roas_ga4: x.google_roas_ga4 ?? null,
+        meta_roas: x.meta_roas ?? null, google_roas_ga4: x.google_roas_ga4 ?? null, google_roas: x.google_roas ?? null, google_fonte: x.google_fonte ?? null,
         sessoes: x.sessoes ?? null, conversao_vtex: x.sessoes && s.pedidos != null ? p(s.pedidos / x.sessoes) : null, conversao_ga4: x.conversao_ga4 ?? null,
         custo_por_pedido: inv && s.pedidos ? r(inv / s.pedidos) : null,
       };
@@ -105,6 +113,8 @@ dash.calc('midia_resumo', {
       roi_rede: invL ? r((S(cl, 'captado_site') + S(cl, 'venda_lojas')) / invL) : null, dias_rede: cl.length,
       meta_roas: me ? r(S(m, 'meta_receita') / me) : null, meta_compras: nz(me > 0, S(m, 'meta_compras')), meta_receita: nz(me > 0, r(S(m, 'meta_receita'))),
       google_roas_ga4: g ? r(S(m, 'receita_google_ga4') / g) : null,
+      google_roas: g && m.some((x) => x.google_fonte === 'Google Ads') ? r(S(m, 'google_receita') / g) : null, google_conversoes: r(S(m, 'google_conversoes')),
+      google_fonte: m.some((x) => x.google_fonte === 'Google Ads') ? 'API do Google Ads' : m.some((x) => x.google_fonte === 'GA4') ? 'GA4' : null,
       custo_por_pedido: inv && S(f, 'pedidos_site') ? r(inv / S(f, 'pedidos_site')) : null,
       sessoes: nz(temGa, ses), usuarios: nz(temGa, S(m, 'usuarios')), conversao_vtex: ses ? p(S(f, 'pedidos_site') / ses) : null, conversao_ga4: ses ? p(S(m, 'compras_ga4') / ses) : null,
       custo_por_sessao: inv && ses ? r(inv / ses) : null, receita_ga4: nz(temGa, r(S(m, 'receita_ga4'))),
@@ -130,10 +140,16 @@ dash.calc('midia_resumo', {
     const msgs = [];
     if (st.ga4_configurado === false) msgs.push('GA4 ainda não conectado (faltam GA4_PROPERTY_ID e GA4_CREDENTIALS no servidor).');
     else if (st.ga4_erro) msgs.push('GA4: ' + st.ga4_erro);
+    if (st.ga4_configurado && st.google_ga4_erro) msgs.push(st.google_ga4_erro);
     if (st.meta_configurado === false) msgs.push('Meta Ads ainda não conectado (faltam META_ACCESS_TOKEN e META_AD_ACCOUNT_ID no servidor).');
     else if (st.meta_erro) msgs.push(st.meta_erro);
+    if (st.google_ads_erro) msgs.push(st.google_ads_erro);
+    else if (!st.google_ads_configurado && st.google_ads_falta) msgs.push('Google Ads direto ainda não conectado (falta: ' + st.google_ads_falta + '); até lá, o investimento do Google vem do GA4.');
+    const bg = document.getElementById('btn-google-ads');
+    bg.hidden = !(B.okUrl(st.url_google_ads));
+    if (!bg.hidden) { bg.href = st.url_google_ads; bg.textContent = st.google_ads_configurado ? 'Reconectar Google Ads' : 'Conectar Google Ads'; }
     const el = document.getElementById('nota-midia');
-    el.textContent = msgs.join(' ');
+    el.textContent = msgs.map((m) => (m.length > 300 ? m.slice(0, 300) + '…' : m)).join(' ');
     el.hidden = !msgs.length;
   }
 
@@ -153,7 +169,7 @@ dash.calc('midia_resumo', {
     if (!B.falhou(el2, 'midia_dia')) B.combo(el2, {
       cats, label: B.dataCurta, bars: [], zero: false,
       lines: [{ name: 'ROI mídia site (captado ÷ invest.)', vals: d.map((x) => x.roi_site), color: c.a, width: 2.5 }, { name: 'ROI mídia rede', vals: d.map((x) => x.roi_rede), color: c.c },
-        { name: 'ROAS Meta (plataforma)', vals: d.map((x) => x.meta_roas), color: c.d, dash: '5 4' }, { name: 'ROAS Google (GA4)', vals: d.map((x) => x.google_roas_ga4), color: c.b, dash: '5 4' }],
+        { name: 'ROAS Meta (plataforma)', vals: d.map((x) => x.meta_roas), color: c.d, dash: '5 4' }, { name: 'ROAS Google', vals: d.map((x) => x.google_roas ?? x.google_roas_ga4), color: c.b, dash: '5 4' }],
       fmtY: (v) => B.nf1.format(v) + 'x', fmtTip: (v) => (B.vazio(v) ? '—' : B.nf1.format(v) + 'x'), height: 240,
     });
     const el3 = document.getElementById('ch-md-ses');
@@ -185,6 +201,9 @@ dash.calc('midia_resumo', {
     });
     B.tabela(document.getElementById('tb-md-meta'), B.linhas('meta_campanhas'), {
       meta_investimento: 'brl0', meta_impressoes: 'int', meta_cliques: 'int', ctr: 'pct', cpc: 'brlc', meta_compras: 'int', meta_receita: 'brl0', meta_roas: 'dec', custo_por_compra: 'brl0',
+    });
+    B.tabela(document.getElementById('tb-md-google'), B.linhas('google_campanhas'), {
+      google_investimento: 'brl0', google_impressoes: 'int', google_cliques: 'int', ctr: 'pct', cpc: 'brlc', google_conversoes: 'dec', google_receita: 'brl0', google_roas: 'dec', custo_por_conversao: 'brl0',
     });
     B.tabela(document.getElementById('tb-md-origens'), B.linhas('ga4_origens'), { sessoes: 'int', compras: 'int', receita: 'brl0', conversao: 'pct' });
     B.tabela(document.getElementById('tb-md-entrada'), B.linhas('ga4_paginas_entrada'), { sessoes: 'int', taxa_engajamento: 'pct', add_to_cart: 'int', compras: 'int', receita: 'brl0', conversao: 'pct' });

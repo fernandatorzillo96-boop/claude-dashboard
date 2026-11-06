@@ -101,25 +101,40 @@
       <div class="bf-tile"><div class="bf-lbl">Margem bruta</div>
         <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="mb_real" data-where="canal=Rede" data-fmt="pct">—</div>
         <div class="bf-delta">Plano <span data-source="pbf_resumo" data-field="mb_plano" data-where="canal=Rede" data-fmt="pct">—</span> · 2025 <span data-source="pbf_resumo" data-field="mb_2025" data-where="canal=Rede" data-fmt="pct">—</span></div></div>
-      <div class="bf-tile"><div class="bf-lbl">Lucro bruto: ganho ou perda vs 2025</div>
-        <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="perda_lb_vs_2025" data-where="canal=Rede" data-fmt="brl">—</div>
-        <div class="bf-delta">LB <span data-source="pbf_resumo" data-field="lb_real" data-where="canal=Rede" data-fmt="brl">—</span> × 2025 <span data-source="pbf_resumo" data-field="lb_2025" data-where="canal=Rede" data-fmt="brl">—</span> · vs plano: <span data-source="pbf_resumo" data-field="perda_lb_vs_plano" data-where="canal=Rede" data-fmt="brl">—</span></div></div>
-      <div class="bf-tile"><div class="bf-lbl">Breakeven do lucro de 2025</div>
-        <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="receita_breakeven_2025" data-where="canal=Rede" data-fmt="brl">—</div>
-        <div class="bf-delta">receita para empatar o LB de 2025 com a margem realizada · falta <span data-source="pbf_resumo" data-field="falta_breakeven_2025" data-where="canal=Rede" data-fmt="brl">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Receita sobre outubro (mesmos dias)</div>
+        <div class="bf-big dash-skeleton" data-source="pbf_tendencia" data-field="var_real" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</div>
+        <div class="bf-delta">realizado nov/26 ÷ out/26 · plano <span data-source="pbf_tendencia" data-field="var_plano" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</span> · 2025 <span data-source="pbf_tendencia" data-field="var_2025" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">Projeção do mês (tendência)</div>
         <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="projecao_tendencia" data-where="canal=Rede" data-fmt="brl">—</div>
         <div class="bf-delta"><span data-source="pbf_resumo" data-field="tendencia_vs_plano" data-where="canal=Rede" data-fmt="delta">—</span> vs plano do mês (<span data-source="pbf_resumo" data-field="mes_receita_plano" data-where="canal=Rede" data-fmt="brl">—</span>) · nov/25 <span data-source="pbf_resumo" data-field="mes_receita_2025" data-where="canal=Rede" data-fmt="brl">—</span></div></div>
     </div>
     <div class="bf-grid">
       <div class="bf-card bf-wide" id="card-pbf-ind">
-        <h2>Mesmo período: 2025 × plano × realizado</h2>
-        <p class="bf-sub">Do dia 1 até a data de corte. Diferenças em % para valores e em pontos percentuais para margem, % SALE e desconto. Out/26 = mesmos dias de outubro.</p>
-        <div class="bf-tablebox aberta">
+        <h2>Mesmo período: 2025 × out/26 × realizado × plano</h2>
+        <p class="bf-sub">De <span id="pbf-ind-periodo">—</span> (mesmos dias para lojas, site e rede): 2025 no mesmo dia da semana, outubro/26 e plano de novembro nos mesmos dias, e o realizado 2026. Diferenças do realizado em % para valores e em pontos percentuais para desconto, % SALE e margem. Share = participação do canal na rede.</p>
+        <div class="bf-tablebox aberta pbf-ind">
           <table class="bf-table" id="tb-pbf-ind" data-source="pbf_indicadores" data-row-key="chave">
             <thead><tr>
-              <th data-field="indicador">Indicador</th><th data-field="v2025" class="n">2025</th><th data-field="plano" class="n">Plano</th><th data-field="real" class="n">Realizado</th>
-              <th data-field="d_plano" class="n">Δ vs plano</th><th data-field="d_2025" class="n">Δ vs 2025</th><th data-field="out26" class="n">Out/26</th><th data-field="d_out26" class="n">Δ vs out</th>
+              <th data-field="indicador">Indicador</th><th data-field="canal">Canal</th>
+              <th data-field="v2025" class="n">2025</th><th data-field="out26" class="n">Out/26</th><th data-field="real" class="n">Realizado 2026</th><th data-field="plano" class="n">Plano nov/26</th>
+              <th data-field="d_2025" class="n">Δ vs 2025</th><th data-field="d_out26" class="n">Δ vs out</th><th data-field="d_plano" class="n">Δ vs plano</th>
+              <th data-field="share_2025" class="n">Share 2025</th><th data-field="share_out26" class="n">Share out</th><th data-field="share_real" class="n">Share real.</th><th data-field="share_plano" class="n">Share plano</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-pbf-tend">
+        <h2>Tendência outubro → novembro: o plano ou a curva?</h2>
+        <p class="bf-sub">Mesmos dias do mês da tabela acima. Quanto novembro andou sobre outubro em 2025, no plano (sobre out/26) e no realizado 2026; e o novembro/26 implícito na curva de 2025 (out/26 × nov/25 ÷ out/25). Se o plano está longe do implícito, a premissa do plano é que mudou; se o realizado está longe do implícito, o comportamento deste ano é que mudou.</p>
+        <p class="bf-take" id="pbf-tend-leitura"></p>
+        <div class="bf-tablebox aberta pbf-ind">
+          <table class="bf-table" id="tb-pbf-tend" data-source="pbf_tendencia" data-row-key="chave">
+            <thead><tr>
+              <th data-field="indicador">Indicador</th><th data-field="canal">Canal</th>
+              <th data-field="out25" class="n">Out/25</th><th data-field="nov25" class="n">Nov/25</th><th data-field="var_2025" class="n">Nov/25 vs out/25</th>
+              <th data-field="out26" class="n">Out/26</th><th data-field="plano" class="n">Plano nov/26</th><th data-field="var_plano" class="n">Plano vs out/26</th>
+              <th data-field="real" class="n">Realizado nov/26</th><th data-field="var_real" class="n">Real vs out/26</th>
+              <th data-field="implicito" class="n">Nov/26 pela curva 2025</th><th data-field="plano_vs_implicito" class="n">Plano vs curva</th><th data-field="real_vs_implicito" class="n">Real vs curva</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>
@@ -146,16 +161,6 @@
         <p class="bf-sub">Realizado acumulado até a data de corte e, depois dela, a projeção pela tendência; plano e 2025 acumulados.</p>
         <div class="bf-chart" id="ch-pbf-acum" data-source="pbf_dia pbf_resumo"></div>
       </div>
-      <div class="bf-card" id="card-pbf-lb">
-        <h2>Lucro bruto por dia</h2>
-        <p class="bf-sub">Receita − CMV (custo GEC fixo do plano por referência), contra o plano e 2025.</p>
-        <div class="bf-chart" id="ch-pbf-lb" data-source="pbf_dia"></div>
-      </div>
-      <div class="bf-card" id="card-pbf-perda">
-        <h2>Ganho ou perda acumulada de lucro bruto</h2>
-        <p class="bf-sub">Lucro bruto realizado menos o de 2025 e menos o do plano, somado dia a dia. Abaixo de zero = perda.</p>
-        <div class="bf-chart" id="ch-pbf-perda" data-source="pbf_dia"></div>
-      </div>
       <div class="bf-card bf-wide" id="card-pbf-mb">
         <h2>Margem bruta por dia</h2>
         <p class="bf-sub">Realizado, plano e 2025.</p>
@@ -169,7 +174,7 @@
             <thead><tr>
               <th data-field="etapa">Etapa</th><th data-field="inicio">Início</th><th data-field="fim">Fim</th><th data-field="receita_real" class="n">Realizado</th><th data-field="receita_plano" class="n">Plano (mesmos dias)</th>
               <th data-field="atingimento" class="n">Atingimento</th><th data-field="var_2025" class="n">Vs 2025</th><th data-field="mb_real" class="n">MB</th><th data-field="mb_plano" class="n">MB plano</th><th data-field="mb_2025" class="n">MB 2025</th>
-              <th data-field="lb_real" class="n">LB</th><th data-field="lb_2025" class="n">LB 2025</th><th data-field="perda_lb_vs_2025" class="n">Ganho/perda LB</th><th data-field="plano_etapa" class="n">Plano da etapa</th>
+              <th data-field="plano_etapa" class="n">Plano da etapa</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>
@@ -180,7 +185,7 @@
           <table class="bf-table" id="tb-pbf-dia" data-source="pbf_dia" data-row-key="chave">
             <thead><tr>
               <th data-field="data">Data</th><th data-field="real_r" class="n">Realizado</th><th data-field="plano_r" class="n">Plano</th><th data-field="atingimento" class="n">Ating.</th><th data-field="r25" class="n">2025</th><th data-field="var_2025" class="n">Vs 2025</th>
-              <th data-field="real_p" class="n">Peças</th><th data-field="mb_real" class="n">MB</th><th data-field="pct_sale_real" class="n">% SALE</th><th data-field="lb_real" class="n">LB</th><th data-field="lb25" class="n">LB 2025</th><th data-field="perda_lb_vs_2025" class="n">Ganho/perda LB</th>
+              <th data-field="real_p" class="n">Peças</th><th data-field="mb_real" class="n">MB</th><th data-field="pct_sale_real" class="n">% SALE</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>
@@ -204,7 +209,8 @@
   <section class="bf-page" data-page="midia" id="midia" hidden>
     <div class="bf-bar">
       <label class="bf-ctl">Período <select id="sel-md" aria-label="Período de mídia"></select></label>
-      <span class="bf-note">GA4 (tráfego, funil, páginas e tempo real), Google Ads pelo GA4 e Meta Ads. ROI de mídia = receita bruta ÷ investimento; ROAS = receita que a plataforma atribui ÷ investimento.</span>
+      <a class="bf-btn" id="btn-google-ads" hidden>Conectar Google Ads</a>
+      <span class="bf-note">GA4 (tráfego, funil, páginas e tempo real), Google Ads (API; sem ela, pelo GA4) e Meta Ads. ROI de mídia = receita bruta ÷ investimento; ROAS = receita que a plataforma atribui ÷ investimento.</span>
     </div>
     <p class="bf-note" id="nota-midia" hidden></p>
     <div class="bf-tiles">
@@ -216,7 +222,7 @@
         <div class="bf-delta">captado <span data-source="midia_resumo" data-field="captado_site" data-row="0" data-fmt="brl">—</span> ÷ investimento · rede: <span data-source="midia_resumo" data-field="roi_rede" data-row="0" data-fmt="dec">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">ROAS das plataformas</div>
         <div class="bf-big dash-skeleton" data-source="midia_resumo" data-field="meta_roas" data-row="0" data-fmt="dec">—</div>
-        <div class="bf-delta">Meta · Google (GA4): <span data-source="midia_resumo" data-field="google_roas_ga4" data-row="0" data-fmt="dec">—</span></div></div>
+        <div class="bf-delta">Meta · Google: <span data-source="midia_resumo" data-field="google_roas" data-row="0" data-fmt="dec">—</span> (plataforma) · <span data-source="midia_resumo" data-field="google_roas_ga4" data-row="0" data-fmt="dec">—</span> (GA4)</div></div>
       <div class="bf-tile"><div class="bf-lbl">Custo por pedido</div>
         <div class="bf-big dash-skeleton" data-source="midia_resumo" data-field="custo_por_pedido" data-row="0" data-fmt="brl0">—</div>
         <div class="bf-delta"><span data-source="midia_resumo" data-field="pedidos_site" data-row="0" data-fmt="int">—</span> pedidos VTEX · <span data-source="midia_resumo" data-field="custo_por_sessao" data-row="0" data-fmt="brlc">—</span> por sessão</div></div>
@@ -244,7 +250,7 @@
       </div>
       <div class="bf-card" id="card-md-inv">
         <h2>Investimento por dia</h2>
-        <p class="bf-sub">Google Ads (custo importado no GA4) e Meta Ads.</p>
+        <p class="bf-sub">Google Ads (da API quando conectada; senão o custo importado no GA4) e Meta Ads.</p>
         <div class="bf-chart" id="ch-md-inv" data-source="midia_roi_dia"></div>
       </div>
       <div class="bf-card" id="card-md-roi">
@@ -274,6 +280,15 @@
         <div class="bf-tablebox aberta">
           <table class="bf-table" id="tb-md-canais" data-source="ga4_canais" data-row-key="canal">
             <thead><tr><th data-field="canal">Canal</th><th data-field="sessoes" class="n">Sessões</th><th data-field="pct_sessoes" class="n">% sessões</th><th data-field="taxa_engajamento" class="n">Engaj.</th><th data-field="add_to_cart" class="n">Carrinhos</th><th data-field="compras" class="n">Compras</th><th data-field="receita" class="n">Receita</th><th data-field="pct_receita" class="n">% receita</th><th data-field="conversao" class="n">Conv.</th><th data-field="ticket_medio" class="n">TM</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-md-google">
+        <h2>Google Ads por campanha</h2>
+        <p class="bf-sub">Direto da API do Google Ads. Conversões e valor de conversão como o Google Ads conta.</p>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-md-google" data-source="google_campanhas" data-row-key="id">
+            <thead><tr><th data-field="campanha">Campanha</th><th data-field="tipo">Tipo</th><th data-field="google_investimento" class="n">Investimento</th><th data-field="google_impressoes" class="n">Impressões</th><th data-field="google_cliques" class="n">Cliques</th><th data-field="ctr" class="n">CTR</th><th data-field="cpc" class="n">CPC</th><th data-field="google_conversoes" class="n">Conversões</th><th data-field="google_receita" class="n">Valor conv.</th><th data-field="google_roas" class="n">ROAS</th><th data-field="custo_por_conversao" class="n">Custo/conv.</th></tr></thead><tbody></tbody>
           </table>
         </div>
       </div>

@@ -58,3 +58,8 @@
 @media (max-width: 40rem) { .bf .bf-tablebox.aberta { overflow-x: auto; } }
 [data-dash-source-state=empty] { color: transparent; }
 [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+/* Plano BF: tabela de indicadores agrupada por indicador, rede em destaque */
+.bf .pbf-ind { overflow-x: auto; }
+.bf .bf-table tr.pbf-ini td { border-top: 2px solid var(--color-border-line); }
+.bf .bf-table tr.pbf-rede td { font-weight: 600; }
+.bf .bf-table tr.pbf-rede td:first-child { font-weight: 400; }

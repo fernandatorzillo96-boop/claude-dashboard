@@ -6,15 +6,17 @@
 //   META_AD_ACCOUNT_ID número da conta de anúncios (com ou sem "act_")
 // Google Ads: enquanto a API não é liberada, investimento/cliques do Google Ads vêm do GA4 (contas vinculadas).
 import crypto from 'node:crypto';
+import { googleAdsPorDia, googleAdsConfigurado } from './googleads.js';
 
 const r2 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
 const p4 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
 const n = (v) => { const x = Number(v); return isFinite(x) ? x : 0; };
 const hoje = () => new Date(Date.now() - 3 * 3600e3).toISOString().slice(0, 10);
 const valida = (d) => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
-const periodo = (i, f) => [valida(i) ? i : hoje().slice(0, 8) + '01', valida(f) ? f : hoje()];
+// GA4 e Meta não aceitam datas futuras (ex.: câmbio do Google Ads): o fim vai no máximo até hoje
+const periodo = (i, f) => { const h = hoje(); let a = valida(i) ? i : h.slice(0, 8) + '01', b = valida(f) && f < h ? f : h; if (a > b) a = b; return [a, b]; };
 
-const erros = { ga4: null, meta: null };
+const erros = { ga4: null, meta: null, google: null };
 const ultimo = { ga4: null, meta: null };
 
 // ---------------- cache simples ----------------
@@ -69,7 +71,7 @@ async function ga4(metodo, body) {
   const r = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer ' + (await tokenGoogle()), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
-    const msg = j.error?.message || 'HTTP ' + r.status;
+    const msg = String(j.error?.message || 'HTTP ' + r.status).split(';')[0].slice(0, 240);
     erros.ga4 = (r.status === 403 ? 'Sem acesso à propriedade (adicione o e-mail da conta de serviço como Leitor no GA4): ' : '') + msg;
     throw new Error(erros.ga4);
   }
@@ -92,13 +94,25 @@ async function ga4PorDia(inicio, fim) {
     sessoes: x.sessions, usuarios: x.totalUsers, novos_usuarios: x.newUsers, sessoes_engajadas: x.engagedSessions,
     compras_ga4: x.transactions, receita_ga4: r2(x.purchaseRevenue), add_to_cart: x.addToCarts, checkouts: x.checkouts,
   };
-  // Google Ads pelo GA4 (só se as contas estiverem vinculadas)
-  try {
-    const ads = await relatorio(inicio, fim, ['date'], ['advertiserAdCost', 'advertiserAdClicks', 'advertiserAdImpressions']);
+  // Google Ads pelo GA4 (só se as contas estiverem vinculadas). O GA4 converte o custo pelo câmbio do dia,
+  // que pode ainda não existir para hoje: dias fechados numa consulta e hoje à parte (se falhar, hoje fica sem custo).
+  const pagos = { dimensionFilter: { filter: { fieldName: 'sessionDefaultChannelGroup', inListFilter: { values: ['Paid Search', 'Paid Shopping', 'Paid Video', 'Display', 'Cross-network', 'Paid Other'] } } } };
+  const custoGoogle = async (a, b) => {
+    const ads = await relatorio(a, b, ['date'], ['advertiserAdCost', 'advertiserAdClicks', 'advertiserAdImpressions']);
     for (const x of ads) Object.assign((out[dataGa(x.date)] ||= {}), { google_investimento: r2(x.advertiserAdCost), google_cliques: x.advertiserAdClicks, google_impressoes: x.advertiserAdImpressions });
-    const rec = await relatorio(inicio, fim, ['date', 'sessionDefaultChannelGroup'], ['purchaseRevenue', 'transactions'], { dimensionFilter: { filter: { fieldName: 'sessionDefaultChannelGroup', inListFilter: { values: ['Paid Search', 'Paid Shopping', 'Paid Video', 'Display', 'Cross-network', 'Paid Other'] } } } });
+  };
+  const h = hoje(), ontem = new Date(Date.parse(h + 'T12:00:00Z') - 86400e3).toISOString().slice(0, 10);
+  const fimFechado = fim >= h ? ontem : fim;
+  try {
+    if (inicio <= fimFechado) await custoGoogle(inicio, fimFechado);
+    erros.google = null;
+  } catch (e) { console.log('GA4 sem custo do Google Ads:', e.message); erros.google = 'Custo do Google Ads pelo GA4: ' + e.message; }
+  if (fim >= h) { try { await custoGoogle(h, h); } catch { /* câmbio de hoje ainda não saiu */ } }
+  erros.ga4 = null;
+  try {
+    const rec = await relatorio(inicio, fim, ['date', 'sessionDefaultChannelGroup'], ['purchaseRevenue', 'transactions'], pagos);
     for (const x of rec) { const o = (out[dataGa(x.date)] ||= {}); o.receita_google_ga4 = r2((o.receita_google_ga4 || 0) + x.purchaseRevenue); o.compras_google_ga4 = (o.compras_google_ga4 || 0) + x.transactions; }
-  } catch (e) { console.log('GA4 sem custo do Google Ads:', e.message); }
+  } catch (e) { console.log('GA4 sem receita de mídia paga:', e.message); }
   return out;
 }
 
@@ -190,7 +204,7 @@ async function metaInsights(params) {
   for (let pag = 0; url && pag < 20; pag++) {
     const r = await fetch(url);
     const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.error) { erros.meta = 'Meta: ' + (j.error?.message || 'HTTP ' + r.status); throw new Error(erros.meta); }
+    if (!r.ok || j.error) { erros.meta = 'Meta: ' + String(j.error?.message || 'HTTP ' + r.status).slice(0, 240); throw new Error(erros.meta); }
     out.push(...(j.data || []));
     url = j.paging?.next || null;
   }
@@ -223,14 +237,21 @@ export async function metaCampanhas(inicio, fim) {
 // ---------------- juntando por dia ----------------
 export async function midiaPorDia(inicio, fim) {
   [inicio, fim] = periodo(inicio, fim);
-  const [g, m] = await Promise.all([
+  const [g, m, ads] = await Promise.all([
     ga4PorDia(inicio, fim).catch((e) => { console.error('GA4:', e.message); return {}; }),
     metaPorDia(inicio, fim).catch((e) => { console.error('Meta:', e.message); return {}; }),
+    googleAdsPorDia(inicio, fim).catch((e) => { console.error('Google Ads:', e.message); return null; }),
   ]);
+  // com a API do Google Ads conectada, o investimento do Google vem dela (mais completo que o custo importado no GA4)
+  const direto = googleAdsConfigurado() && ads;
   const dias = [];
   for (let d = new Date(inicio + 'T12:00:00Z'); d.toISOString().slice(0, 10) <= fim; d = new Date(d.getTime() + 86400e3)) dias.push(d.toISOString().slice(0, 10));
   return dias.map((data) => {
-    const a = g[data] || {}, b = m[data] || {};
+    const a = { ...(g[data] || {}) }, b = m[data] || {};
+    if (direto) {
+      const d = ads[data] || { google_investimento: 0, google_cliques: 0, google_impressoes: 0, google_conversoes: 0, google_receita: 0, google_roas: null };
+      Object.assign(a, d, { google_fonte: 'Google Ads' });
+    } else if (a.google_investimento != null) a.google_fonte = 'GA4';
     const goog = a.google_investimento ?? null, meta = b.meta_investimento ?? null;
     const inv = goog == null && meta == null ? null : r2((goog || 0) + (meta || 0));
     return {
@@ -246,6 +267,6 @@ export function statusMidia() {
   return {
     ga4_configurado: ga4Configurado(), ga4_ultima_leitura: ultimo.ga4, ga4_erro: erros.ga4,
     meta_configurado: metaConfigurado(), meta_ultima_leitura: ultimo.meta, meta_erro: erros.meta,
-    google_ads_direto: false,
+    google_ads_direto: googleAdsConfigurado(), google_ga4_erro: googleAdsConfigurado() ? null : erros.google,
   };
 }
