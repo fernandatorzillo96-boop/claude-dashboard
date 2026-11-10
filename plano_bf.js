@@ -26,72 +26,75 @@ dash.loader('lojas_out25', { description: 'Lê a resposta JSON do servidor VTEX 
 
 dash.calc('pbf_dia', {
   title: 'Plano BF: dia a dia por canal',
-  description: 'Plano diário de lojas e site (abas 05i e 05f) com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado: site = captado VTEX (hoje entra parcial); lojas = venda líquida da base comercial importada (vendas − devoluções). Out/25: site = captado VTEX 2025 por dia; lojas = venda líquida da base comercial de outubro/2025. Rede = lojas + site nos dias com os dois.',
-  inputs: ['plano_canais', 'dia', 'lojas_venda', 'base25', 'lojas_out25'],
-  fn: (plano_canais, dia, lojas_venda, base25, lojas_out25) => {
+  description: 'Plano líquido diário de lojas (R$ 8,5 mi) e site (R$ 2,7 mi) das abas 05i e 05f, com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado como nas abas 05f/05i/05j: site = faturado líquido do 3351 (e-commerce + omni), com % SALE e desconto do captado VTEX; rede = base comercial líquida (vendas − devoluções, todas as lojas e o CD); lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
+  inputs: ['plano_canais', 'dia', 'faturado', 'lojas_venda', 'base25', 'lojas_out25'],
+  fn: (plano_canais, dia, faturado, lojas_venda, base25, lojas_out25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
+    const z = (x) => Number(x) || 0;
     const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
+    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
     const hoje = dia.map((x) => x.data).sort().pop() || '';
-    const site = new Map(dia.map((x) => [x.data, { r: n(x.captado), p: n(x.pecas), sale: n(x.captado_sale), cmv: n(x.cmv), de: n(x.valor_de), parcial: x.data === hoje }]));
-    // lojas: venda líquida (vendas − devoluções) e peças líquidas; SALE, valor DE e CMV das linhas de venda,
-    // proporcionais à venda líquida (mantêm o % SALE, o desconto e a margem das vendas do dia)
-    const liquida = (x) => {
-      const b = n(x.venda_bruta), l = x.venda_liquida == null ? b : n(x.venda_liquida), f = b ? l / b : 1;
-      return { r: l, p: n(x.pecas) - (n(x.pecas_devolvidas) || 0), sale: n(x.venda_sale) * f, cmv: x.cmv == null ? null : n(x.cmv) * f, de: n(x.valor_de) * f, parcial: false };
+    const cap = new Map(dia.map((x) => [x.data, x]));
+    const fat = new Map(faturado.map((x) => [x.data, x]));
+    const base = new Map(lojas_venda.filter((x) => x.tem_liquido).map((x) => [x.data, x]));
+    // site: faturado líquido do 3351; SALE, valor DE e receita com DE do captado VTEX do mesmo dia
+    const site = (d) => {
+      const f = fat.get(d); if (!f) return null;
+      const v = cap.get(d) || {};
+      return { r: z(f.liquido), p: z(f.pecas_liquidas ?? f.pecas), cmv: n(f.cmv), sale: z(v.captado_sale), sb: z(v.captado), de: z(v.valor_de), rde: z(v.captado), parcial: d >= hoje };
     };
-    const loja = new Map(lojas_venda.map((x) => [x.data, liquida(x)]));
-    // outubro/2025, mesmo dia do mês
-    const o25site = new Map();
+    // rede: base comercial líquida inteira (traz as notas do site nas lojas e no CD); lojas = rede − site
+    const rede = (d) => {
+      const b = base.get(d), s = site(d); if (!b || !s) return null;
+      return { r: z(b.venda_liquida), p: z(b.pecas_liquidas), cmv: n(b.cmv_liquido), sale: z(b.venda_sale_liquida), de: z(b.valor_de_liquido), parcial: s.parcial };
+    };
+    const lojas = (d) => {
+      const t = rede(d), s = site(d); if (!t) return null;
+      const lr = t.r - s.r;
+      return { r: lr, p: t.p - s.p, cmv: t.cmv == null || s.cmv == null ? null : t.cmv - s.cmv, sale: t.sale - s.sale, sb: lr, de: t.de - s.de, rde: lr, parcial: t.parcial };
+    };
+    // outubro/2025, mesmo dia do mês. Site: faturado líquido do 3351 de outubro/2025 (se importado), com o % SALE do captado VTEX 2025
+    const cap25 = new Map();
     for (const x of base25) {
       if (!String(x.data25).startsWith('2025-10')) continue;
-      // sem desconto: o valor DE desse export de 2025 não é o preço cheio
-      const a = o25site.get(x.data25) || { r: 0, p: 0, sale: 0, de: null, cmv: null };
-      a.r += Number(x.captado) || 0; a.p += Number(x.pecas) || 0; a.sale += Number(x.captado_sale) || 0;
-      o25site.set(x.data25, a);
+      const a = cap25.get(x.data25) || { sale: 0, sb: 0 };
+      a.sale += z(x.captado_sale); a.sb += z(x.captado);
+      cap25.set(x.data25, a);
     }
-    const o25loja = new Map(lojas_out25.map((x) => [x.data, liquida(x)]));
-    const campos = ['r25', 'p25', 'sale25', 'cmv25', 'rc25', 'de25', 'rde25', 'plano_r', 'plano_p', 'plano_cmv', 'plano_sale', 'plano_cheio', 'o26_r', 'o26_p', 'o26_sale', 'o26_cmv', 'o26_rc', 'o26_de', 'o26_rde'];
+    const o25s = new Map();
+    for (const [d, f] of fat) {
+      if (!d.startsWith('2025-10')) continue;
+      const c = cap25.get(d);
+      o25s.set(d, { r: z(f.liquido), p: z(f.pecas_liquidas ?? f.pecas), cmv: n(f.cmv), sale: c ? c.sale : 0, sb: c ? c.sb : 0, de: null, rde: null });
+    }
+    const o25l = new Map(lojas_out25.filter((x) => x.tem_liquido).map((x) => [x.data, { r: z(x.venda_liquida), p: z(x.pecas_liquidas), sale: z(x.venda_sale_liquida), sb: z(x.venda_liquida), de: z(x.valor_de_liquido), rde: z(x.venda_liquida), cmv: n(x.cmv_liquido) }]));
+    const campos = ['r25', 'p25', 'sale25', 'sale_base25', 'cmv25', 'rc25', 'de25', 'rde25', 'plano_r', 'plano_p', 'plano_cmv', 'plano_sale', 'plano_cheio', 'o26_r', 'o26_p', 'o26_sale', 'o26_sale_base', 'o26_cmv', 'o26_rc', 'o26_de', 'o26_rde'];
     const linha = (canal, data, etapa, b, real, o25) => ({
-      canal, data, etapa, ...Object.fromEntries(campos.map((k) => [k, r(b[k])])),
-      real_r: real ? r(real.r) : null, real_p: real ? real.p : null, real_sale: real ? r(real.sale) : null,
-      real_cmv: real && real.cmv != null ? r(real.cmv) : null, real_de: real ? r(real.de) : null, parcial: !!(real && real.parcial),
-      lb25: r(b.rc25 ? b.r25 * (1 - b.cmv25 / b.rc25) : 0), lb_o26: r(b.o26_rc ? b.o26_r * (1 - b.o26_cmv / b.o26_rc) : 0),
-      lb_plano: r(b.plano_r - b.plano_cmv), lb_real: real && real.cmv != null ? r(real.r - real.cmv) : null,
-      o25_r: o25 ? r(o25.r) : null, o25_p: o25 ? o25.p : null, o25_sale: o25 ? r(o25.sale) : null, o25_de: o25 && o25.de != null ? r(o25.de) : null, o25_cmv: o25 && o25.cmv != null ? r(o25.cmv) : null,
+      chave: canal + ' · ' + data, canal, data, etapa, ...Object.fromEntries(campos.map((k) => [k, r(b[k])])),
+      real_r: real ? r(real.r) : null, real_p: real ? real.p : null, real_sale: real ? r(real.sale) : null, real_sale_base: real ? r(real.sb) : null,
+      real_cmv: real && real.cmv != null ? r(real.cmv) : null, real_de: real ? r(real.de) : null, real_rde: real ? r(real.rde) : null, parcial: !!(real && real.parcial),
+      o25_r: o25 ? r(o25.r) : null, o25_p: o25 ? o25.p : null, o25_sale: o25 ? r(o25.sale) : null, o25_sale_base: o25 ? r(o25.sb) : null,
+      o25_de: o25 && o25.de != null ? r(o25.de) : null, o25_rde: o25 && o25.rde != null ? r(o25.rde) : null, o25_cmv: o25 && o25.cmv != null ? r(o25.cmv) : null,
+      atingimento: real && b.plano_r ? p(real.r / b.plano_r) : null, var_2025: real && b.r25 ? p(real.r / b.r25 - 1) : null,
+      mb_real: real && real.cmv != null && real.r ? p(1 - real.cmv / real.r) : null, pct_sale_real: real && real.sb ? p(real.sale / real.sb) : null,
     });
-    const out = [], rede = new Map();
+    const out = [], porData = new Map();
     for (const x of plano_canais) {
-      const b = Object.fromEntries(campos.map((k) => [k, n(x[k]) || 0]));
-      const real = (x.canal === 'Site' ? site : loja).get(x.data) || null;
+      const b = Object.fromEntries(campos.map((k) => [k, n(x[k]) ?? 0]));
       const d25 = '2025-10-' + x.data.slice(8, 10);
-      const o25 = (x.canal === 'Site' ? o25site : o25loja).get(d25) || null;
-      const l = linha(x.canal, x.data, x.etapa, b, real, o25);
-      out.push(l);
-      const g = rede.get(x.data) || [];
-      g.push(l); rede.set(x.data, g);
+      const real = x.canal === 'Site' ? site(x.data) : lojas(x.data);
+      const o25 = (x.canal === 'Site' ? o25s : o25l).get(d25) || null;
+      out.push(linha(x.canal, x.data, x.etapa, b, real, o25));
+      const g = porData.get(x.data) || { etapa: x.etapa, b: Object.fromEntries(campos.map((k) => [k, 0])), reais: {}, o25: {} };
+      campos.forEach((k) => (g.b[k] += b[k]));
+      g.reais[x.canal] = real; g.o25[x.canal] = o25;
+      porData.set(x.data, g);
     }
-    for (const [data, g] of rede) {
-      const s = (k) => g.reduce((t, x) => t + (Number(x[k]) || 0), 0);
-      const ok = g.length === 2 && g.every((x) => x.real_r != null);
-      const cmvOk = ok && g.every((x) => x.real_cmv != null);
-      out.push({
-        canal: 'Rede', data, etapa: g[0].etapa, ...Object.fromEntries(campos.map((k) => [k, r(s(k))])),
-        real_r: ok ? r(s('real_r')) : null, real_p: ok ? s('real_p') : null, real_sale: ok ? r(s('real_sale')) : null,
-        real_cmv: cmvOk ? r(s('real_cmv')) : null, real_de: ok ? r(s('real_de')) : null, parcial: ok && g.some((x) => x.parcial),
-        lb25: r(s('lb25')), lb_o26: r(s('lb_o26')), lb_plano: r(s('lb_plano')), lb_real: cmvOk ? r(s('lb_real')) : null,
-        o25_r: g.every((x) => x.o25_r != null) ? r(s('o25_r')) : null, o25_p: g.every((x) => x.o25_r != null) ? s('o25_p') : null,
-        o25_sale: g.every((x) => x.o25_r != null) ? r(s('o25_sale')) : null, o25_de: g.every((x) => x.o25_de != null) ? r(s('o25_de')) : null,
-        o25_cmv: g.every((x) => x.o25_cmv != null) ? r(s('o25_cmv')) : null,
-      });
-    }
+    const soma = (a, b) => (!a || !b ? null : { r: a.r + b.r, p: a.p + b.p, cmv: a.cmv == null || b.cmv == null ? null : a.cmv + b.cmv, sale: a.sale + b.sale, sb: a.sb + b.sb,
+      de: a.de == null || b.de == null ? null : a.de + b.de, rde: a.rde == null || b.rde == null ? null : a.rde + b.rde, parcial: !!(a.parcial || b.parcial) });
+    for (const [data, g] of porData) out.push(linha('Rede', data, g.etapa, g.b, soma(g.reais.Lojas, g.reais.Site), soma(g.o25.Lojas, g.o25.Site)));
     const ordem = { Rede: 0, Lojas: 1, Site: 2 };
-    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
-    return out.map((x) => ({
-      chave: x.canal + ' · ' + x.data, ...x,
-      atingimento: x.real_r != null && x.plano_r ? p(x.real_r / x.plano_r) : null, var_2025: x.real_r != null && x.r25 ? p(x.real_r / x.r25 - 1) : null,
-      mb_real: x.lb_real != null && x.real_r ? p(x.lb_real / x.real_r) : null, pct_sale_real: x.real_r ? p(x.real_sale / x.real_r) : null,
-      perda_lb_vs_2025: x.lb_real != null ? r(x.lb_real - x.lb25) : null,
-    })).sort((a, b) => ordem[a.canal] - ordem[b.canal] || (a.data < b.data ? -1 : 1));
+    return out.sort((a, b) => ordem[a.canal] - ordem[b.canal] || (a.data < b.data ? -1 : 1));
   },
 });
 
@@ -116,35 +119,28 @@ dash.calc('pbf_resumo', {
       const resto = xs.filter((x) => !corte || x.data > corte);
       const rr = S('real_r'), pr = S('plano_r'), r25 = S('r25'), ro = S('o26_r');
       const mbReal = comCmv.length ? 1 - S('real_cmv', comCmv) / S('real_r', comCmv) : null;
-      const lbReal = mbReal == null ? null : rr * mbReal, lb25 = S('lb25'), lbPlano = S('lb_plano'), lbO = S('lb_o26');
       const fator = pr ? rr / pr : null;
-      const receitaBreakeven = mbReal ? lb25 / mbReal : null;
       return {
         canal, de: xs.length ? xs[0].data : null, corte, dias: f.length,
         receita_2025: r(r25), receita_plano: r(pr), receita_real: r(rr), receita_out26: r(ro),
         pecas_2025: S('p25'), pecas_plano: Math.round(S('plano_p')), pecas_real: S('real_p'), pecas_out26: S('o26_p'),
         preco_medio_2025: r(r25 / S('p25')), preco_medio_plano: r(pr / S('plano_p')), preco_medio_real: r(rr / S('real_p')), preco_medio_out26: r(ro / S('o26_p')),
-        pct_sale_2025: p(S('sale25') / r25), pct_sale_plano: p(S('plano_sale') / pr), pct_sale_real: p(S('real_sale') / rr), pct_sale_out26: p(S('o26_sale') / ro),
+        pct_sale_2025: p(S('sale25') / S('sale_base25')), pct_sale_plano: p(S('plano_sale') / pr), pct_sale_real: p(S('real_sale') / S('real_sale_base')), pct_sale_out26: p(S('o26_sale') / S('o26_sale_base')),
         mb_2025: p(1 - S('cmv25') / S('rc25')), mb_plano: p(1 - S('plano_cmv') / pr), mb_real: p(mbReal), mb_out26: p(1 - S('o26_cmv') / S('o26_rc')),
-        desconto_2025: p(1 - S('rde25') / S('de25')), desconto_plano: p(1 - pr / S('plano_cheio')), desconto_real: p(1 - rr / S('real_de')), desconto_out26: p(1 - S('o26_rde') / S('o26_de')),
-        lb_2025: r(lb25), lb_plano: r(lbPlano), lb_real: r(lbReal), lb_out26: r(lbO),
+        desconto_2025: p(1 - S('rde25') / S('de25')), desconto_plano: p(1 - pr / S('plano_cheio')), desconto_real: p(1 - S('real_rde') / S('real_de')), desconto_out26: p(1 - S('o26_rde') / S('o26_de')),
         receita_out25: o25.length ? r(S('o25_r', o25)) : null, pecas_out25: o25.length ? S('o25_p', o25) : null,
-        preco_medio_out25: o25.length ? r(S('o25_r', o25) / S('o25_p', o25)) : null, pct_sale_out25: o25.length ? p(S('o25_sale', o25) / S('o25_r', o25)) : null,
-        desconto_out25: o25.length && o25.every((x) => x.o25_de != null) ? p(1 - S('o25_r', o25) / S('o25_de', o25)) : null,
+        preco_medio_out25: o25.length ? r(S('o25_r', o25) / S('o25_p', o25)) : null, pct_sale_out25: o25.length ? p(S('o25_sale', o25) / S('o25_sale_base', o25)) : null,
+        desconto_out25: o25.length && o25.every((x) => x.o25_de != null) ? p(1 - S('o25_rde', o25) / S('o25_de', o25)) : null,
         mb_out25: o25.length && o25.every((x) => x.o25_cmv != null) ? p(1 - S('o25_cmv', o25) / S('o25_r', o25)) : null, dias_out25: o25.length,
         var_receita_plano: p(rr / pr - 1), var_receita_2025: p(rr / r25 - 1), var_receita_out26: p(rr / ro - 1),
         atingimento: p(rr / pr),
-        perda_lb_vs_2025: lbReal == null ? null : r(lbReal - lb25), perda_lb_vs_plano: lbReal == null ? null : r(lbReal - lbPlano),
-        receita_breakeven_2025: r(receitaBreakeven), falta_breakeven_2025: receitaBreakeven == null ? null : r(receitaBreakeven - rr),
         mes_receita_2025: r(S('r25', xs)), mes_receita_plano: r(S('plano_r', xs)), mes_pecas_2025: S('p25', xs), mes_pecas_plano: Math.round(S('plano_p', xs)),
         mes_mb_2025: p(1 - S('cmv25', xs) / S('rc25', xs)), mes_mb_plano: p(1 - S('plano_cmv', xs) / S('plano_r', xs)),
-        mes_pct_sale_2025: p(S('sale25', xs) / S('r25', xs)), mes_pct_sale_plano: p(S('plano_sale', xs) / S('plano_r', xs)),
-        mes_lb_2025: r(S('lb25', xs)), mes_lb_plano: r(S('lb_plano', xs)),
+        mes_pct_sale_2025: p(S('sale25', xs) / S('sale_base25', xs)), mes_pct_sale_plano: p(S('plano_sale', xs) / S('plano_r', xs)),
         projecao_tendencia: fator == null ? null : r(rr + S('plano_r', resto) * fator),
         projecao_real_mais_plano: r(rr + S('plano_r', resto)),
         projecao_pecas_tendencia: fator == null || !S('plano_p') ? null : Math.round(S('real_p') + S('plano_p', resto) * (S('real_p') / S('plano_p'))),
         projecao_pecas_real_mais_plano: Math.round(S('real_p') + S('plano_p', resto)),
-        projecao_lb_real_mais_plano: lbReal == null ? null : r(lbReal + S('lb_plano', resto)),
         tendencia_vs_plano: fator == null ? null : p(fator - 1),
       };
     });
@@ -317,7 +313,7 @@ dash.calc('pbf_etapas', {
     const pct = (v) => (B.vazio(v) ? '—' : B.F.delta(v));
     const nome = { Lojas: 'Nas lojas', Site: 'No site', Rede: 'Na rede' };
     const frases = rec.map((x) => x.var_2025 == null
-      ? `${nome[x.canal]}: falta outubro/2025${x.canal === 'Site' ? '' : ' das lojas (importe a base comercial de outubro/2025)'} para comparar.`
+      ? `${nome[x.canal]}: falta outubro/2025 líquido para comparar (${x.canal === 'Lojas' ? 'importe a base comercial de outubro/2025' : x.canal === 'Site' ? 'importe o 3351 de outubro/2025' : 'precisa das lojas e do site de outubro/2025'}).`
       : `${nome[x.canal]}, novembro/25 andou ${pct(x.var_2025)} sobre outubro/25; o plano pede ${pct(x.var_plano)} sobre outubro/26 e o realizado está em ${pct(x.var_real)}.`);
     document.getElementById('pbf-tend-leitura').textContent = frases.join(' ');
   }
@@ -397,11 +393,11 @@ dash.calc('pbf_etapas', {
     // margem bruta por dia
     const elM = document.getElementById('ch-pbf-mb');
     if (!B.falhou(elM, 'dia')) {
-      const mb = (lb, rec) => (lb == null || !rec ? null : lb / rec);
+      const pc = (x) => (x == null || !isFinite(x) ? null : x);
       B.combo(elM, {
         cats, label: lab, tipTitle: tip, bars: [], zero: false,
-        lines: [{ name: '2026', vals: xs.map((x) => (x.parcial ? null : mb(x.lb_real, x.real_r))), color: c.a, width: 2.5 },
-          { name: 'Plano', vals: xs.map((x) => mb(x.lb_plano, x.plano_r)), color: c.b, dash: '5 4' }, { name: '2025', vals: xs.map((x) => mb(x.lb25, x.r25)), color: c.mudo, width: 1.5 }],
+        lines: [{ name: '2026', vals: xs.map((x) => (x.parcial ? null : x.mb_real)), color: c.a, width: 2.5 },
+          { name: 'Plano', vals: xs.map((x) => pc(x.plano_r ? 1 - x.plano_cmv / x.plano_r : null)), color: c.b, dash: '5 4' }, { name: '2025', vals: xs.map((x) => pc(x.rc25 ? 1 - x.cmv25 / x.rc25 : null)), color: c.mudo, width: 1.5 }],
         fmtY: (v) => B.nf0.format(v * 100) + '%', fmtTip: B.F.pct, height: 220,
       });
     }

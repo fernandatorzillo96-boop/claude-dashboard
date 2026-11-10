@@ -76,8 +76,12 @@ export function importarLojas(body) {
     const v = num(l[ix.valor]), p = num(l[ix.pecas]), t = num(l[ix.tabela]);
     const ds = ix.desc >= 0 && l[ix.desc] !== '' && l[ix.desc] != null ? num(l[ix.desc]) : t ? 1 - v / t : 0;
     const dia = (novos[d] ||= {});
-    const a = (dia[emp] ||= { loja: String(l[ix.loja] ?? emp), bruta: 0, pecas: 0, sale: 0, de: 0, cmv_id: 0, rec_id: 0, liquida: 0, devolvido: 0, pecas_devolvidas: 0 });
+    const a = (dia[emp] ||= { loja: String(l[ix.loja] ?? emp), bruta: 0, pecas: 0, sale: 0, de: 0, cmv_id: 0, rec_id: 0, liquida: 0, devolvido: 0, pecas_devolvidas: 0, pecas_liq: 0, sale_liq: 0, de_liq: 0, cmv_id_liq: 0, rec_id_liq: 0 });
     a.liquida += v;
+    // líquido: todas as linhas (as devoluções entram negativas), como na aba 05i
+    a.pecas_liq += p; a.de_liq += t;
+    if (ds >= 0.4) a.sale_liq += v;
+    { const c = custoDe(ref); if (c != null) { a.cmv_id_liq += c * p; a.rec_id_liq += v; } }
     if (p > 0) {
       a.bruta += v; a.pecas += p; a.de += t;
       if (ds >= 0.4) a.sale += v;
@@ -95,8 +99,7 @@ export function importarLojas(body) {
   lv.importado_em = new Date().toISOString();
   lv.arquivo = String(body.nome_arquivo || '').slice(0, 120);
   salvar();
-  const cd = dias.reduce((t, d) => t + [...NAO_LOJA].reduce((u, e) => u + (novos[d][e]?.bruta || 0), 0), 0);
-  return { venda_cd_ignorada: r2(cd), linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.keys(novos[d]))).size, venda_sem_custo: r2(semCusto) };
+  return { linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.keys(novos[d]))).size, venda_sem_custo: r2(semCusto) };
 }
 
 const fecha = (a) => {
@@ -107,10 +110,21 @@ const fecha = (a) => {
     preco_medio: a.pecas ? r2(a.bruta / a.pecas) : null, pct_sale: a.bruta ? p4(a.sale / a.bruta) : null,
     margem_bruta: cmv != null && a.bruta ? p4(1 - cmv / a.bruta) : null, desconto_sobre_de: a.de ? p4(1 - a.bruta / a.de) : null,
     cobertura_custo: a.bruta ? p4(a.rec_id / a.bruta) : null,
+    // líquido (vendas − devoluções): base das abas 05i/05j
+    pecas_liquidas: a.pecas_liq ?? a.pecas - a.pecas_devolvidas,
+    venda_sale_liquida: a.sale_liq != null ? r2(a.sale_liq) : null, valor_de_liquido: a.de_liq != null ? r2(a.de_liq) : null,
+    cmv_liquido: a.rec_id_liq ? r2((a.cmv_id_liq / a.rec_id_liq) * a.liquida) : null,
+    tem_liquido: a.sale_liq != null,
   };
 };
-const soma = (xs) => xs.reduce((s, a) => { for (const k of ['bruta', 'pecas', 'sale', 'de', 'cmv_id', 'rec_id', 'liquida', 'devolvido', 'pecas_devolvidas']) s[k] += a[k] || 0; return s; },
-  { bruta: 0, pecas: 0, sale: 0, de: 0, cmv_id: 0, rec_id: 0, liquida: 0, devolvido: 0, pecas_devolvidas: 0 });
+const CAMPOS = ['bruta', 'pecas', 'sale', 'de', 'cmv_id', 'rec_id', 'liquida', 'devolvido', 'pecas_devolvidas', 'pecas_liq', 'sale_liq', 'de_liq', 'cmv_id_liq', 'rec_id_liq'];
+const soma = (xs) => {
+  const s = Object.fromEntries(CAMPOS.map((k) => [k, 0]));
+  let liq = true;
+  for (const a of xs) { if (a.sale_liq == null) liq = false; for (const k of CAMPOS) s[k] += a[k] || 0; }
+  if (!liq) { s.pecas_liq = null; s.sale_liq = null; s.de_liq = null; s.rec_id_liq = 0; } // importado antes da versão com líquido: reimportar
+  return s;
+};
 
 // agrupar: 'dia' (padrão) ou 'loja'
 export function vendaLojas(inicio, fim, agrupar = 'dia') {
@@ -121,9 +135,12 @@ export function vendaLojas(inicio, fim, agrupar = 'dia') {
     return Object.entries(g).map(([emp, { loja, xs }]) => ({ empresa: Number(emp), loja, dias: xs.length, ...fecha(soma(xs)) }))
       .sort((a, b) => b.venda_bruta - a.venda_bruta);
   }
+  // por dia: todas as empresas da base (lojas + CD). A base comercial traz as notas do site (omni e CD) junto:
+  // o painel tira o site (3351) para chegar nas lojas, como a aba 05i.
   return dias.map((d) => {
-    const xs = Object.entries(lv.dias[d]).filter(([emp]) => !NAO_LOJA.has(emp)).map(([, a]) => a);
-    return { data: d, lojas: xs.length, ...fecha(soma(xs)) };
+    const xs = Object.entries(lv.dias[d]).filter(([emp]) => emp !== '3').map(([, a]) => a);
+    const cd = Object.entries(lv.dias[d]).filter(([emp]) => NAO_LOJA.has(emp) && emp !== '3').reduce((t, [, a]) => t + (a.liquida || 0), 0);
+    return { data: d, lojas: xs.length, ...fecha(soma(xs)), venda_liquida_cd: r2(cd) };
   });
 }
 

@@ -31,7 +31,7 @@ export function estoquePage(st) {
 </dl>
 <script>
 const f=document.getElementById('f'),b=document.getElementById('b'),m=document.getElementById('msg');
-const COLS=['ds_canal','cd_empresa','empresa','cd_produto','estoque atual','referencia','ds_referencia','tamanho','cor','sale','vlr varejo'];
+const COLS=['ds_canal','cd_empresa','empresa','cd_produto','estoque atual','referencia','ds_referencia','tamanho','cor','sale','vlr varejo','saldo'];
 f.onchange=()=>{b.disabled=!f.files.length;m.textContent='';};
 b.onclick=async()=>{
   b.disabled=true;m.className='';m.textContent='Lendo o arquivo…';
@@ -40,7 +40,7 @@ b.onclick=async()=>{
     const wb=XLSX.read(await arq.arrayBuffer(),{dense:true});
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});
     // aceita o relatório do ERP e a "base de estoque" (nomes de coluna em português)
-    const norm=(c)=>String(c??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+    const norm=(c)=>String(c??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\\s+/g,' ');
     const ALIAS={'canal':'ds_canal','codigo da loja':'cd_empresa','loja':'empresa','codigo do produto (cd_produto)':'cd_produto','codigo do produto':'cd_produto',
       'pecas':'estoque atual','nome da referencia':'ds_referencia','preco de varejo':'vlr varejo'};
     const head=(rows[0]||[]).map((c)=>{const n=norm(c);return ALIAS[n]||n;});
@@ -54,7 +54,7 @@ b.onclick=async()=>{
     const j=await r.json();
     if(!j.ok)throw new Error(j.erro||'Falhou');
     m.className='ok';
-    m.textContent='Importado: '+j.lojas+' lojas, '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.pecas.toLocaleString('pt-BR')+' peças.\\nAtualize o painel para ver o match.';
+    m.textContent='Importado: '+j.lojas+' lojas, '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.pecas.toLocaleString('pt-BR')+' peças (saldo físico).'+(j.outros_saldos&&Object.keys(j.outros_saldos).length?'\\nFora do match: '+Object.entries(j.outros_saldos).map(([k,v])=>k+' '+v.toLocaleString('pt-BR')+' peças').join(', ')+'.':'')+'\\nAtualize o painel para ver o match.';
   }catch(e){m.className='erro';m.textContent='Erro: '+e.message;}
   b.disabled=false;
 };

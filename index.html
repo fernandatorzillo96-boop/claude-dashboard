@@ -91,7 +91,7 @@
     <div class="bf-bar">
       <label class="bf-ctl">Canal <select id="sel-pbf-canal" aria-label="Canal"><option value="Rede">Rede (lojas + site)</option><option value="Lojas">Lojas físicas</option><option value="Site">Site + app</option></select></label>
       <a class="bf-btn" id="btn-lojas-importar" target="_blank" rel="noopener" hidden>Importar venda das lojas</a>
-      <span class="bf-note">Plano diário do BF26 Apoio Executivo (abas 05f, 05i e 05j). Realizado do site = captado VTEX; das lojas = venda líquida da base comercial importada (vendas − devoluções). Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
+      <span class="bf-note">Plano diário do BF26 Apoio Executivo (abas 05f, 05i e 05j). Tudo líquido de devoluções, como nas abas 05f, 05i e 05j: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX); rede = base comercial líquida; lojas = rede − site. Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
     </div>
     <p class="bf-note" id="nota-pbf-lojas" hidden>A venda das lojas ainda não foi importada: a rede e as lojas aparecem quando a base comercial for enviada no botão Importar venda das lojas.</p>
     <div class="bf-tiles">

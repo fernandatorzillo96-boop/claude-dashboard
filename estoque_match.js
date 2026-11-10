@@ -66,12 +66,17 @@ export function importarEstoqueErp(body) {
   const ix = (n) => cols.findIndex((c) => String(c).trim().toLowerCase() === n);
   const c = {
     canal: ix('ds_canal'), emp: ix('cd_empresa'), nome: ix('empresa'), cd: ix('cd_produto'), qtd: ix('estoque atual'),
-    ref: ix('referencia'), desc: ix('ds_referencia'), tam: ix('tamanho'), cor: ix('cor'), sale: ix('sale'), preco: ix('vlr varejo'),
+    ref: ix('referencia'), desc: ix('ds_referencia'), tam: ix('tamanho'), cor: ix('cor'), sale: ix('sale'), preco: ix('vlr varejo'), saldo: ix('saldo'),
   };
   for (const k of ['emp', 'cd', 'qtd']) if (c[k] < 0) throw new Error(`Coluna não encontrada: ${{ emp: 'cd_empresa', cd: 'cd_produto', qtd: 'Estoque atual' }[k]}`);
   const lojas = {}, itens = {}, attrs = {};
   let lidas = 0, ignoradas = 0;
+  const outrosSaldos = {};
   for (const r of linhas) {
+    // base de estoque com coluna Saldo: só o saldo físico (1 - Fisico) se compara com a VTEX
+    if (c.saldo >= 0 && r[c.saldo] != null && r[c.saldo] !== '' && !/^\s*1\s*-|f[ií]sico/i.test(String(r[c.saldo]))) {
+      const k = String(r[c.saldo]); outrosSaldos[k] = (outrosSaldos[k] || 0) + (Number(r[c.qtd]) || 0); continue;
+    }
     const canal = c.canal >= 0 ? String(r[c.canal] || '') : '';
     let emp = Number(r[c.emp]);
     // Só lojas (ON e OFF) e o e-commerce; fábrica, atacado, DPA etc. não têm estoque na VTEX.
@@ -90,7 +95,7 @@ export function importarEstoqueErp(body) {
   est.erp = { importado_em: new Date().toISOString(), arquivo_em: body.arquivo_em || null, nome_arquivo: body.nome_arquivo || null, lojas, itens, attrs };
   salvar();
   const pecas = Object.values(itens).reduce((s, m) => s + Object.values(m).reduce((a, b) => a + b, 0), 0);
-  return { lojas: Object.keys(lojas).length, linhas: lidas, ignoradas, pecas };
+  return { lojas: Object.keys(lojas).length, linhas: lidas, ignoradas, pecas, outros_saldos: outrosSaldos };
 }
 
 // RefIds cadastrados na VTEX (catálogo inteiro, não só os com estoque).
