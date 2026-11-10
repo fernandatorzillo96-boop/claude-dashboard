@@ -17,7 +17,7 @@ export function estoquePage(st) {
  dt{color:#888}
 </style></head><body>
 <h1>Estoque das lojas (ERP)</h1>
-<p>Suba o Excel de estoque do ERP (colunas cd_empresa, cd_produto e Estoque atual). O painel compara loja a loja com o estoque da VTEX da última varredura. Cada importação substitui a anterior.</p>
+<p>Suba o Excel de estoque do ERP em qualquer um dos dois formatos: o relatório do ERP (colunas cd_empresa, cd_produto e Estoque atual) ou a base de estoque (Código da loja, Código do produto (cd_produto) e Peças). O painel compara loja a loja com o estoque da VTEX da última varredura. Cada importação substitui a anterior.</p>
 <div class="box">
  <input type="file" id="f" accept=".xlsx,.xls,.csv">
  <br><button id="b" disabled>Importar</button>
@@ -39,9 +39,13 @@ b.onclick=async()=>{
     const arq=f.files[0];
     const wb=XLSX.read(await arq.arrayBuffer(),{dense:true});
     const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:true,defval:null});
-    const head=(rows[0]||[]).map((c)=>String(c??'').trim().toLowerCase());
+    // aceita o relatório do ERP e a "base de estoque" (nomes de coluna em português)
+    const norm=(c)=>String(c??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase().replace(/\s+/g,' ');
+    const ALIAS={'canal':'ds_canal','codigo da loja':'cd_empresa','loja':'empresa','codigo do produto (cd_produto)':'cd_produto','codigo do produto':'cd_produto',
+      'pecas':'estoque atual','nome da referencia':'ds_referencia','preco de varejo':'vlr varejo'};
+    const head=(rows[0]||[]).map((c)=>{const n=norm(c);return ALIAS[n]||n;});
     const ix=COLS.map((c)=>head.indexOf(c));
-    if(ix[1]<0||ix[3]<0||ix[4]<0)throw new Error('Não achei as colunas cd_empresa, cd_produto e Estoque atual.');
+    if(ix[1]<0||ix[3]<0||ix[4]<0)throw new Error('Não achei as colunas da loja, do produto e da quantidade (cd_empresa/Código da loja, cd_produto e Estoque atual/Peças).');
     const linhas=[];
     for(let i=1;i<rows.length;i++){const r=rows[i];if(!r||r[ix[3]]==null)continue;linhas.push(ix.map((j)=>j<0?null:r[j]));}
     m.textContent='Enviando '+linhas.length.toLocaleString('pt-BR')+' linhas…';

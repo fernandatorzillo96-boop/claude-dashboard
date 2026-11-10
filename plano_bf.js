@@ -26,14 +26,20 @@ dash.loader('lojas_out25', { description: 'Lê a resposta JSON do servidor VTEX 
 
 dash.calc('pbf_dia', {
   title: 'Plano BF: dia a dia por canal',
-  description: 'Plano diário de lojas e site (abas 05i e 05f) com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado: site = captado VTEX bruto (hoje entra parcial); lojas = base comercial importada. Out/25: site = captado VTEX 2025 por dia; lojas = base comercial de outubro/2025 importada. Rede = lojas + site nos dias com os dois.',
+  description: 'Plano diário de lojas e site (abas 05i e 05f) com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado: site = captado VTEX (hoje entra parcial); lojas = venda líquida da base comercial importada (vendas − devoluções). Out/25: site = captado VTEX 2025 por dia; lojas = venda líquida da base comercial de outubro/2025. Rede = lojas + site nos dias com os dois.',
   inputs: ['plano_canais', 'dia', 'lojas_venda', 'base25', 'lojas_out25'],
   fn: (plano_canais, dia, lojas_venda, base25, lojas_out25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
     const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
     const hoje = dia.map((x) => x.data).sort().pop() || '';
     const site = new Map(dia.map((x) => [x.data, { r: n(x.captado), p: n(x.pecas), sale: n(x.captado_sale), cmv: n(x.cmv), de: n(x.valor_de), parcial: x.data === hoje }]));
-    const loja = new Map(lojas_venda.map((x) => [x.data, { r: n(x.venda_bruta), p: n(x.pecas), sale: n(x.venda_sale), cmv: n(x.cmv), de: n(x.valor_de), parcial: false }]));
+    // lojas: venda líquida (vendas − devoluções) e peças líquidas; SALE, valor DE e CMV das linhas de venda,
+    // proporcionais à venda líquida (mantêm o % SALE, o desconto e a margem das vendas do dia)
+    const liquida = (x) => {
+      const b = n(x.venda_bruta), l = x.venda_liquida == null ? b : n(x.venda_liquida), f = b ? l / b : 1;
+      return { r: l, p: n(x.pecas) - (n(x.pecas_devolvidas) || 0), sale: n(x.venda_sale) * f, cmv: x.cmv == null ? null : n(x.cmv) * f, de: n(x.valor_de) * f, parcial: false };
+    };
+    const loja = new Map(lojas_venda.map((x) => [x.data, liquida(x)]));
     // outubro/2025, mesmo dia do mês
     const o25site = new Map();
     for (const x of base25) {
@@ -43,7 +49,7 @@ dash.calc('pbf_dia', {
       a.r += Number(x.captado) || 0; a.p += Number(x.pecas) || 0; a.sale += Number(x.captado_sale) || 0;
       o25site.set(x.data25, a);
     }
-    const o25loja = new Map(lojas_out25.map((x) => [x.data, { r: n(x.venda_bruta), p: n(x.pecas), sale: n(x.venda_sale), de: n(x.valor_de), cmv: n(x.cmv) }]));
+    const o25loja = new Map(lojas_out25.map((x) => [x.data, liquida(x)]));
     const campos = ['r25', 'p25', 'sale25', 'cmv25', 'rc25', 'de25', 'rde25', 'plano_r', 'plano_p', 'plano_cmv', 'plano_sale', 'plano_cheio', 'o26_r', 'o26_p', 'o26_sale', 'o26_cmv', 'o26_rc', 'o26_de', 'o26_rde'];
     const linha = (canal, data, etapa, b, real, o25) => ({
       canal, data, etapa, ...Object.fromEntries(campos.map((k) => [k, r(b[k])])),
@@ -151,7 +157,7 @@ dash.calc('pbf_indicadores', {
   inputs: ['pbf_resumo'],
   fn: (pbf_resumo) => {
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
-    const ind = [['Receita bruta', 'receita', 'brl'], ['Preço médio', 'preco_medio', 'brl0'], ['Desconto médio sobre DE', 'desconto', 'pp'],
+    const ind = [['Receita', 'receita', 'brl'], ['Preço médio', 'preco_medio', 'brl0'], ['Desconto médio sobre DE', 'desconto', 'pp'],
       ['% SALE na receita', 'pct_sale', 'pp'], ['Margem bruta', 'mb', 'pp'], ['Peças vendidas', 'pecas', 'int']];
     const rede = pbf_resumo.find((x) => x.canal === 'Rede') || {};
     const out = [];
@@ -181,7 +187,7 @@ dash.calc('pbf_tendencia', {
   fn: (pbf_resumo) => {
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
     const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
-    const ind = [['Receita bruta', 'receita', 'brl'], ['Preço médio', 'preco_medio', 'brl0'], ['Desconto médio sobre DE', 'desconto', 'pp'],
+    const ind = [['Receita', 'receita', 'brl'], ['Preço médio', 'preco_medio', 'brl0'], ['Desconto médio sobre DE', 'desconto', 'pp'],
       ['% SALE na receita', 'pct_sale', 'pp'], ['Margem bruta', 'mb', 'pp'], ['Peças vendidas', 'pecas', 'int']];
     const out = [];
     ind.forEach(([nome, k, tipo], i) => {
@@ -214,7 +220,7 @@ dash.calc('pbf_projecao', {
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
     const out = [];
     for (const x of pbf_resumo) {
-      const linhas = [['Receita bruta', 'brl', x.mes_receita_2025, x.mes_receita_plano, x.projecao_tendencia, x.projecao_real_mais_plano],
+      const linhas = [['Receita', 'brl', x.mes_receita_2025, x.mes_receita_plano, x.projecao_tendencia, x.projecao_real_mais_plano],
         ['Peças vendidas', 'int', x.mes_pecas_2025, x.mes_pecas_plano, x.projecao_pecas_tendencia, x.projecao_pecas_real_mais_plano],
         ['Margem bruta', 'pct', x.mes_mb_2025, x.mes_mb_plano, null, null],
         ['% SALE na receita', 'pct', x.mes_pct_sale_2025, x.mes_pct_sale_plano, null, null]];
@@ -307,7 +313,7 @@ dash.calc('pbf_etapas', {
       return tr;
     }));
     // leitura da receita, por canal
-    const rec = rows.filter((x) => x.indicador === 'Receita bruta');
+    const rec = rows.filter((x) => x.indicador === 'Receita');
     const pct = (v) => (B.vazio(v) ? '—' : B.F.delta(v));
     const nome = { Lojas: 'Nas lojas', Site: 'No site', Rede: 'Na rede' };
     const frases = rec.map((x) => x.var_2025 == null
@@ -342,9 +348,9 @@ dash.calc('pbf_etapas', {
       B.preencher(el, res[el.dataset.field]);
       if (el.dataset.fmt === 'delta') B.tomDelta(el, res[el.dataset.field]);
     });
-    const tend = B.linhas('pbf_tendencia').find((x) => x.chave === 'Receita bruta · ' + canal);
+    const tend = B.linhas('pbf_tendencia').find((x) => x.chave === 'Receita · ' + canal);
     sec.querySelectorAll('[data-source="pbf_tendencia"][data-field]').forEach((el) => {
-      el.dataset.where = 'chave=' + encodeURIComponent('Receita bruta · ' + canal);
+      el.dataset.where = 'chave=' + encodeURIComponent('Receita · ' + canal);
       if (!tend) return;
       B.preencher(el, tend[el.dataset.field]);
       B.tomDelta(el, tend[el.dataset.field]);

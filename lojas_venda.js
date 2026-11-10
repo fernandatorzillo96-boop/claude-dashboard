@@ -17,6 +17,8 @@ let custoPlano = {};
 try { custoPlano = JSON.parse(fs.readFileSync(path.join(here, 'custo_plano_por_referencia.json'), 'utf8')); } catch { console.error('custo_plano_por_referencia.json não encontrado: usando só o custo GEC da tabela de produtos.'); }
 const custoDe = (ref) => (ref in custoPlano ? custoPlano[ref] : ref in costByRef ? costByRef[ref] : null);
 
+// CD do e-commerce (64, e 58 residual) e fábrica (3) não são loja física: a venda deles já está no site / não entra no plano das lojas
+const NAO_LOJA = new Set(['64', '58', '3']);
 const ARQ = () => path.join(config.dataDir, 'lojas_venda.json.gz');
 const r2 = (x) => Math.round(x * 100) / 100;
 const p4 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
@@ -93,7 +95,8 @@ export function importarLojas(body) {
   lv.importado_em = new Date().toISOString();
   lv.arquivo = String(body.nome_arquivo || '').slice(0, 120);
   salvar();
-  return { linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.keys(novos[d]))).size, venda_sem_custo: r2(semCusto) };
+  const cd = dias.reduce((t, d) => t + [...NAO_LOJA].reduce((u, e) => u + (novos[d][e]?.bruta || 0), 0), 0);
+  return { venda_cd_ignorada: r2(cd), linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.keys(novos[d]))).size, venda_sem_custo: r2(semCusto) };
 }
 
 const fecha = (a) => {
@@ -114,11 +117,14 @@ export function vendaLojas(inicio, fim, agrupar = 'dia') {
   const dias = Object.keys(lv.dias).filter((d) => (!inicio || d >= inicio) && (!fim || d <= fim)).sort();
   if (agrupar === 'loja') {
     const g = {};
-    for (const d of dias) for (const [emp, a] of Object.entries(lv.dias[d])) (g[emp] ||= { loja: a.loja, xs: [] }).xs.push(a);
+    for (const d of dias) for (const [emp, a] of Object.entries(lv.dias[d])) if (!NAO_LOJA.has(emp)) (g[emp] ||= { loja: a.loja, xs: [] }).xs.push(a);
     return Object.entries(g).map(([emp, { loja, xs }]) => ({ empresa: Number(emp), loja, dias: xs.length, ...fecha(soma(xs)) }))
       .sort((a, b) => b.venda_bruta - a.venda_bruta);
   }
-  return dias.map((d) => ({ data: d, lojas: Object.keys(lv.dias[d]).length, ...fecha(soma(Object.values(lv.dias[d]))) }));
+  return dias.map((d) => {
+    const xs = Object.entries(lv.dias[d]).filter(([emp]) => !NAO_LOJA.has(emp)).map(([, a]) => a);
+    return { data: d, lojas: xs.length, ...fecha(soma(xs)) };
+  });
 }
 
 export function statusLojas() {

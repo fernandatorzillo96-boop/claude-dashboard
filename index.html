@@ -91,19 +91,19 @@
     <div class="bf-bar">
       <label class="bf-ctl">Canal <select id="sel-pbf-canal" aria-label="Canal"><option value="Rede">Rede (lojas + site)</option><option value="Lojas">Lojas físicas</option><option value="Site">Site + app</option></select></label>
       <a class="bf-btn" id="btn-lojas-importar" target="_blank" rel="noopener" hidden>Importar venda das lojas</a>
-      <span class="bf-note">Plano diário do BF26 Apoio Executivo (abas 05f, 05i e 05j). Realizado do site = captado VTEX bruto; das lojas = base comercial importada (venda bruta, sem devoluções). Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
+      <span class="bf-note">Plano diário do BF26 Apoio Executivo (abas 05f, 05i e 05j). Realizado do site = captado VTEX; das lojas = venda líquida da base comercial importada (vendas − devoluções). Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
     </div>
     <p class="bf-note" id="nota-pbf-lojas" hidden>A venda das lojas ainda não foi importada: a rede e as lojas aparecem quando a base comercial for enviada no botão Importar venda das lojas.</p>
     <div class="bf-tiles">
-      <div class="bf-tile"><div class="bf-lbl">Receita bruta até a data de corte</div>
+      <div class="bf-tile"><div class="bf-lbl">Receita até a data de corte (lojas: líquida)</div>
         <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="receita_real" data-where="canal=Rede" data-fmt="brl">—</div>
         <div class="bf-delta"><span data-source="pbf_resumo" data-field="atingimento" data-where="canal=Rede" data-fmt="pct">—</span> do plano (<span data-source="pbf_resumo" data-field="receita_plano" data-where="canal=Rede" data-fmt="brl">—</span>) · <span data-source="pbf_resumo" data-field="var_receita_2025" data-where="canal=Rede" data-fmt="delta">—</span> vs 2025</div></div>
       <div class="bf-tile"><div class="bf-lbl">Margem bruta</div>
         <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="mb_real" data-where="canal=Rede" data-fmt="pct">—</div>
         <div class="bf-delta">Plano <span data-source="pbf_resumo" data-field="mb_plano" data-where="canal=Rede" data-fmt="pct">—</span> · 2025 <span data-source="pbf_resumo" data-field="mb_2025" data-where="canal=Rede" data-fmt="pct">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">Receita sobre outubro (mesmos dias)</div>
-        <div class="bf-big dash-skeleton" data-source="pbf_tendencia" data-field="var_real" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</div>
-        <div class="bf-delta">realizado nov/26 ÷ out/26 · plano <span data-source="pbf_tendencia" data-field="var_plano" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</span> · 2025 <span data-source="pbf_tendencia" data-field="var_2025" data-where="chave=Receita%20bruta%20%C2%B7%20Rede" data-fmt="delta">—</span></div></div>
+        <div class="bf-big dash-skeleton" data-source="pbf_tendencia" data-field="var_real" data-where="chave=Receita%20%C2%B7%20Rede" data-fmt="delta">—</div>
+        <div class="bf-delta">realizado nov/26 ÷ out/26 · plano <span data-source="pbf_tendencia" data-field="var_plano" data-where="chave=Receita%20%C2%B7%20Rede" data-fmt="delta">—</span> · 2025 <span data-source="pbf_tendencia" data-field="var_2025" data-where="chave=Receita%20%C2%B7%20Rede" data-fmt="delta">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">Projeção do mês (tendência)</div>
         <div class="bf-big dash-skeleton" data-source="pbf_resumo" data-field="projecao_tendencia" data-where="canal=Rede" data-fmt="brl">—</div>
         <div class="bf-delta"><span data-source="pbf_resumo" data-field="tendencia_vs_plano" data-where="canal=Rede" data-fmt="delta">—</span> vs plano do mês (<span data-source="pbf_resumo" data-field="mes_receita_plano" data-where="canal=Rede" data-fmt="brl">—</span>) · nov/25 <span data-source="pbf_resumo" data-field="mes_receita_2025" data-where="canal=Rede" data-fmt="brl">—</span></div></div>
@@ -266,7 +266,7 @@
         <h2>Conversão por dia</h2>
         <div class="bf-chart" id="ch-md-conv" data-source="midia_roi_dia"></div>
       </div>
-      <div class="bf-card" id="card-md-funil">
+      <div class="bf-card bf-wide" id="card-md-funil">
         <h2>Funil de compra</h2>
         <p class="bf-sub">Usuários em cada etapa (GA4), com % do início e da etapa anterior.</p>
         <div class="bf-tablebox aberta">
@@ -275,7 +275,7 @@
           </table>
         </div>
       </div>
-      <div class="bf-card" id="card-md-canais">
+      <div class="bf-card bf-wide" id="card-md-canais">
         <h2>Por canal (GA4)</h2>
         <div class="bf-tablebox aberta">
           <table class="bf-table" id="tb-md-canais" data-source="ga4_canais" data-row-key="canal">

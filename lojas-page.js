@@ -48,7 +48,7 @@ b.onclick=async()=>{
     if(!j.ok)throw new Error(j.erro||'Falhou');
     m.className='ok';
     const br=(d)=>d.slice(8,10)+'/'+d.slice(5,7);
-    m.textContent='Importado: '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.lojas+' lojas, de '+br(j.de)+' a '+br(j.ate)+'.'+(j.venda_sem_custo?'\\nVenda de referências sem custo GEC: R$ '+Math.round(j.venda_sem_custo).toLocaleString('pt-BR')+' (a margem delas segue a média do dia).':'')+'\\nAtualize o painel para ver na aba Plano BF.';
+    m.textContent='Importado: '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.lojas+' lojas, de '+br(j.de)+' a '+br(j.ate)+'.'+(j.venda_cd_ignorada?'\\nVenda do CD do e-commerce fora das lojas: R$ '+Math.round(j.venda_cd_ignorada).toLocaleString('pt-BR')+' (já entra no site).':'')+(j.venda_sem_custo?'\\nVenda de referências sem custo GEC: R$ '+Math.round(j.venda_sem_custo).toLocaleString('pt-BR')+' (a margem delas segue a média do dia).':'')+'\\nAtualize o painel para ver na aba Plano BF.';
   }catch(e){m.className='erro';m.textContent='Erro: '+e.message;}
   b.disabled=false;
 };

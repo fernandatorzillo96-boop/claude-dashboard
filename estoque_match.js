@@ -75,7 +75,7 @@ export function importarEstoqueErp(body) {
     const canal = c.canal >= 0 ? String(r[c.canal] || '') : '';
     let emp = Number(r[c.emp]);
     // Só lojas (ON e OFF) e o e-commerce; fábrica, atacado, DPA etc. não têm estoque na VTEX.
-    if (!Number.isFinite(emp) || emp === 3 || !(/^[12]-/.test(canal) || /e-?commerce/i.test(canal) || !canal)) { ignoradas++; continue; }
+    if (!Number.isFinite(emp) || emp === 3 || !(/^[12]-/.test(canal) || /^lojas/i.test(canal) || /e-?commerce/i.test(canal) || !canal)) { ignoradas++; continue; }
     emp = empresaErp(emp);
     const cd = String(r[c.cd] ?? '').replace(/\.0$/, '').trim();
     if (!cd) { ignoradas++; continue; }
@@ -83,7 +83,7 @@ export function importarEstoqueErp(body) {
     lojas[emp] = lojas[emp] || (emp === 64 ? 'E-commerce (CD)' : String(r[c.nome] || `Loja ${emp}`));
     itens[emp] = itens[emp] || {};
     itens[emp][cd] = (itens[emp][cd] || 0) + q;
-    if (!attrs[cd]) attrs[cd] = [r[c.ref] ?? null, r[c.desc] ?? null, r[c.tam] ?? null, r[c.cor] ?? null, c.sale >= 0 && /sale/i.test(String(r[c.sale] || '')) ? 1 : 0, c.preco >= 0 ? Number(r[c.preco]) || null : null];
+    if (!attrs[cd]) attrs[cd] = [r[c.ref] ?? null, r[c.desc] ?? null, r[c.tam] ?? null, r[c.cor] ?? null, c.sale >= 0 && /sale/i.test(String(r[c.sale] || '')) && !/fora|n[aã]o/i.test(String(r[c.sale] || '')) ? 1 : 0, c.preco >= 0 ? Number(r[c.preco]) || null : null];
     lidas++;
   }
   if (!lidas) throw new Error('Nenhuma linha de loja ou e-commerce no arquivo.');
