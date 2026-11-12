@@ -391,7 +391,7 @@ painel.get('/d3.min.js', (req, res) => res.sendFile(path.join(path.dirname(fileU
 // Arquivos do site: procura em site/ e, se tiverem sido enviados soltos na raiz do repositório, na raiz.
 // Só os arquivos desta lista são servidos (o resto do repositório nunca vai para o navegador).
 const raiz = path.dirname(fileURLToPath(import.meta.url));
-const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css', 'plano_bf.js', 'midia_painel.js', 'data/plano_bf_canais.json',
+const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css', 'plano_bf.js', 'midia_painel.js', 'data/plano_bf_canais.json', 'data/faturado_2025.json',
   'data/base_2025_por_hora.json', 'data/meta_diaria.json', 'data/plano_bf26_site_diario_v2.json', 'data/promocoes_bf25.json'];
 const acharArquivo = (rel) => [path.join(pastaSite, rel), path.join(raiz, 'site', path.basename(rel)), path.join(raiz, path.basename(rel))].find((f) => fs.existsSync(f));
 painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {

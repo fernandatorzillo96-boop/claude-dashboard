@@ -38,6 +38,7 @@
     ga4_entrada_det: { tool: 'bf_ga4_entrada_detalhe', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', pagina: '{{md_pagina}}', agrupar: '{{md_det}}', limite: 50 } },
     meta_campanhas: { tool: 'bf_meta_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     plano_canais: { file: 'data/plano_bf_canais.json' },
+    faturado25: { file: 'data/faturado_2025.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
     meta: { file: 'data/meta_diaria.json' },
     plano: { file: 'data/plano_bf26_site_diario_v2.json' },

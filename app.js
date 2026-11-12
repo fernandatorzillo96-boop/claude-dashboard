@@ -496,8 +496,10 @@ function desenharFaturado() {
       lines: [
         { name: 'Meta (Quadros)', vals: fd.map((x) => x.meta), color: c.b, width: 2 },
         { name: 'Super meta', vals: fd.map((x) => x.super_meta), color: c.c, dash: '2 3' },
+        { name: '2025 (mesmo dia da semana)', vals: fd.map((x) => x.liquido_2025_semana), color: c.mudo, width: 1.5 },
+        { name: '2025 (mesmo dia do mês)', vals: fd.map((x) => x.liquido_2025_dia), color: c.d, dash: '1 3', width: 1.5 },
       ],
-      fmtY: F.brl, fmtTip: F.brl0, height: 260,
+      fmtY: F.brl, fmtTip: F.brl0, height: 280,
     });
   }
   const el2 = document.getElementById('ch-fat-acum');
@@ -510,13 +512,16 @@ function desenharFaturado() {
         { name: 'Faturado líquido acumulado', vals: m.map((x) => x.acumulado_mes), color: c.a, width: 2.5 },
         { name: 'Meta acumulada', vals: m.map((x) => x.acumulado_meta_mes), color: c.b, width: 2 },
         { name: 'Super meta acumulada', vals: m.map((x) => x.acumulado_super_mes), color: c.c, dash: '2 3' },
+        { name: '2025 acumulado (dia da semana)', vals: m.map((x) => x.acumulado_2025_semana), color: c.mudo, width: 1.5 },
+        { name: '2025 acumulado (dia do mês)', vals: m.map((x) => x.acumulado_2025_dia), color: c.d, dash: '1 3', width: 1.5 },
       ],
       fmtY: F.brl, fmtTip: F.brl, height: 240,
     });
   }
   tabela(document.getElementById('tb-fat'), fd.filter((x) => x.liquido != null).reverse(), {
     data: 'data', vendido: 'brl0', devolvido: 'brl0', liquido: 'brl0', meta: 'brl0', var_vs_meta: 'delta', super_meta: 'brl0', var_vs_super: 'delta', margem_bruta: 'pct', liquido_ecommerce: 'brl0', liquido_omni: 'brl0',
-  }, { var_vs_meta: (r) => r.var_vs_meta, var_vs_super: (r) => r.var_vs_super });
+    liquido_2025_semana: 'brl0', var_vs_2025_semana: 'delta', liquido_2025_dia: 'brl0', var_vs_2025_dia: 'delta',
+  }, { var_vs_meta: (r) => r.var_vs_meta, var_vs_super: (r) => r.var_vs_super, var_vs_2025_semana: (r) => r.var_vs_2025_semana, var_vs_2025_dia: (r) => r.var_vs_2025_dia });
 }
 
 // ---------- match de estoque ----------

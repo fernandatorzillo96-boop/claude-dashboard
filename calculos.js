@@ -247,8 +247,9 @@ dash.calc('bf_resumo', {
 
 dash.calc('faturado_dia', {
   title: 'Faturado líquido × plano',
-  inputs: ['faturado', 'plano', 'meta', 'dia'],
-  fn: (faturado, plano, meta, dia) => {
+  description: 'Faturado líquido do 3351 por dia do mês corrente contra a meta, a super meta e 2025 (3351 de novembro/2025): mesmo dia da semana (364 dias antes) e mesmo dia do mês.',
+  inputs: ['faturado', 'plano', 'meta', 'dia', 'faturado25'],
+  fn: (faturado, plano, meta, dia, faturado25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
     const r = (x) => Math.round(x * 100) / 100;
@@ -262,7 +263,17 @@ dash.calc('faturado_dia', {
     const datas = [...new Set([...fat.keys(), ...mt.keys(), ...pl.keys()])].filter((d) => d.slice(0, 7) === mesAtual).sort();
     const accMeta = {};
     const acc = {};
+    const f25 = new Map(faturado25.map((x) => [x.data, Number(x.liquido)]));
+    const menos364 = (d) => new Date(Date.parse(d + 'T12:00:00Z') - 364 * 864e5).toISOString().slice(0, 10);
+    let a25s = 0, a25d = 0, s25ok = true, d25ok = true;
     return datas.map((d) => {
+      const ls = f25.has(menos364(d)) ? f25.get(menos364(d)) : null, ld = f25.has('2025' + d.slice(4)) ? f25.get('2025' + d.slice(4)) : null;
+      if (ls == null) s25ok = false; else a25s += ls;
+      if (ld == null) d25ok = false; else a25d += ld;
+      const extra25 = {
+        data_2025_semana: menos364(d), liquido_2025_semana: ls, liquido_2025_dia: ld,
+        acumulado_2025_semana: s25ok ? r(a25s) : null, acumulado_2025_dia: d25ok ? r(a25d) : null,
+      };
       const x = fat.get(d) || { data: d };
       const b = pl.get(x.data) || {};
       const liq = n(x.liquido), meta = n(b.plano_receita_liquida), cm = n(b.plano_cmv);
@@ -284,6 +295,9 @@ dash.calc('faturado_dia', {
         super_meta: st.has(x.data) ? st.get(x.data) : null,
         var_vs_super: st.get(x.data) && liq != null ? p(liq / st.get(x.data) - 1) : null,
         acumulado_super_mes: st.has(x.data) ? r((accSuper[m] = (accSuper[m] || 0) + st.get(x.data))) : null,
+        ...extra25,
+        var_vs_2025_semana: liq != null && extra25.liquido_2025_semana ? p(liq / extra25.liquido_2025_semana - 1) : null,
+        var_vs_2025_dia: liq != null && extra25.liquido_2025_dia ? p(liq / extra25.liquido_2025_dia - 1) : null,
       };
     });
   },
@@ -416,7 +430,10 @@ dash.calc('faturado_resumo', {
     const comPlano = f.filter((x) => x.plano_receita_liquida != null);
     const liq = sum('liquido'), vend = sum('vendido'), dev = sum('devolvido'), cmv = sum('cmv');
     const lp = sum('liquido', comPlano), pl = sum('plano_receita_liquida', comPlano), cmp = sum('plano_cmv', comPlano);
+    const s25 = f.every((x) => x.liquido_2025_semana != null) ? sum('liquido_2025_semana') : null, d25 = f.every((x) => x.liquido_2025_dia != null) ? sum('liquido_2025_dia') : null;
     return [{
+      liquido_2025_semana: s25 == null ? null : r(s25), var_vs_2025_semana: s25 ? p(liq / s25 - 1) : null,
+      liquido_2025_dia: d25 == null ? null : r(d25), var_vs_2025_dia: d25 ? p(liq / d25 - 1) : null,
       mes: ate.slice(0, 7), ate, liquido: r(liq), vendido: r(vend), devolvido: r(dev),
       taxa_devolucao: vend ? p(dev / vend) : null, margem_bruta: liq ? p(1 - cmv / liq) : null,
       plano: r(pl), atingimento: pl ? p(lp / pl) : null, margem_plano: pl ? p(1 - cmp / pl) : null,

@@ -140,13 +140,13 @@
         </div>
       </div>
       <div class="bf-card bf-wide" id="card-pbf-proj">
-        <h2>Projeção do mês</h2>
-        <p class="bf-sub">Tendência = realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano. Margem e % SALE não são projetados: dependem do mix das próximas etapas.</p>
-        <div class="bf-tablebox aberta">
+        <h2>Projeção do mês por canal</h2>
+        <p class="bf-sub">Tendência = realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano, como nas abas 05f, 05i e 05j (a rede usa o desempenho da rede, por isso não é a soma exata das duas tendências). Margem e % SALE não são projetados: dependem do mix das próximas etapas.</p>
+        <div class="bf-tablebox aberta pbf-ind">
           <table class="bf-table" id="tb-pbf-proj" data-source="pbf_projecao" data-row-key="chave">
             <thead><tr>
-              <th data-field="indicador">Indicador</th><th data-field="mes_2025" class="n">Nov/25</th><th data-field="mes_plano" class="n">Plano nov/26</th><th data-field="tendencia" class="n">Tendência</th>
-              <th data-field="real_mais_plano" class="n">Realizado + plano restante</th><th data-field="tend_vs_plano" class="n">Tendência vs plano</th>
+              <th data-field="indicador">Indicador</th><th data-field="canal">Canal</th><th data-field="mes_2025" class="n">Nov/25</th><th data-field="mes_plano" class="n">Plano nov/26</th><th data-field="tendencia" class="n">Tendência</th>
+              <th data-field="real_mais_plano" class="n">Realizado + plano restante</th><th data-field="tend_vs_plano" class="n">Tendência vs plano</th><th data-field="tend_vs_2025" class="n">Tendência vs nov/25</th><th data-field="share_tendencia" class="n">Share na tendência</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>
@@ -741,7 +741,7 @@
     <div class="bf-tiles">
       <div class="bf-tile"><div class="bf-lbl">Faturado líquido no mês</div>
         <div class="bf-big dash-skeleton" data-source="faturado_resumo" data-field="liquido" data-row="0" data-fmt="brl">—</div>
-        <div class="bf-delta">até <span data-source="faturado_resumo" data-field="ate" data-row="0" data-fmt="data">—</span></div></div>
+        <div class="bf-delta">até <span data-source="faturado_resumo" data-field="ate" data-row="0" data-fmt="data">—</span> · <span data-source="faturado_resumo" data-field="var_vs_2025_semana" data-row="0" data-fmt="delta">—</span> vs 2025 no mesmo dia da semana (<span data-source="faturado_resumo" data-field="liquido_2025_semana" data-row="0" data-fmt="brl">—</span>) · <span data-source="faturado_resumo" data-field="var_vs_2025_dia" data-row="0" data-fmt="delta">—</span> no mesmo dia do mês (<span data-source="faturado_resumo" data-field="liquido_2025_dia" data-row="0" data-fmt="brl">—</span>)</div></div>
       <div class="bf-tile"><div class="bf-lbl">% da meta até o último dia do 3351 (Quadros)</div>
         <div class="bf-big dash-skeleton" data-source="meta_resumo" data-field="pct_meta_ate_dia" data-row="0" data-fmt="pct">—</div>
         <div class="bf-delta">Meta do mês: <span data-source="meta_resumo" data-field="meta_mes" data-row="0" data-fmt="brl">—</span></div></div>
@@ -755,12 +755,12 @@
     <div class="bf-grid">
       <div class="bf-card bf-wide" id="card-fat">
         <h2>Faturado líquido por dia × meta</h2>
-        <p class="bf-sub">Mês corrente. Barras: vendido − devolvido, pela data de emissão, até o último dia do 3351 (hoje entra parcial quando o 3351 trouxer o dia). Linhas: meta diária de faturado líquido do Quadros (R$ 2,7 mi) e super meta (R$ 3,276 mi = R$ 3,6 mi captado − 9% de devolução), o mês inteiro.</p>
+        <p class="bf-sub">Mês corrente. Barras: vendido − devolvido, pela data de emissão, até o último dia do 3351 (hoje entra parcial quando o 3351 trouxer o dia). Linhas: meta diária de faturado líquido do Quadros (R$ 2,7 mi), super meta (R$ 3,276 mi = R$ 3,6 mi captado − 9% de devolução) e o faturado líquido de 2025 (3351 de novembro/2025) no mesmo dia da semana e no mesmo dia do mês.</p>
         <div class="bf-chart" id="ch-fat" data-source="faturado_dia faturado meta"></div>
       </div>
       <div class="bf-card bf-wide" id="card-fat-acum">
         <h2>Curva acumulada do mês</h2>
-        <p class="bf-sub">Faturado líquido acumulado × meta acumulada × super meta acumulada.</p>
+        <p class="bf-sub">Faturado líquido acumulado × meta × super meta × 2025 (mesmo dia da semana e mesmo dia do mês).</p>
         <div class="bf-chart" id="ch-fat-acum" data-source="faturado_dia"></div>
       </div>
       <div class="bf-card bf-wide" id="card-fat-tb">
@@ -770,6 +770,7 @@
             <thead><tr>
               <th data-field="data">Data</th><th data-field="vendido" class="n">Vendido</th><th data-field="devolvido" class="n">Devolvido</th>
               <th data-field="liquido" class="n">Líquido</th><th data-field="meta" class="n">Meta</th><th data-field="var_vs_meta" class="n">Vs meta</th><th data-field="super_meta" class="n">Super meta</th><th data-field="var_vs_super" class="n">Vs super</th>
+              <th data-field="liquido_2025_semana" class="n">2025 (dia da semana)</th><th data-field="var_vs_2025_semana" class="n">Vs 2025</th><th data-field="liquido_2025_dia" class="n">2025 (dia do mês)</th><th data-field="var_vs_2025_dia" class="n">Vs 2025</th>
               <th data-field="margem_bruta" class="n">MB</th><th data-field="liquido_ecommerce" class="n">E-commerce</th><th data-field="liquido_omni" class="n">Omni</th>
             </tr></thead><tbody></tbody>
           </table>
