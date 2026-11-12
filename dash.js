@@ -17,6 +17,7 @@
     toprefs: { tool: 'bf_top_referencias', args: { inicio: '{{col_inicio}}', fim: '{{col_fim}}', limite: 50 } },
     lojas: { tool: 'bf_faturamento_por_loja', args: { inicio: '{{log_inicio}}', fim: '{{log_fim}}', dias: '{{sla_dias}}' } },
     transp: { tool: 'bf_entrega_por_transportadora', args: { inicio: '{{log_inicio}}', fim: '{{log_fim}}' } },
+    entrega_ped: { tool: 'bf_entrega_pedidos', args: { inicio: '{{log_inicio}}', fim: '{{log_fim}}' } },
     atend_dia: { tool: 'bf_atendimento_por_dia', args: { inicio: '{{at_inicio}}', fim: '{{at_fim}}' } },
     atend_motivos: { tool: 'bf_atendimento_por_grupo', args: { agrupar: 'motivo', origem: 'tickets', inicio: '{{at_inicio}}', fim: '{{at_fim}}' } },
     atend_canais: { tool: 'bf_atendimento_por_grupo', args: { agrupar: 'canal', origem: 'chat', inicio: '{{at_inicio}}', fim: '{{at_fim}}' } },

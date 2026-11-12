@@ -445,6 +445,12 @@ function desenharColecoes() {
 function desenharLogistica() {
   syncLog();
   selSla.value = String(dash.params().sla_dias ?? 1);
+  tabela(document.getElementById('tb-entrega-ped'), linhas('entrega_quadro'), { total: 'int', pct_total: 'pct', entrega: 'int', retira: 'int' });
+  document.querySelectorAll('#tb-entrega-ped tbody tr').forEach((tr) => {
+    const k = tr.dataset.key;
+    if (k === 'pedidos' || k === 'dentro_do_prazo') tr.style.fontWeight = '600';
+    if (k === 'abertos_atrasados' || k === 'entregues_atrasados') tr.cells[0].style.color = 'var(--bf-neg, #b42318)';
+  });
   tabela(document.getElementById('tb-lojas'), linhas('lojas'), {
     pct_no_prazo: 'pct', pct_mesmo_dia: 'pct', entregas: 'int', faturadas: 'int', faturadas_no_prazo: 'int', pendentes: 'int', pendentes_atrasadas: 'int', dias_mediana: 'int', mais_antiga_pendente: 'dt',
   });

@@ -312,6 +312,42 @@ export function entregaPorTransportadora(inicio, fim) {
   }).sort((a, b) => b.despachadas - a.despachadas);
 }
 
+// Pedidos do período (aprovados, não cancelados) e a entrega ao cliente.
+// Entregue = isDelivered da VTEX (courierStatus.finished) em TODOS os pacotes do pedido.
+// Prazo = maior shippingEstimateDate do pedido (só a data). Data da entrega = maior data de entrega dos pacotes.
+export function entregaPedidos(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const hoje = hojeLocal();
+  const novo = () => ({ pedidos: 0, dentro_do_prazo: 0, entregues: 0, entregues_no_prazo: 0, entregues_atrasados: 0, entregues_sem_data: 0, abertos: 0, abertos_no_prazo: 0, abertos_atrasados: 0, sem_prazo: 0 });
+  const g = { total: novo(), entrega: novo(), retira: novo() };
+  const vistos = new Set();
+  for (const { o } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe || !o.aprovado || !o.entregas?.length) continue;
+    if (vistos.has(o.id)) continue;
+    vistos.add(o.id);
+    const es = o.entregas;
+    const retira = es.every((e) => /pickup/i.test(e.canal || ''));
+    const prom = es.map((e) => diaLocal(e.prometido)).filter(Boolean).sort().pop() || null;
+    const entregue = es.every((e) => e.finalizado);
+    const dEnt = entregue ? es.map((e) => diaLocal(e.entregue)).filter(Boolean).sort().pop() || null : null;
+    for (const x of [g.total, retira ? g.retira : g.entrega]) {
+      x.pedidos++;
+      if (!prom) x.sem_prazo++;
+      if (entregue) {
+        x.entregues++;
+        if (!dEnt || !prom) x.entregues_sem_data++;
+        else if (dEnt <= prom) { x.entregues_no_prazo++; x.dentro_do_prazo++; }
+        else x.entregues_atrasados++;
+      } else {
+        x.abertos++;
+        if (prom && hoje > prom) x.abertos_atrasados++;
+        else { x.abertos_no_prazo++; x.dentro_do_prazo++; }
+      }
+    }
+  }
+  return Object.entries(g).map(([tipo, x]) => ({ tipo, ...x }));
+}
+
 export function faturadoLiquido(inicio, fim) {
   const i = dataValida(inicio) ? inicio : '2000-01-01';
   const f = dataValida(fim) ? fim : '2999-12-31';

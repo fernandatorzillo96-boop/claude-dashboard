@@ -527,6 +527,18 @@
         <div class="bf-big dash-skeleton" data-source="log_resumo" data-field="abertas_atrasadas" data-row="0" data-fmt="int">—</div>
         <div class="bf-delta">entregues com atraso: <span data-source="log_resumo" data-field="entregues_atrasadas" data-row="0" data-fmt="int">—</span></div></div>
     </div>
+    <div class="bf-card" id="card-entrega-ped">
+      <h2>Entrega ao cliente (por pedido)</h2>
+      <p class="bf-sub">Pedidos aprovados criados no período, sem cancelados. Entregue = confirmação de entrega da VTEX (isDelivered) em todos os pacotes do pedido. Prazo = data prometida ao cliente no checkout (só a data). "Dentro do prazo" = entregues no prazo + em aberto que ainda não venceram.</p>
+      <div class="bf-tablebox aberta">
+        <table class="bf-table" id="tb-entrega-ped" data-source="entrega_quadro" data-row-key="campo">
+          <thead><tr>
+            <th data-field="indicador">Indicador</th><th data-field="total" class="n">Pedidos</th><th data-field="pct_total" class="n">% dos pedidos</th>
+            <th data-field="entrega" class="n">Entrega em casa</th><th data-field="retira" class="n">Retira em loja</th>
+          </tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </div>
     <div class="bf-card" id="card-lojas">
       <h2>Faturamento por loja</h2>
       <p class="bf-sub">Cada pacote conta na loja ou CD de onde sai. No prazo = data da nota até o prazo escolhido, em dias úteis após a aprovação do pagamento (a VTEX guarda a data da nota sem horário). % sobre as entregas cujo prazo já venceu.</p>

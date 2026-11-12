@@ -54,6 +54,32 @@ dash.calc('transp_agrupada', {
   },
 });
 
+dash.calc('entrega_quadro', {
+  title: 'Entrega ao cliente por pedido',
+  inputs: ['entrega_ped'],
+  fn: (entrega_ped) => {
+    const t = Object.fromEntries(entrega_ped.map((x) => [x.tipo, x]));
+    const v = (tipo, f) => Number(t[tipo]?.[f]) || 0;
+    const linhas = [
+      ['pedidos', 'Pedidos'],
+      ['dentro_do_prazo', 'Dentro do prazo de entrega'],
+      ['entregues_no_prazo', '↳ Entregues no prazo'],
+      ['abertos_no_prazo', '↳ Em aberto, ainda no prazo'],
+      ['abertos_atrasados', 'Em aberto já atrasados'],
+      ['entregues_atrasados', 'Entregues com atraso'],
+      ['entregues_sem_data', 'Entregues sem data ou prazo na VTEX'],
+    ];
+    const tot = v('total', 'pedidos');
+    return linhas
+      .filter(([f]) => f !== 'entregues_sem_data' || v('total', f) > 0)
+      .map(([f, nome], i) => ({
+        ordem: i, campo: f, indicador: nome,
+        total: v('total', f), pct_total: tot ? Math.round((v('total', f) / tot) * 10000) / 10000 : null,
+        entrega: v('entrega', f), retira: v('retira', f),
+      }));
+  },
+});
+
 dash.calc('log_resumo', {
   title: 'Logística: totais',
   inputs: ['lojas', 'transp_agrupada'],

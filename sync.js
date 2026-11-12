@@ -55,7 +55,10 @@ function compactOrder(o) {
       g.emissao = p.issuanceDate || null;
       g.courier = p.courier || g.courier;
       g.finalizado = !!cs.finished;
-      g.entregue = cs.deliveredDate || null;
+      // isDelivered da VTEX (API de rastreio) vira courierStatus.finished; a data vem em deliveredDate ou no último evento.
+      const ev = Array.isArray(cs.data) ? cs.data : [];
+      const ultimoEvento = ev.map((x) => x.createDate || x.lastChange || x.date).filter(Boolean).sort().pop() || null;
+      g.entregue = cs.deliveredDate || (cs.finished ? ultimoEvento : null);
       g.status_transp = cs.status || null;
     }
   }
