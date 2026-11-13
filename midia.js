@@ -128,7 +128,7 @@ export async function ga4Canais(inicio, fim) {
   const rows = await relatorio(inicio, fim, ['sessionDefaultChannelGroup'], ['sessions', 'totalUsers', 'engagedSessions', 'transactions', 'purchaseRevenue', 'addToCarts']);
   const tot = rows.reduce((s, x) => s + x.sessions, 0), rec = rows.reduce((s, x) => s + x.purchaseRevenue, 0);
   return rows.map((x) => ({
-    canal: x.sessionDefaultChannelGroup, sessoes: x.sessions, usuarios: x.totalUsers, pct_sessoes: tot ? p4(x.sessions / tot) : null,
+    canal: x.sessionDefaultChannelGroup || '(sem canal)', sessoes: x.sessions, usuarios: x.totalUsers, pct_sessoes: tot ? p4(x.sessions / tot) : null,
     taxa_engajamento: x.sessions ? p4(x.engagedSessions / x.sessions) : null, add_to_cart: x.addToCarts,
     compras: x.transactions, receita: r2(x.purchaseRevenue), pct_receita: rec ? p4(x.purchaseRevenue / rec) : null,
     conversao: x.sessions ? p4(x.transactions / x.sessions) : null, ticket_medio: x.transactions ? r2(x.purchaseRevenue / x.transactions) : null,

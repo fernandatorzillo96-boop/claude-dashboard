@@ -209,18 +209,26 @@ dash.calc('pbf_tendencia', {
 });
 
 dash.calc('pbf_projecao', {
-  title: 'Plano BF: projeção do mês',
-  description: 'Por canal: novembro de 2025, plano do mês, tendência (realizado + plano restante corrigido pelo desempenho contra o plano) e realizado + plano restante.',
+  title: 'Plano BF: projeção do mês por canal',
+  description: 'Lojas, site e rede: novembro de 2025, plano do mês, tendência (realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano), realizado + plano restante, tendência contra o plano e contra 2025, e o share de cada canal na tendência da rede.',
   inputs: ['pbf_resumo'],
   fn: (pbf_resumo) => {
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+    const q = (a, b) => (a == null || !b ? null : Math.round((a / b) * 100) / 100);
     const out = [];
     for (const x of pbf_resumo) {
       const linhas = [['Receita', 'brl', x.mes_receita_2025, x.mes_receita_plano, x.projecao_tendencia, x.projecao_real_mais_plano],
         ['Peças vendidas', 'int', x.mes_pecas_2025, x.mes_pecas_plano, x.projecao_pecas_tendencia, x.projecao_pecas_real_mais_plano],
+        ['Preço médio', 'brl0', q(x.mes_receita_2025, x.mes_pecas_2025), q(x.mes_receita_plano, x.mes_pecas_plano), q(x.projecao_tendencia, x.projecao_pecas_tendencia), q(x.projecao_real_mais_plano, x.projecao_pecas_real_mais_plano)],
         ['Margem bruta', 'pct', x.mes_mb_2025, x.mes_mb_plano, null, null],
         ['% SALE na receita', 'pct', x.mes_pct_sale_2025, x.mes_pct_sale_plano, null, null]];
-      for (const [indicador, tipo, a, b, c, d] of linhas) out.push({ chave: x.canal + ' · ' + indicador, canal: x.canal, indicador, tipo, mes_2025: a, mes_plano: b, tendencia: c, real_mais_plano: d, tend_vs_plano: c != null && b ? p(c / b - 1) : null });
+      for (const [indicador, tipo, a, b, c, d] of linhas) out.push({ chave: x.canal + ' · ' + indicador, canal: x.canal, indicador, tipo, mes_2025: a, mes_plano: b, tendencia: c, real_mais_plano: d,
+        tend_vs_plano: c != null && b ? p(c / b - 1) : null, tend_vs_2025: c != null && a ? p(c / a - 1) : null, share_tendencia: null });
+    }
+    // share de cada canal na tendência da rede (receita e peças)
+    for (const x of out) {
+      const rede = out.find((y) => y.canal === 'Rede' && y.indicador === x.indicador);
+      if (rede && rede.tendencia && x.tendencia != null && (x.tipo === 'brl' || x.tipo === 'int')) x.share_tendencia = p(x.tendencia / rede.tendencia);
     }
     return out;
   },
@@ -321,14 +329,26 @@ dash.calc('pbf_etapas', {
   function tabelaProjecao() {
     const tb = document.getElementById('tb-pbf-proj');
     const ths = [...tb.querySelectorAll('th')];
-    tb.tBodies[0].replaceChildren(...B.linhas('pbf_projecao').filter((x) => x.canal === canal).map((x) => {
+    // um bloco por canal: lojas físicas, site + app e rede (total)
+    const ordem = { Lojas: 0, Site: 1, Rede: 2 };
+    const nome = { Lojas: 'Lojas físicas', Site: 'Site + app', Rede: 'Rede (total)' };
+    const ind = [];
+    const rows = B.linhas('pbf_projecao').slice();
+    rows.forEach((x) => { if (!ind.includes(x.indicador)) ind.push(x.indicador); });
+    rows.sort((a, b) => ordem[a.canal] - ordem[b.canal] || ind.indexOf(a.indicador) - ind.indexOf(b.indicador));
+    tb.tBodies[0].replaceChildren(...rows.map((x, i) => {
       const tr = document.createElement('tr');
       tr.dataset.key = x.chave;
+      const primeira = i === 0 || rows[i - 1].canal !== x.canal;
+      if (primeira) tr.className = 'pbf-ini';
+      if (x.canal === 'Rede') tr.classList.add('pbf-rede');
       ths.forEach((th) => {
         const f = th.dataset.field, td = document.createElement('td');
         if (th.classList.contains('n')) td.className = 'n';
-        td.textContent = f === 'indicador' ? x.indicador : f === 'tend_vs_plano' ? B.F.delta(x[f]) : fmtV(x.tipo, x[f]);
-        if (f === 'tend_vs_plano') B.tomDelta(td, x[f]);
+        if (f === 'canal') { td.textContent = primeira ? nome[x.canal] || x.canal : ''; if (primeira) td.style.fontWeight = '600'; }
+        else if (f === 'indicador') td.textContent = x.indicador;
+        else if (f === 'tend_vs_plano' || f === 'tend_vs_2025') { td.textContent = B.F.delta(x[f]); B.tomDelta(td, x[f]); }
+        else td.textContent = fmtV(x.tipo, x[f]);
         tr.append(td);
       });
       return tr;
