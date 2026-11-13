@@ -1,1 +1,579 @@
-[{"data": "2026-10-01", "meta_ecom": 14365.93, "meta_omni": 14438.31, "meta_total": 28804.24, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-02", "meta_ecom": 19809.79, "meta_omni": 20745.68, "meta_total": 40555.47, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-03", "meta_ecom": 0, "meta_omni": 15711.34, "meta_total": 15711.34, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-04", "meta_ecom": 0, "meta_omni": 10398.71, "meta_total": 10398.71, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-05", "meta_ecom": 23701.17, "meta_omni": 49505.51, "meta_total": 73206.68, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-06", "meta_ecom": 11882.84, "meta_omni": 27915.8, "meta_total": 39798.64, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-07", "meta_ecom": 5899.21, "meta_omni": 33273.25, "meta_total": 39172.46, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-08", "meta_ecom": 13759.48, "meta_omni": 20035.2, "meta_total": 33794.68, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-09", "meta_ecom": 7565.44, "meta_omni": 29792.14, "meta_total": 37357.58, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-10", "meta_ecom": 0, "meta_omni": 21821.61, "meta_total": 21821.61, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-11", "meta_ecom": 0, "meta_omni": 14036.45, "meta_total": 14036.45, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-12", "meta_ecom": 0, "meta_omni": 12286.91, "meta_total": 12286.91, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-13", "meta_ecom": 12491.25, "meta_omni": 27989.72, "meta_total": 40480.97, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-14", "meta_ecom": 14606.31, "meta_omni": 23327.48, "meta_total": 37933.79, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-15", "meta_ecom": 9353.54, "meta_omni": 37387.88, "meta_total": 46741.42, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-16", "meta_ecom": 102.82, "meta_omni": 35600.31, "meta_total": 35703.13, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-17", "meta_ecom": 0, "meta_omni": 40219.63, "meta_total": 40219.63, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-18", "meta_ecom": 0, "meta_omni": 17674.18, "meta_total": 17674.18, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-19", "meta_ecom": 3903.12, "meta_omni": 43071.68, "meta_total": 46974.8, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-20", "meta_ecom": 40619.83, "meta_omni": 38984.68, "meta_total": 79604.51, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-21", "meta_ecom": 11889.59, "meta_omni": 56668.41, "meta_total": 68558, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-22", "meta_ecom": 5326.13, "meta_omni": 33732.69, "meta_total": 39058.82, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-23", "meta_ecom": 10617.36, "meta_omni": 37246.19, "meta_total": 47863.55, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-24", "meta_ecom": 0, "meta_omni": 24981.86, "meta_total": 24981.86, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-25", "meta_ecom": 0, "meta_omni": 16271.99, "meta_total": 16271.99, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-26", "meta_ecom": 30010.22, "meta_omni": 55096.88, "meta_total": 85107.1, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-27", "meta_ecom": 7172.73, "meta_omni": 53573.39, "meta_total": 60746.12, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-28", "meta_ecom": 12480.51, "meta_omni": 27335.26, "meta_total": 39815.77, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-29", "meta_ecom": 6910.91, "meta_omni": 47871.37, "meta_total": 54782.28, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-30", "meta_ecom": 12531.82, "meta_omni": 38023.63, "meta_total": 50555.45, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-10-31", "meta_ecom": 0, "meta_omni": 24981.86, "meta_total": 24981.86, "fonte": "Quadros outubro, aba Meta"}, {"data": "2026-11-01", "meta_ecom": 0.0, "meta_omni": 18845.05, "meta_total": 18845.05, "meta_captado": 72384.3, "super_ecom": 0.0, "super_omni": 22865.33, "super_total": 22865.33, "super_captado": 87826.28, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-02", "meta_ecom": 0.0, "meta_omni": 34216.63, "meta_total": 34216.63, "meta_captado": 44091.49, "super_ecom": 0.0, "super_omni": 41516.18, "super_total": 41516.18, "super_captado": 53497.67, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-03", "meta_ecom": 43714.2, "meta_omni": 41644.22, "meta_total": 85358.42, "meta_captado": 70002.06, "super_ecom": 53039.9, "super_omni": 50528.32, "super_total": 103568.22, "super_captado": 84935.83, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-04", "meta_ecom": 20957.7, "meta_omni": 54121.44, "meta_total": 75079.14, "meta_captado": 70551.12, "super_ecom": 25428.68, "super_omni": 65667.35, "super_total": 91096.03, "super_captado": 85602.02, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-05", "meta_ecom": 22997.2, "meta_omni": 53589.69, "meta_total": 76586.89, "meta_captado": 78033.61, "super_ecom": 27903.27, "super_omni": 65022.16, "super_total": 92925.43, "super_captado": 94680.78, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-06", "meta_ecom": 19581.78, "meta_omni": 49480.93, "meta_total": 69062.71, "meta_captado": 59606.47, "super_ecom": 23759.23, "super_omni": 60036.86, "super_total": 83796.09, "super_captado": 72322.52, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-07", "meta_ecom": 0.0, "meta_omni": 39562.42, "meta_total": 39562.42, "meta_captado": 93222.64, "super_ecom": 0.0, "super_omni": 48002.4, "super_total": 48002.4, "super_captado": 113110.14, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-08", "meta_ecom": 0.0, "meta_omni": 26762.96, "meta_total": 26762.96, "meta_captado": 98674.03, "super_ecom": 0.0, "super_omni": 32472.39, "super_total": 32472.39, "super_captado": 119724.49, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-09", "meta_ecom": 61901.0, "meta_omni": 109968.36, "meta_total": 171869.36, "meta_captado": 82629.23, "super_ecom": 75106.55, "super_omni": 133428.28, "super_total": 208534.83, "super_captado": 100256.8, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-10", "meta_ecom": 29943.43, "meta_omni": 61047.93, "meta_total": 90991.36, "meta_captado": 98502.82, "super_ecom": 36331.36, "super_omni": 74071.49, "super_total": 110402.85, "super_captado": 119516.75, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-11", "meta_ecom": 32390.15, "meta_omni": 70138.57, "meta_total": 102528.72, "meta_captado": 87763.32, "super_ecom": 39300.05, "super_omni": 85101.46, "super_total": 124401.51, "super_captado": 106486.16, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-12", "meta_ecom": 32426.15, "meta_omni": 63360.67, "meta_total": 95786.82, "meta_captado": 88560.86, "super_ecom": 39343.73, "super_omni": 76877.61, "super_total": 116221.34, "super_captado": 107453.84, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-13", "meta_ecom": 30561.93, "meta_omni": 64756.67, "meta_total": 95318.6, "meta_captado": 74879.28, "super_ecom": 37081.81, "super_omni": 78571.43, "super_total": 115653.24, "super_captado": 90853.53, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-14", "meta_ecom": 0.0, "meta_omni": 42242.2, "meta_total": 42242.2, "meta_captado": 65028.07, "super_ecom": 0.0, "super_omni": 51253.87, "super_total": 51253.87, "super_captado": 78900.72, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-15", "meta_ecom": 0.0, "meta_omni": 36223.52, "meta_total": 36223.52, "meta_captado": 81383.66, "super_ecom": 0.0, "super_omni": 43951.2, "super_total": 43951.2, "super_captado": 98745.51, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-16", "meta_ecom": 28184.43, "meta_omni": 66310.29, "meta_total": 94494.72, "meta_captado": 105909.98, "super_ecom": 34197.11, "super_omni": 80456.49, "super_total": 114653.6, "super_captado": 128504.11, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-17", "meta_ecom": 22677.05, "meta_omni": 61229.06, "meta_total": 83906.11, "meta_captado": 95668.15, "super_ecom": 27514.82, "super_omni": 74291.26, "super_total": 101806.08, "super_captado": 116077.35, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-18", "meta_ecom": 28626.05, "meta_omni": 82093.18, "meta_total": 110719.23, "meta_captado": 99470.72, "super_ecom": 34732.94, "super_omni": 99606.39, "super_total": 134339.33, "super_captado": 120691.14, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-19", "meta_ecom": 28223.97, "meta_omni": 73037.21, "meta_total": 101261.18, "meta_captado": 98854.93, "super_ecom": 34245.08, "super_omni": 88618.48, "super_total": 122863.56, "super_captado": 119943.98, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-20", "meta_ecom": 0.0, "meta_omni": 49783.96, "meta_total": 49783.96, "meta_captado": 70855.48, "super_ecom": 0.0, "super_omni": 60404.54, "super_total": 60404.54, "super_captado": 85971.32, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-21", "meta_ecom": 0.0, "meta_omni": 51799.16, "meta_total": 51799.16, "meta_captado": 77216.32, "super_ecom": 0.0, "super_omni": 62849.65, "super_total": 62849.65, "super_captado": 93689.14, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-22", "meta_ecom": 0.0, "meta_omni": 44998.77, "meta_total": 44998.77, "meta_captado": 160657.65, "super_ecom": 0.0, "super_omni": 54598.51, "super_total": 54598.51, "super_captado": 194931.28, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-23", "meta_ecom": 71701.58, "meta_omni": 115638.79, "meta_total": 187340.37, "meta_captado": 84139.81, "super_ecom": 86997.92, "super_omni": 140308.4, "super_total": 227306.32, "super_captado": 102089.64, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-24", "meta_ecom": 20720.98, "meta_omni": 55947.58, "meta_total": 76668.56, "meta_captado": 87416.02, "super_ecom": 25141.46, "super_omni": 67883.06, "super_total": 93024.52, "super_captado": 106064.77, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-25", "meta_ecom": 28421.4, "meta_omni": 81671.41, "meta_total": 110092.81, "meta_captado": 118973.48, "super_ecom": 34484.63, "super_omni": 99094.64, "super_total": 133579.27, "super_captado": 144354.49, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-26", "meta_ecom": 45692.27, "meta_omni": 95156.67, "meta_total": 140848.94, "meta_captado": 169804.77, "super_ecom": 55439.95, "super_omni": 115456.76, "super_total": 170896.71, "super_captado": 206029.79, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-27", "meta_ecom": 17523.31, "meta_omni": 137749.53, "meta_total": 155272.84, "meta_captado": 189134.98, "super_ecom": 21261.62, "super_omni": 167136.1, "super_total": 188397.72, "super_captado": 229483.78, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-28", "meta_ecom": 48846.37, "meta_omni": 123957.89, "meta_total": 172804.26, "meta_captado": 163522.46, "super_ecom": 59266.93, "super_omni": 150402.24, "super_total": 209669.17, "super_captado": 198407.25, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-29", "meta_ecom": 39965.33, "meta_omni": 70482.15, "meta_total": 110447.48, "meta_captado": 162864.92, "super_ecom": 48491.27, "super_omni": 85518.34, "super_total": 134009.61, "super_captado": 197609.44, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}, {"data": "2026-11-30", "meta_ecom": 40811.08, "meta_omni": 108315.73, "meta_total": 149126.81, "meta_captado": 117230.34, "super_ecom": 49517.44, "super_omni": 131423.06, "super_total": 180940.5, "super_captado": 142239.48, "fonte": "Meta: Quadros novembro (R$ 2,7 mi líquido). Super meta: R$ 3,6 mi captado / R$ 3,276 mi líquido (devolução 9%)."}]
+[
+ {
+  "data": "2026-10-01",
+  "meta_ecom": 14365.93,
+  "meta_omni": 14438.31,
+  "meta_total": 28804.24,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-02",
+  "meta_ecom": 19809.79,
+  "meta_omni": 20745.68,
+  "meta_total": 40555.47,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-03",
+  "meta_ecom": 0,
+  "meta_omni": 15711.34,
+  "meta_total": 15711.34,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-04",
+  "meta_ecom": 0,
+  "meta_omni": 10398.71,
+  "meta_total": 10398.71,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-05",
+  "meta_ecom": 23701.17,
+  "meta_omni": 49505.51,
+  "meta_total": 73206.68,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-06",
+  "meta_ecom": 11882.84,
+  "meta_omni": 27915.8,
+  "meta_total": 39798.64,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-07",
+  "meta_ecom": 5899.21,
+  "meta_omni": 33273.25,
+  "meta_total": 39172.46,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-08",
+  "meta_ecom": 13759.48,
+  "meta_omni": 20035.2,
+  "meta_total": 33794.68,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-09",
+  "meta_ecom": 7565.44,
+  "meta_omni": 29792.14,
+  "meta_total": 37357.58,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-10",
+  "meta_ecom": 0,
+  "meta_omni": 21821.61,
+  "meta_total": 21821.61,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-11",
+  "meta_ecom": 0,
+  "meta_omni": 14036.45,
+  "meta_total": 14036.45,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-12",
+  "meta_ecom": 0,
+  "meta_omni": 12286.91,
+  "meta_total": 12286.91,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-13",
+  "meta_ecom": 12491.25,
+  "meta_omni": 27989.72,
+  "meta_total": 40480.97,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-14",
+  "meta_ecom": 14606.31,
+  "meta_omni": 23327.48,
+  "meta_total": 37933.79,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-15",
+  "meta_ecom": 9353.54,
+  "meta_omni": 37387.88,
+  "meta_total": 46741.42,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-16",
+  "meta_ecom": 102.82,
+  "meta_omni": 35600.31,
+  "meta_total": 35703.13,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-17",
+  "meta_ecom": 0,
+  "meta_omni": 40219.63,
+  "meta_total": 40219.63,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-18",
+  "meta_ecom": 0,
+  "meta_omni": 17674.18,
+  "meta_total": 17674.18,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-19",
+  "meta_ecom": 3903.12,
+  "meta_omni": 43071.68,
+  "meta_total": 46974.8,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-20",
+  "meta_ecom": 40619.83,
+  "meta_omni": 38984.68,
+  "meta_total": 79604.51,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-21",
+  "meta_ecom": 11889.59,
+  "meta_omni": 56668.41,
+  "meta_total": 68558,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-22",
+  "meta_ecom": 5326.13,
+  "meta_omni": 33732.69,
+  "meta_total": 39058.82,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-23",
+  "meta_ecom": 10617.36,
+  "meta_omni": 37246.19,
+  "meta_total": 47863.55,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-24",
+  "meta_ecom": 0,
+  "meta_omni": 24981.86,
+  "meta_total": 24981.86,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-25",
+  "meta_ecom": 0,
+  "meta_omni": 16271.99,
+  "meta_total": 16271.99,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-26",
+  "meta_ecom": 30010.22,
+  "meta_omni": 55096.88,
+  "meta_total": 85107.1,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-27",
+  "meta_ecom": 7172.73,
+  "meta_omni": 53573.39,
+  "meta_total": 60746.12,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-28",
+  "meta_ecom": 12480.51,
+  "meta_omni": 27335.26,
+  "meta_total": 39815.77,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-29",
+  "meta_ecom": 6910.91,
+  "meta_omni": 47871.37,
+  "meta_total": 54782.28,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-30",
+  "meta_ecom": 12531.82,
+  "meta_omni": 38023.63,
+  "meta_total": 50555.45,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-10-31",
+  "meta_ecom": 0,
+  "meta_omni": 24981.86,
+  "meta_total": 24981.86,
+  "fonte": "Quadros outubro, aba Meta"
+ },
+ {
+  "data": "2026-11-01",
+  "meta_ecom": 14739.67,
+  "meta_omni": 40853.2,
+  "meta_total": 55592.87,
+  "meta_captado": 61091.07,
+  "super_ecom": 17884.14,
+  "super_omni": 49568.54,
+  "super_total": 67452.68,
+  "super_captado": 74123.83,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-02",
+  "meta_ecom": 7905.6,
+  "meta_omni": 21911.54,
+  "meta_total": 29817.14,
+  "meta_captado": 32766.09,
+  "super_ecom": 9592.13,
+  "super_omni": 26586.0,
+  "super_total": 36178.13,
+  "super_captado": 39756.19,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-03",
+  "meta_ecom": 14374.89,
+  "meta_omni": 39842.15,
+  "meta_total": 54217.05,
+  "meta_captado": 59579.18,
+  "super_ecom": 17441.54,
+  "super_omni": 48341.81,
+  "super_total": 65783.35,
+  "super_captado": 72289.4,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-04",
+  "meta_ecom": 15629.33,
+  "meta_omni": 43319.0,
+  "meta_total": 58948.33,
+  "meta_captado": 64778.38,
+  "super_ecom": 18963.58,
+  "super_omni": 52560.39,
+  "super_total": 71523.97,
+  "super_captado": 78597.77,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-05",
+  "meta_ecom": 17103.76,
+  "meta_omni": 47405.6,
+  "meta_total": 64509.36,
+  "meta_captado": 70889.41,
+  "super_ecom": 20752.56,
+  "super_omni": 57518.8,
+  "super_total": 78271.36,
+  "super_captado": 86012.48,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-06",
+  "meta_ecom": 12878.41,
+  "meta_omni": 35694.43,
+  "meta_total": 48572.84,
+  "meta_captado": 53376.75,
+  "super_ecom": 15625.81,
+  "super_omni": 43309.24,
+  "super_total": 58935.05,
+  "super_captado": 64763.79,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-07",
+  "meta_ecom": 16374.48,
+  "meta_omni": 45384.3,
+  "meta_total": 61758.78,
+  "meta_captado": 67866.79,
+  "super_ecom": 19867.7,
+  "super_omni": 55066.28,
+  "super_total": 74933.99,
+  "super_captado": 82345.04,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-08",
+  "meta_ecom": 20272.22,
+  "meta_omni": 56187.48,
+  "meta_total": 76459.7,
+  "meta_captado": 84021.65,
+  "super_ecom": 24596.97,
+  "super_omni": 68174.14,
+  "super_total": 92771.1,
+  "super_captado": 101946.27,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-09",
+  "meta_ecom": 18375.0,
+  "meta_omni": 50929.05,
+  "meta_total": 69304.05,
+  "meta_captado": 76158.3,
+  "super_ecom": 22295.0,
+  "super_omni": 61793.91,
+  "super_total": 84088.91,
+  "super_captado": 92405.4,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-10",
+  "meta_ecom": 23233.4,
+  "meta_omni": 64394.83,
+  "meta_total": 87628.23,
+  "meta_captado": 96294.76,
+  "super_ecom": 28189.86,
+  "super_omni": 78132.39,
+  "super_total": 106322.25,
+  "super_captado": 116837.64,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-11",
+  "meta_ecom": 19270.49,
+  "meta_omni": 53411.03,
+  "meta_total": 72681.52,
+  "meta_captado": 79869.8,
+  "super_ecom": 23381.53,
+  "super_omni": 64805.38,
+  "super_total": 88186.91,
+  "super_captado": 96908.69,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-12",
+  "meta_ecom": 21930.5,
+  "meta_omni": 60783.65,
+  "meta_total": 82714.15,
+  "meta_captado": 90894.67,
+  "super_ecom": 26609.01,
+  "super_omni": 73750.82,
+  "super_total": 100359.83,
+  "super_captado": 110285.53,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-13",
+  "meta_ecom": 16952.66,
+  "meta_omni": 46986.82,
+  "meta_total": 63939.48,
+  "meta_captado": 70263.16,
+  "super_ecom": 20569.23,
+  "super_omni": 57010.67,
+  "super_total": 77579.9,
+  "super_captado": 85252.64,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-14",
+  "meta_ecom": 13898.01,
+  "meta_omni": 38520.41,
+  "meta_total": 52418.42,
+  "meta_captado": 57602.66,
+  "super_ecom": 16862.92,
+  "super_omni": 46738.09,
+  "super_total": 63601.02,
+  "super_captado": 69891.23,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-15",
+  "meta_ecom": 25475.02,
+  "meta_omni": 70607.8,
+  "meta_total": 96082.82,
+  "meta_captado": 105585.52,
+  "super_ecom": 30909.69,
+  "super_omni": 85670.8,
+  "super_total": 116580.49,
+  "super_captado": 128110.43,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-16",
+  "meta_ecom": 15276.36,
+  "meta_omni": 42340.71,
+  "meta_total": 57617.07,
+  "meta_captado": 63315.46,
+  "super_ecom": 18535.32,
+  "super_omni": 51373.39,
+  "super_total": 69908.71,
+  "super_captado": 76822.76,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-17",
+  "meta_ecom": 11709.7,
+  "meta_omni": 32455.18,
+  "meta_total": 44164.88,
+  "meta_captado": 48532.84,
+  "super_ecom": 14207.77,
+  "super_omni": 39378.95,
+  "super_total": 53586.72,
+  "super_captado": 58886.51,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-18",
+  "meta_ecom": 13872.45,
+  "meta_omni": 38449.57,
+  "meta_total": 52322.02,
+  "meta_captado": 57496.73,
+  "super_ecom": 16831.91,
+  "super_omni": 46652.14,
+  "super_total": 63484.05,
+  "super_captado": 69762.69,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-19",
+  "meta_ecom": 24382.34,
+  "meta_omni": 67579.27,
+  "meta_total": 91961.61,
+  "meta_captado": 101056.71,
+  "super_ecom": 29583.91,
+  "super_omni": 81996.18,
+  "super_total": 111580.09,
+  "super_captado": 122615.48,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-20",
+  "meta_ecom": 29006.34,
+  "meta_omni": 80395.38,
+  "meta_total": 109401.72,
+  "meta_captado": 120221.67,
+  "super_ecom": 35194.36,
+  "super_omni": 97546.39,
+  "super_total": 132740.75,
+  "super_captado": 145868.96,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-21",
+  "meta_ecom": 25102.5,
+  "meta_omni": 69575.3,
+  "meta_total": 94677.8,
+  "meta_captado": 104041.54,
+  "super_ecom": 30457.7,
+  "super_omni": 84418.03,
+  "super_total": 114875.73,
+  "super_captado": 126237.07,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-22",
+  "meta_ecom": 33403.42,
+  "meta_omni": 92582.55,
+  "meta_total": 125985.97,
+  "meta_captado": 138446.12,
+  "super_ecom": 40529.49,
+  "super_omni": 112333.49,
+  "super_total": 152862.98,
+  "super_captado": 167981.29,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-23",
+  "meta_ecom": 32229.76,
+  "meta_omni": 89329.57,
+  "meta_total": 121559.33,
+  "meta_captado": 133581.68,
+  "super_ecom": 39105.44,
+  "super_omni": 108386.54,
+  "super_total": 147491.99,
+  "super_captado": 162079.11,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-24",
+  "meta_ecom": 28319.77,
+  "meta_omni": 78492.46,
+  "meta_total": 106812.23,
+  "meta_captado": 117376.08,
+  "super_ecom": 34361.33,
+  "super_omni": 95237.51,
+  "super_total": 129598.84,
+  "super_captado": 142416.31,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-25",
+  "meta_ecom": 31678.09,
+  "meta_omni": 87800.51,
+  "meta_total": 119478.6,
+  "meta_captado": 131295.16,
+  "super_ecom": 38436.08,
+  "super_omni": 106531.29,
+  "super_total": 144967.37,
+  "super_captado": 159304.8,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-26",
+  "meta_ecom": 44737.77,
+  "meta_omni": 123997.36,
+  "meta_total": 168735.13,
+  "meta_captado": 185423.22,
+  "super_ecom": 54281.83,
+  "super_omni": 150450.13,
+  "super_total": 204731.96,
+  "super_captado": 224980.17,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-27",
+  "meta_ecom": 49931.88,
+  "meta_omni": 138393.62,
+  "meta_total": 188325.5,
+  "meta_captado": 206951.1,
+  "super_ecom": 60584.02,
+  "super_omni": 167917.59,
+  "super_total": 228501.61,
+  "super_captado": 251100.67,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-28",
+  "meta_ecom": 43569.43,
+  "meta_omni": 120759.14,
+  "meta_total": 164328.57,
+  "meta_captado": 180580.85,
+  "super_ecom": 52864.24,
+  "super_omni": 146521.09,
+  "super_total": 199385.33,
+  "super_captado": 219104.76,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-29",
+  "meta_ecom": 43161.04,
+  "meta_omni": 119627.24,
+  "meta_total": 162788.28,
+  "meta_captado": 178888.22,
+  "super_ecom": 52368.73,
+  "super_omni": 145147.71,
+  "super_total": 197516.45,
+  "super_captado": 217051.04,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ },
+ {
+  "data": "2026-11-30",
+  "meta_ecom": 31073.03,
+  "meta_omni": 86123.53,
+  "meta_total": 117196.56,
+  "meta_captado": 128787.43,
+  "super_ecom": 37701.95,
+  "super_omni": 104496.54,
+  "super_total": 142198.49,
+  "super_captado": 156262.08,
+  "fonte": "Meta = Plano BF (Apoio Executivo, aba 05f, site) — R$ 2,7 mi líquido; super meta R$ 3,276 mi líquido / R$ 3,6 mi captado na mesma curva."
+ }
+]
