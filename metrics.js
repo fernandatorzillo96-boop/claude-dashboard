@@ -312,14 +312,10 @@ export function entregaPorTransportadora(inicio, fim) {
   }).sort((a, b) => b.despachadas - a.despachadas);
 }
 
-// Pedidos do período (aprovados, não cancelados) e a entrega ao cliente.
-// Entregue = isDelivered da VTEX (courierStatus.finished) em TODOS os pacotes do pedido.
-// Prazo = maior shippingEstimateDate do pedido (só a data). Data da entrega = maior data de entrega dos pacotes.
-export function entregaPedidos(inicio, fim) {
+function classificaPedidos(inicio, fim) {
   const [i, f] = periodo(inicio, fim);
   const hoje = hojeLocal();
-  const novo = () => ({ pedidos: 0, dentro_do_prazo: 0, entregues: 0, entregues_no_prazo: 0, entregues_atrasados: 0, entregues_sem_data: 0, abertos: 0, abertos_no_prazo: 0, abertos_atrasados: 0, sem_prazo: 0 });
-  const g = { total: novo(), entrega: novo(), retira: novo() };
+  const out = [];
   const vistos = new Set();
   for (const { o } of pedidosNoPeriodo(i, f)) {
     if (o.status === 'canceled' || !o.detalhe || !o.aprovado || !o.entregas?.length) continue;
@@ -330,22 +326,57 @@ export function entregaPedidos(inicio, fim) {
     const prom = es.map((e) => diaLocal(e.prometido)).filter(Boolean).sort().pop() || null;
     const entregue = es.every((e) => e.finalizado);
     const dEnt = entregue ? es.map((e) => diaLocal(e.entregue)).filter(Boolean).sort().pop() || null : null;
-    for (const x of [g.total, retira ? g.retira : g.entrega]) {
+    let situacao;
+    if (entregue) situacao = !dEnt || !prom ? 'entregues_sem_data' : dEnt <= prom ? 'entregues_no_prazo' : 'entregues_atrasados';
+    else situacao = prom && hoje > prom ? 'abertos_atrasados' : 'abertos_no_prazo';
+    const diasEntre = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+    out.push({ o, es, retira, prom, entregue, dEnt, situacao,
+      dias_atraso: !prom ? null : situacao === 'abertos_atrasados' ? diasEntre(prom, hoje) : situacao === 'entregues_atrasados' ? diasEntre(prom, dEnt) : 0 });
+  }
+  return out;
+}
+
+// Pedidos do período (aprovados, não cancelados) e a entrega ao cliente.
+// Entregue = isDelivered da VTEX (courierStatus.finished) em TODOS os pacotes do pedido.
+// Prazo = maior shippingEstimateDate do pedido (só a data). Data da entrega = maior data de entrega dos pacotes.
+export function entregaPedidos(inicio, fim) {
+  const novo = () => ({ pedidos: 0, dentro_do_prazo: 0, entregues: 0, entregues_no_prazo: 0, entregues_atrasados: 0, entregues_sem_data: 0, abertos: 0, abertos_no_prazo: 0, abertos_atrasados: 0, sem_prazo: 0 });
+  const g = { total: novo(), entrega: novo(), retira: novo() };
+  for (const p of classificaPedidos(inicio, fim)) {
+    for (const x of [g.total, p.retira ? g.retira : g.entrega]) {
       x.pedidos++;
-      if (!prom) x.sem_prazo++;
-      if (entregue) {
-        x.entregues++;
-        if (!dEnt || !prom) x.entregues_sem_data++;
-        else if (dEnt <= prom) { x.entregues_no_prazo++; x.dentro_do_prazo++; }
-        else x.entregues_atrasados++;
-      } else {
-        x.abertos++;
-        if (prom && hoje > prom) x.abertos_atrasados++;
-        else { x.abertos_no_prazo++; x.dentro_do_prazo++; }
-      }
+      if (!p.prom) x.sem_prazo++;
+      x[p.situacao]++;
+      if (p.entregue) x.entregues++; else x.abertos++;
+      if (p.situacao === 'entregues_no_prazo' || p.situacao === 'abertos_no_prazo') x.dentro_do_prazo++;
     }
   }
   return Object.entries(g).map(([tipo, x]) => ({ tipo, ...x }));
+}
+
+const NOME_SITUACAO = {
+  abertos_atrasados: 'Em aberto já atrasado', abertos_no_prazo: 'Em aberto, ainda no prazo',
+  entregues_atrasados: 'Entregue com atraso', entregues_no_prazo: 'Entregue no prazo', entregues_sem_data: 'Entregue sem data ou prazo',
+};
+
+// Lista de pedidos de uma situação (para exportar). situacao: abertos_atrasados (padrão), abertos, abertos_no_prazo, entregues_atrasados, todos...
+export function entregaPedidosLista(inicio, fim, situacao = 'abertos_atrasados') {
+  const filtro = situacao === 'todos' ? () => true
+    : situacao === 'abertos' ? (p) => !p.entregue
+    : (p) => p.situacao === situacao;
+  const uniq = (a) => [...new Set(a.filter(Boolean))].join(' | ') || null;
+  return classificaPedidos(inicio, fim).filter(filtro)
+    .sort((a, b) => (b.dias_atraso || 0) - (a.dias_atraso || 0) || String(a.prom).localeCompare(String(b.prom)))
+    .map((p) => ({
+      pedido: p.o.id, situacao: NOME_SITUACAO[p.situacao], dias_atraso: p.dias_atraso,
+      criado: diaLocal(p.o.criado), aprovado: diaLocal(p.o.aprovado), prazo_prometido: p.prom, entregue_em: p.dEnt,
+      tipo: p.retira ? 'Retira em loja' : 'Entrega em casa', status_vtex: p.o.status,
+      transportadora: uniq(p.es.map((e) => e.courier)), sla: uniq(p.es.map((e) => e.sla)), warehouse: uniq(p.es.map((e) => e.wh)),
+      nota_fiscal: uniq(p.es.map((e) => e.nf)), emissao_nf: uniq(p.es.map((e) => diaLocal(e.emissao))),
+      status_transportadora: uniq(p.es.map((e) => e.status_transp)),
+      pacotes: p.es.length, pacotes_entregues: p.es.filter((e) => e.finalizado).length,
+      valor: p.o.total, canal_venda: p.o.sc, origem: p.o.origin,
+    }));
 }
 
 export function faturadoLiquido(inicio, fim) {

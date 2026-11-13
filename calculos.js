@@ -401,6 +401,49 @@ dash.calc('meta_resumo', {
   },
 });
 
+dash.calc('faturado_semana', {
+  title: 'Faturado líquido por semana × meta',
+  description: 'Semanas de segunda a domingo dentro do mês corrente: meta da semana, super meta, realizado, % da meta (na semana em andamento, contra a meta até o último dia do 3351), acumulado do mês até o fim de cada semana e 2025 no mesmo dia da semana.',
+  inputs: ['faturado_dia'],
+  fn: (faturado_dia) => {
+    const r = (x) => Math.round(x * 100) / 100;
+    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+    const S = (a, f) => a.reduce((t, x) => t + (Number(x[f]) || 0), 0);
+    if (!faturado_dia.length) return [];
+    const mes = faturado_dia[faturado_dia.length - 1].data.slice(0, 7);
+    const dias = faturado_dia.filter((x) => x.data.slice(0, 7) === mes);
+    const ult = dias.filter((x) => x.liquido != null).map((x) => x.data).pop() || null;
+    const seg = (d) => { const t = new Date(d + 'T12:00:00Z'); const w = (t.getUTCDay() + 6) % 7; return new Date(t - w * 864e5).toISOString().slice(0, 10); };
+    const g = new Map();
+    for (const x of dias) { const k = seg(x.data); if (!g.has(k)) g.set(k, []); g.get(k).push(x); }
+    const curta = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+    let accMeta = 0, accSuper = 0, accReal = 0, acc25 = 0;
+    return [...g.values()].map((xs, i) => {
+      const ini = xs[0].data, fim = xs[xs.length - 1].data;
+      const feitos = xs.filter((x) => ult && x.data <= ult);
+      const status = !ult || ini > ult ? 'futura' : fim <= ult ? 'fechada' : 'em andamento';
+      const meta = S(xs, 'meta'), sup = S(xs, 'super_meta'), metaAte = S(feitos, 'meta'), supAte = S(feitos, 'super_meta');
+      const real = S(feitos, 'liquido'), l25 = S(xs, 'liquido_2025_semana'), l25ate = S(feitos, 'liquido_2025_semana');
+      accMeta += meta; accSuper += sup; accReal += real; acc25 += l25;
+      const accMetaAte = accMeta - (meta - metaAte);
+      return {
+        semana: 'Semana ' + (i + 1), periodo: ini === fim ? curta(ini) : curta(ini) + ' a ' + curta(fim), inicio: ini, fim, dias: xs.length, status,
+        meta_semana: r(meta), super_semana: r(sup), meta_ate_dia: status === 'futura' ? null : r(metaAte),
+        realizado: status === 'futura' ? null : r(real),
+        pct_meta: status === 'futura' || !metaAte ? null : p(real / metaAte),
+        pct_meta_semana: status === 'futura' || !meta ? null : p(real / meta),
+        diferenca: status === 'futura' ? null : r(real - metaAte),
+        pct_super: status === 'futura' || !supAte ? null : p(real / supAte),
+        falta_semana: status === 'em andamento' ? r(Math.max(meta - real, 0)) : null,
+        meta_acumulada: r(accMeta), super_acumulada: r(accSuper),
+        realizado_acumulado: status === 'futura' ? null : r(accReal),
+        pct_acumulado: status === 'futura' || !accMetaAte ? null : p(accReal / accMetaAte),
+        liquido_2025: r(l25), vs_2025: status === 'futura' || !l25ate ? null : p(real / l25ate - 1),
+      };
+    });
+  },
+});
+
 dash.calc('est_total', {
   title: 'Match de estoque: total',
   inputs: ['est_resumo'],

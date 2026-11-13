@@ -500,7 +500,7 @@ function desenharFaturado() {
       cats: fd.map((x) => x.data), label: dataCurta,
       bars: [{ name: 'Faturado líquido', vals: fd.map((x) => x.liquido), color: c.a }],
       lines: [
-        { name: 'Meta (Quadros)', vals: fd.map((x) => x.meta), color: c.b, width: 2 },
+        { name: 'Meta (Plano BF)', vals: fd.map((x) => x.meta), color: c.b, width: 2 },
         { name: 'Super meta', vals: fd.map((x) => x.super_meta), color: c.c, dash: '2 3' },
         { name: '2025 (mesmo dia da semana)', vals: fd.map((x) => x.liquido_2025_semana), color: c.mudo, width: 1.5 },
         { name: '2025 (mesmo dia do mês)', vals: fd.map((x) => x.liquido_2025_dia), color: c.d, dash: '1 3', width: 1.5 },
@@ -524,6 +524,29 @@ function desenharFaturado() {
       fmtY: F.brl, fmtTip: F.brl, height: 240,
     });
   }
+  const sem = linhas('faturado_semana');
+  const elS = document.getElementById('ch-fat-sem');
+  if (!falhou(elS, 'faturado')) {
+    combo(elS, {
+      cats: sem.map((x) => x.semana), label: (s, i) => sem[i] ? sem[i].semana.replace('Semana ', 'S') + ' · ' + sem[i].periodo : s,
+      bars: [
+        { name: 'Meta da semana', vals: sem.map((x) => x.meta_semana), color: c.b },
+        { name: 'Realizado', vals: sem.map((x) => x.realizado), color: c.a },
+      ],
+      lines: [{ name: 'Super meta', vals: sem.map((x) => x.super_semana), color: c.c, dash: '2 3' }],
+      fmtY: F.brl, fmtTip: F.brl0, height: 240,
+    });
+  }
+  tabela(document.getElementById('tb-fat-sem'), sem, {
+    meta_semana: 'brl0', super_semana: 'brl0', meta_ate_dia: 'brl0', realizado: 'brl0', pct_meta: 'pct', pct_meta_semana: 'pct', diferenca: 'brl0', pct_super: 'pct', falta_semana: 'brl0',
+    meta_acumulada: 'brl0', realizado_acumulado: 'brl0', pct_acumulado: 'pct', liquido_2025: 'brl0', vs_2025: 'delta',
+  }, { diferenca: (r) => r.diferenca, vs_2025: (r) => r.vs_2025, pct_meta: (r) => (r.pct_meta == null ? null : r.pct_meta - 1), pct_acumulado: (r) => (r.pct_acumulado == null ? null : r.pct_acumulado - 1) });
+  const stSem = new Map(sem.map((x) => [x.inicio, x.status]));
+  document.querySelectorAll('#tb-fat-sem tbody tr').forEach((tr) => {
+    const st = stSem.get(tr.dataset.key);
+    if (st === 'em andamento') tr.style.fontWeight = '600';
+    if (st === 'futura') tr.style.opacity = '0.6';
+  });
   tabela(document.getElementById('tb-fat'), fd.filter((x) => x.liquido != null).reverse(), {
     data: 'data', vendido: 'brl0', devolvido: 'brl0', liquido: 'brl0', meta: 'brl0', var_vs_meta: 'delta', super_meta: 'brl0', var_vs_super: 'delta', margem_bruta: 'pct', liquido_ecommerce: 'brl0', liquido_omni: 'brl0',
     liquido_2025_semana: 'brl0', var_vs_2025_semana: 'delta', liquido_2025_dia: 'brl0', var_vs_2025_dia: 'delta',
@@ -598,3 +621,44 @@ let larg = window.innerWidth;
 window.addEventListener('resize', () => { if (Math.abs(window.innerWidth - larg) > 30) { larg = window.innerWidth; desenhar(); } });
 const inicial = location.hash.slice(1);
 mostrar(tabs.some((t) => t.dataset.tab === inicial) ? inicial : 'curva', false);
+
+// ---------- exportar pedidos por situação de entrega ----------
+(function () {
+  const btn = document.getElementById('btn-exp-ped');
+  if (!btn) return;
+  const sel = document.getElementById('sel-exp-ped'), msg = document.getElementById('msg-exp-ped');
+  const COLS = [
+    ['pedido', 'Pedido'], ['situacao', 'Situação'], ['dias_atraso', 'Dias de atraso'], ['criado', 'Criado em'], ['aprovado', 'Aprovado em'],
+    ['prazo_prometido', 'Prazo prometido'], ['entregue_em', 'Entregue em'], ['tipo', 'Tipo'], ['status_vtex', 'Status VTEX'],
+    ['transportadora', 'Transportadora'], ['sla', 'SLA'], ['warehouse', 'Warehouse'], ['nota_fiscal', 'Nota fiscal'], ['emissao_nf', 'Emissão NF'],
+    ['status_transportadora', 'Status transportadora'], ['pacotes', 'Pacotes'], ['pacotes_entregues', 'Pacotes entregues'], ['valor', 'Valor (R$)'],
+    ['canal_venda', 'Canal de venda'], ['origem', 'Origem'],
+  ];
+  const dataBR = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v || '') ? v.slice(8, 10) + '/' + v.slice(5, 7) + '/' + v.slice(0, 4) : v);
+  const cel = (k, v) => {
+    if (v == null) return '';
+    if (k === 'valor') return String(v).replace('.', ',');
+    const t = String(v).split(' | ').map(dataBR).join(' | ');
+    return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+  };
+  btn.addEventListener('click', async () => {
+    const pr = dash.params();
+    const args = { inicio: pr.log_inicio, fim: pr.log_fim, situacao: sel.value };
+    btn.disabled = true; msg.textContent = 'Gerando…';
+    try {
+      const r = await fetch('api/bf_entrega_pedidos_lista?args=' + encodeURIComponent(JSON.stringify(args)), { credentials: 'same-origin', cache: 'no-store' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const rows = await r.json();
+      const linhasCsv = [COLS.map((c) => c[1]).join(';'), ...rows.map((x) => COLS.map(([k]) => cel(k, x[k])).join(';'))];
+      const blob = new Blob(['\ufeff' + linhasCsv.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pedidos_' + sel.value + '_' + (pr.log_inicio || '') + '_a_' + (pr.log_fim || '') + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      msg.textContent = rows.length + ' pedido(s) exportado(s).';
+    } catch (e) {
+      msg.textContent = 'Não consegui exportar: ' + e.message;
+    } finally { btn.disabled = false; }
+  });
+})();

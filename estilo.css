@@ -65,3 +65,4 @@
 /* nenhum card empurra a página para o lado */
 .bf-card { overflow: hidden; }
 .bf .bf-tablebox { overflow-x: auto; }
+.bf button.bf-btn { border: 0; cursor: pointer; } .bf button.bf-btn:disabled { opacity: .5; cursor: default; }

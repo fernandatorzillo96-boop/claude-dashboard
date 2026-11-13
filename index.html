@@ -530,6 +530,18 @@
     <div class="bf-card" id="card-entrega-ped">
       <h2>Entrega ao cliente (por pedido)</h2>
       <p class="bf-sub">Pedidos aprovados criados no período, sem cancelados. Entregue = confirmação de entrega da VTEX (isDelivered) em todos os pacotes do pedido. Prazo = data prometida ao cliente no checkout (só a data). "Dentro do prazo" = entregues no prazo + em aberto que ainda não venceram.</p>
+      <div class="bf-filtros" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 10px">
+        <label for="sel-exp-ped">Exportar pedidos:</label>
+        <select id="sel-exp-ped">
+          <option value="abertos_atrasados">Em aberto já atrasados</option>
+          <option value="abertos">Todos em aberto (no prazo + atrasados)</option>
+          <option value="abertos_no_prazo">Em aberto, ainda no prazo</option>
+          <option value="entregues_atrasados">Entregues com atraso</option>
+          <option value="todos">Todos os pedidos do período</option>
+        </select>
+        <button type="button" class="bf-btn" id="btn-exp-ped">Baixar planilha (CSV)</button>
+        <span id="msg-exp-ped" class="bf-sub" style="margin:0"></span>
+      </div>
       <div class="bf-tablebox aberta">
         <table class="bf-table" id="tb-entrega-ped" data-source="entrega_quadro" data-row-key="campo">
           <thead><tr>
@@ -765,6 +777,23 @@
         <div class="bf-delta">Plano: <span data-source="faturado_resumo" data-field="margem_plano" data-row="0" data-fmt="pct">—</span></div></div>
     </div>
     <div class="bf-grid">
+      <div class="bf-card bf-wide" id="card-fat-sem">
+        <h2>Meta por semana</h2>
+        <p class="bf-sub">Semanas de segunda a domingo dentro do mês. Meta = Plano BF do site. Na semana em andamento, "% da meta" compara o realizado com a meta até o último dia do 3351; "% da semana inteira" e "Falta na semana" usam a meta da semana toda. Acumulado = do dia 1 até o fim da semana (ou até o último dia do 3351).</p>
+        <div class="bf-chart" id="ch-fat-sem" data-source="faturado_semana"></div>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-fat-sem" data-source="faturado_semana" data-row-key="inicio">
+            <thead><tr>
+              <th data-field="semana">Semana</th><th data-field="periodo">Período</th><th data-field="status">Status</th>
+              <th data-field="meta_semana" class="n">Meta da semana</th><th data-field="meta_ate_dia" class="n">Meta até o dia</th><th data-field="realizado" class="n">Realizado</th>
+              <th data-field="pct_meta" class="n">% da meta</th><th data-field="diferenca" class="n">Diferença</th><th data-field="pct_meta_semana" class="n">% da semana inteira</th><th data-field="falta_semana" class="n">Falta na semana</th>
+              <th data-field="super_semana" class="n">Super meta</th><th data-field="pct_super" class="n">% da super</th>
+              <th data-field="meta_acumulada" class="n">Meta acumulada</th><th data-field="realizado_acumulado" class="n">Realizado acumulado</th><th data-field="pct_acumulado" class="n">% acumulado</th>
+              <th data-field="liquido_2025" class="n">2025 (dia da semana)</th><th data-field="vs_2025" class="n">Vs 2025</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
       <div class="bf-card bf-wide" id="card-fat">
         <h2>Faturado líquido por dia × meta</h2>
         <p class="bf-sub">Mês corrente. Barras: vendido − devolvido, pela data de emissão, até o último dia do 3351 (hoje entra parcial quando o 3351 trouxer o dia). Linhas: meta diária de faturado líquido = Plano BF do site (R$ 2,7 mi, curva da aba 05f), super meta (R$ 3,276 mi = R$ 3,6 mi captado − 9% de devolução) e o faturado líquido de 2025 (3351 de novembro/2025) no mesmo dia da semana e no mesmo dia do mês.</p>
