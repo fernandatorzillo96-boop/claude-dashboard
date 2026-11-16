@@ -26,7 +26,7 @@ dash.loader('lojas_out25', { description: 'Lê a resposta JSON do servidor VTEX 
 
 dash.calc('pbf_dia', {
   title: 'Plano BF: dia a dia por canal',
-  description: 'Plano líquido diário de lojas (R$ 8,5 mi) e site (R$ 2,7 mi) das abas 05i e 05f, com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado como nas abas 05f/05i/05j: site = faturado líquido do 3351 (e-commerce + omni), com % SALE e desconto do captado VTEX; rede = base comercial líquida (vendas − devoluções, todas as lojas e o CD); lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
+  description: 'Plano líquido diário de lojas (R$ 8,5 mi) e site (R$ 2,7 mi) das abas 05i e 05f, com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado da base comercial líquida (vendas − devoluções) pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. Dias de bases antigas, sem Canal: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX) e lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
   inputs: ['plano_canais', 'dia', 'faturado', 'lojas_venda', 'base25', 'lojas_out25'],
   fn: (plano_canais, dia, faturado, lojas_venda, base25, lojas_out25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
@@ -37,18 +37,31 @@ dash.calc('pbf_dia', {
     const cap = new Map(dia.map((x) => [x.data, x]));
     const fat = new Map(faturado.map((x) => [x.data, x]));
     const base = new Map(lojas_venda.filter((x) => x.tem_liquido).map((x) => [x.data, x]));
-    // site: faturado líquido do 3351; SALE, valor DE e receita com DE do captado VTEX do mesmo dia
-    const site = (d) => {
+    // Base comercial com Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni (tudo da mesma base, líquido).
+    const doCanal = (b, px, parcial) => ({
+      r: z(b[px + 'venda_liquida']), p: z(b[px + 'pecas_liquidas']), cmv: n(b[px + 'cmv_liquido']),
+      sale: z(b[px + 'venda_sale_liquida']), sb: z(b[px + 'venda_liquida']), de: z(b[px + 'valor_de_liquido']), rde: z(b[px + 'venda_liquida']), parcial,
+    });
+    // site sem Canal na base: faturado líquido do 3351; SALE, valor DE e receita com DE do captado VTEX do mesmo dia
+    const site3351 = (d) => {
       const f = fat.get(d); if (!f) return null;
       const v = cap.get(d) || {};
       return { r: z(f.liquido), p: z(f.pecas_liquidas ?? f.pecas), cmv: n(f.cmv), sale: z(v.captado_sale), sb: z(v.captado), de: z(v.valor_de), rde: z(v.captado), parcial: d >= hoje };
     };
-    // rede: base comercial líquida inteira (traz as notas do site nas lojas e no CD); lojas = rede − site
+    const site = (d) => {
+      const b = base.get(d);
+      if (b && b.tem_canal) return doCanal(b, 'site_', d >= hoje);
+      return site3351(d);
+    };
+    // rede: base comercial líquida inteira (lojas + notas do site nas lojas e no CD)
     const rede = (d) => {
       const b = base.get(d), s = site(d); if (!b || !s) return null;
       return { r: z(b.venda_liquida), p: z(b.pecas_liquidas), cmv: n(b.cmv_liquido), sale: z(b.venda_sale_liquida), de: z(b.valor_de_liquido), parcial: s.parcial };
     };
+    // lojas: Varejo da base (com Canal); sem Canal, rede − site (3351), como a aba 05i
     const lojas = (d) => {
+      const b = base.get(d);
+      if (b && b.tem_canal) return doCanal(b, 'lojas_', d >= hoje);
       const t = rede(d), s = site(d); if (!t) return null;
       const lr = t.r - s.r;
       return { r: lr, p: t.p - s.p, cmv: t.cmv == null || s.cmv == null ? null : t.cmv - s.cmv, sale: t.sale - s.sale, sb: lr, de: t.de - s.de, rde: lr, parcial: t.parcial };

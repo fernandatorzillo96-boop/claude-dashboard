@@ -48,7 +48,7 @@ b.onclick=async()=>{
     if(!j.ok)throw new Error(j.erro||'Falhou');
     m.className='ok';
     const br=(d)=>d.slice(8,10)+'/'+d.slice(5,7);
-    m.textContent='Importado: '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.lojas+' lojas, de '+br(j.de)+' a '+br(j.ate)+'.'+(j.venda_sem_custo?'\\nVenda de referências sem custo GEC: R$ '+Math.round(j.venda_sem_custo).toLocaleString('pt-BR')+' (a margem delas segue a média do dia).':'')+'\\nAtualize o painel para ver na aba Plano BF.';
+    m.textContent='Importado: '+j.linhas.toLocaleString('pt-BR')+' linhas, '+j.lojas+' lojas, de '+br(j.de)+' a '+br(j.ate)+'.'+(j.venda_sem_custo?'\\nVenda de referências sem custo GEC: R$ '+Math.round(j.venda_sem_custo).toLocaleString('pt-BR')+' (a margem delas segue a média do dia).':'')+(j.venda_liquida_por_canal?'\\nVenda líquida por canal: '+Object.entries(j.venda_liquida_por_canal).map(([k,v])=>({varejo:'Varejo (lojas)',ecom:'E-commerce',omni:'E-commerce Omni'}[k]||k)+' R$ '+Math.round(v).toLocaleString('pt-BR')).join(' · '):'')+'\\nAtualize o painel para ver na aba Plano BF.';
   }catch(e){m.className='erro';m.textContent='Erro: '+e.message;}
   b.disabled=false;
 };

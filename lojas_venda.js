@@ -1,5 +1,6 @@
 // Venda das lojas físicas: "base comercial" do varejo (Excel), importada todo dia.
-// Colunas: Data (dia) | Código da loja | Loja | Referência | Valor de venda | Peças | Valor de tabela | Desconto sobre tabela
+// Colunas: Data (dia) | Código da loja | Loja | Referência | Canal | Valor de venda | Peças | Valor de tabela | Desconto sobre tabela
+// Canal (arquivos a partir de nov/26): Varejo = loja física; E-commerce e E-commerce Omni = site + app.
 // Mesmos critérios da aba 05i ACOMPANHAMENTO LOJAS do BF26_Apoio_Executivo:
 //  - venda bruta = linhas com peças > 0 (devoluções à parte; líquido = todas as linhas)
 //  - % SALE = itens com desconto de 40% ou mais sobre a tabela
@@ -53,6 +54,15 @@ function dataDe(v) {
   if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
   return null;
 }
+// Canal da base comercial: varejo (loja física), ecom (E-commerce, CD) e omni (E-commerce Omni, faturado nas lojas)
+const canalDe = (v) => {
+  const c = String(v ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!c) return null;
+  if (c.includes('omni')) return 'omni';
+  if (c.includes('commerce') || c.includes('ecom') || c === 'site' || c === 'app') return 'ecom';
+  if (c.includes('varejo') || c.includes('loja')) return 'varejo';
+  return c;
+};
 const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
 // body: { nome_arquivo, colunas: [...], linhas: [[...], ...] }
@@ -62,9 +72,9 @@ export function importarLojas(body) {
   const ix = {
     data: achar('data (dia)', 'data'), cod: achar('codigo da loja', 'cod loja', 'cd_empresa'), loja: achar('loja'),
     ref: achar('referencia'), valor: achar('valor de venda', 'valor venda'), pecas: achar('pecas', 'quantidade'),
-    tabela: achar('valor de tabela', 'valor tabela'), desc: achar('desconto sobre tabela', 'desconto'),
+    tabela: achar('valor de tabela', 'valor tabela'), desc: achar('desconto sobre tabela', 'desconto'), canal: achar('canal'),
   };
-  const faltam = Object.entries(ix).filter(([k, v]) => v < 0 && k !== 'desc').map(([k]) => k);
+  const faltam = Object.entries(ix).filter(([k, v]) => v < 0 && k !== 'desc' && k !== 'canal').map(([k]) => k);
   if (faltam.length) throw new Error('Não achei as colunas: ' + faltam.join(', ') + '. Esperado: Data (dia), Código da loja, Loja, Referência, Valor de venda, Peças, Valor de tabela.');
   const novos = {};
   let linhas = 0, semCusto = 0;
@@ -75,8 +85,9 @@ export function importarLojas(body) {
     const ref = String(l[ix.ref] ?? '').trim();
     const v = num(l[ix.valor]), p = num(l[ix.pecas]), t = num(l[ix.tabela]);
     const ds = ix.desc >= 0 && l[ix.desc] !== '' && l[ix.desc] != null ? num(l[ix.desc]) : t ? 1 - v / t : 0;
+    const canal = ix.canal >= 0 ? canalDe(l[ix.canal]) : null;
     const dia = (novos[d] ||= {});
-    const a = (dia[emp] ||= { loja: String(l[ix.loja] ?? emp), bruta: 0, pecas: 0, sale: 0, de: 0, cmv_id: 0, rec_id: 0, liquida: 0, devolvido: 0, pecas_devolvidas: 0, pecas_liq: 0, sale_liq: 0, de_liq: 0, cmv_id_liq: 0, rec_id_liq: 0 });
+    const a = (dia[canal ? emp + '|' + canal : emp] ||= { loja: String(l[ix.loja] ?? emp), empresa: emp, canal, bruta: 0, pecas: 0, sale: 0, de: 0, cmv_id: 0, rec_id: 0, liquida: 0, devolvido: 0, pecas_devolvidas: 0, pecas_liq: 0, sale_liq: 0, de_liq: 0, cmv_id_liq: 0, rec_id_liq: 0 });
     a.liquida += v;
     // líquido: todas as linhas (as devoluções entram negativas), como na aba 05i
     a.pecas_liq += p; a.de_liq += t;
@@ -99,7 +110,9 @@ export function importarLojas(body) {
   lv.importado_em = new Date().toISOString();
   lv.arquivo = String(body.nome_arquivo || '').slice(0, 120);
   salvar();
-  return { linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.keys(novos[d]))).size, venda_sem_custo: r2(semCusto) };
+  const porCanal = {};
+  for (const d of dias) for (const a of Object.values(novos[d])) porCanal[a.canal || 'sem canal'] = r2((porCanal[a.canal || 'sem canal'] || 0) + a.liquida);
+  return { linhas, dias: dias.length, de: dias[0], ate: dias[dias.length - 1], lojas: new Set(dias.flatMap((d) => Object.values(novos[d]).map((a) => a.empresa))).size, venda_sem_custo: r2(semCusto), venda_liquida_por_canal: porCanal };
 }
 
 const fecha = (a) => {
@@ -126,21 +139,45 @@ const soma = (xs) => {
   return s;
 };
 
+// empresa da chave (arquivos novos: 'empresa|canal')
+const empDe = (k, a) => a.empresa || k.split('|')[0];
+
 // agrupar: 'dia' (padrão) ou 'loja'
 export function vendaLojas(inicio, fim, agrupar = 'dia') {
   const dias = Object.keys(lv.dias).filter((d) => (!inicio || d >= inicio) && (!fim || d <= fim)).sort();
   if (agrupar === 'loja') {
+    // com o Canal na base, só o Varejo é venda da loja física (o Omni faturado na loja é venda do site)
     const g = {};
-    for (const d of dias) for (const [emp, a] of Object.entries(lv.dias[d])) if (!NAO_LOJA.has(emp)) (g[emp] ||= { loja: a.loja, xs: [] }).xs.push(a);
-    return Object.entries(g).map(([emp, { loja, xs }]) => ({ empresa: Number(emp), loja, dias: xs.length, ...fecha(soma(xs)) }))
+    for (const d of dias) for (const [k, a] of Object.entries(lv.dias[d])) {
+      const emp = empDe(k, a);
+      if (NAO_LOJA.has(emp)) continue;
+      const e = (g[emp] ||= { loja: a.loja, xs: [], omni: 0, dias: new Set() });
+      if (a.canal && a.canal !== 'varejo') { if (a.canal === 'omni') e.omni += a.liquida || 0; continue; }
+      e.xs.push(a); e.dias.add(d);
+    }
+    return Object.entries(g).filter(([, e]) => e.xs.length)
+      .map(([emp, e]) => ({ empresa: Number(emp), loja: e.loja, dias: e.dias.size, ...fecha(soma(e.xs)), venda_omni_liquida: r2(e.omni) }))
       .sort((a, b) => b.venda_bruta - a.venda_bruta);
   }
-  // por dia: todas as empresas da base (lojas + CD). A base comercial traz as notas do site (omni e CD) junto:
-  // o painel tira o site (3351) para chegar nas lojas, como a aba 05i.
+  // por dia: todas as empresas da base (lojas + CD), sem a fábrica (3).
+  // Arquivos com Canal: lojas = Varejo; site = E-commerce + E-commerce Omni (campos lojas_* e site_*).
+  // Arquivos antigos (sem Canal): o painel tira o site (3351) da rede para chegar nas lojas, como a aba 05i.
   return dias.map((d) => {
-    const xs = Object.entries(lv.dias[d]).filter(([emp]) => emp !== '3').map(([, a]) => a);
-    const cd = Object.entries(lv.dias[d]).filter(([emp]) => NAO_LOJA.has(emp) && emp !== '3').reduce((t, [, a]) => t + (a.liquida || 0), 0);
-    return { data: d, lojas: xs.length, ...fecha(soma(xs)), venda_liquida_cd: r2(cd) };
+    const ent = Object.entries(lv.dias[d]).filter(([k, a]) => empDe(k, a) !== '3');
+    const xs = ent.map(([, a]) => a);
+    const cd = ent.filter(([k, a]) => NAO_LOJA.has(empDe(k, a))).reduce((t, [, a]) => t + (a.liquida || 0), 0);
+    const out = { data: d, lojas: new Set(ent.map(([k, a]) => empDe(k, a))).size, ...fecha(soma(xs)), venda_liquida_cd: r2(cd) };
+    const comCanal = xs.length > 0 && xs.every((a) => a.canal);
+    out.tem_canal = comCanal;
+    if (comCanal) {
+      const pref = (o, px) => Object.fromEntries(Object.entries(o).map(([k, v]) => [px + k, v]));
+      Object.assign(out,
+        pref(fecha(soma(xs.filter((a) => a.canal === 'varejo'))), 'lojas_'),
+        pref(fecha(soma(xs.filter((a) => a.canal !== 'varejo'))), 'site_'),
+        { ecom_venda_liquida: r2(xs.filter((a) => a.canal === 'ecom').reduce((t, a) => t + a.liquida, 0)),
+          omni_venda_liquida: r2(xs.filter((a) => a.canal === 'omni').reduce((t, a) => t + a.liquida, 0)) });
+    }
+    return out;
   });
 }
 
