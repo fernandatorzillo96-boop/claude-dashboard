@@ -91,7 +91,7 @@
     <div class="bf-bar">
       <label class="bf-ctl">Canal <select id="sel-pbf-canal" aria-label="Canal"><option value="Rede">Rede (lojas + site)</option><option value="Lojas">Lojas físicas</option><option value="Site">Site + app</option></select></label>
       <a class="bf-btn" id="btn-lojas-importar" target="_blank" rel="noopener" hidden>Importar venda das lojas</a>
-      <span class="bf-note">Plano diário do BF26 Apoio Executivo (abas 05f, 05i e 05j). Tudo líquido de devoluções, da base comercial pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. % SALE = itens com 40% ou mais de desconto sobre a tabela. (Dias de bases antigas, sem a coluna Canal: site = 3351 e lojas = rede − site.) Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
+      <span class="bf-note">Plano diário: site = BF26 Apoio Executivo (aba 05f); lojas = meta diária do varejo (Diárias Varejo nov/26, R$ 8,175 mi). Tudo líquido de devoluções, da base comercial pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. % SALE = itens com 40% ou mais de desconto sobre a tabela. (Dias de bases antigas, sem a coluna Canal: site = 3351 e lojas = rede − site.) Do dia 1 até a data de corte: <span data-source="pbf_resumo" data-field="corte" data-where="canal=Rede" data-fmt="data">—</span>.</span>
     </div>
     <p class="bf-note" id="nota-pbf-lojas" hidden>A venda das lojas ainda não foi importada: a rede e as lojas aparecem quando a base comercial for enviada no botão Importar venda das lojas.</p>
     <div class="bf-tiles">
@@ -141,12 +141,50 @@
       </div>
       <div class="bf-card bf-wide" id="card-pbf-proj">
         <h2>Projeção do mês por canal</h2>
-        <p class="bf-sub">Tendência = realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano, como nas abas 05f, 05i e 05j (a rede usa o desempenho da rede, por isso não é a soma exata das duas tendências). Margem e % SALE não são projetados: dependem do mix das próximas etapas.</p>
+        <p class="bf-sub">Tendência = realizado até a data de corte + plano restante corrigido pelo desempenho geral contra o plano, como nas abas 05f, 05i e 05j (a rede usa o desempenho da rede, por isso não é a soma exata das duas tendências). Projeção pela curva = realizado + cada dia restante pelo plano do dia × o desempenho do mesmo dia da semana (veja o quadro abaixo). Margem e % SALE não são projetados: dependem do mix das próximas etapas.</p>
         <div class="bf-tablebox aberta pbf-ind">
           <table class="bf-table" id="tb-pbf-proj" data-source="pbf_projecao" data-row-key="chave">
             <thead><tr>
               <th data-field="canal">Canal</th><th data-field="indicador">Indicador</th><th data-field="mes_2025" class="n">Nov/25</th><th data-field="mes_plano" class="n">Plano nov/26</th><th data-field="tendencia" class="n">Tendência</th>
-              <th data-field="real_mais_plano" class="n">Realizado + plano restante</th><th data-field="tend_vs_plano" class="n">Tendência vs plano</th><th data-field="tend_vs_2025" class="n">Tendência vs nov/25</th><th data-field="share_tendencia" class="n">Share na tendência</th>
+              <th data-field="curva" class="n">Projeção pela curva</th><th data-field="curva_vs_plano" class="n">Curva vs plano</th><th data-field="real_mais_plano" class="n">Realizado + plano restante</th><th data-field="tend_vs_plano" class="n">Tendência vs plano</th><th data-field="tend_vs_2025" class="n">Tendência vs nov/25</th><th data-field="share_tendencia" class="n">Share na tendência</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-pbf-semana">
+        <h2>Venda por semana × plano</h2>
+        <p class="bf-sub">Semanas de segunda a domingo dentro do mês. Plano das lojas = meta diária do varejo (Diárias Varejo nov/26, R$ 8,175 mi); site = Plano BF (R$ 2,7 mi). "% do plano" compara o realizado com o plano dos dias já fechados da semana. "Realizado + projeção" completa a semana pela curva do dia da semana. Gráfico do canal escolhido no topo.</p>
+        <div class="bf-chart" id="ch-pbf-semana" data-source="pbf_semana"></div>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-pbf-semana" data-source="pbf_semana" data-row-key="chave">
+            <thead><tr>
+              <th data-field="canal_nome">Canal</th><th data-field="semana">Semana</th><th data-field="periodo">Período</th><th data-field="status">Status</th>
+              <th data-field="plano_semana" class="n">Plano da semana</th><th data-field="plano_ate_corte" class="n">Plano até o corte</th><th data-field="realizado" class="n">Realizado</th>
+              <th data-field="pct_plano" class="n">% do plano</th><th data-field="diferenca" class="n">Diferença</th>
+              <th data-field="projecao_semana" class="n">Realizado + projeção</th><th data-field="projecao_vs_plano" class="n">Projeção vs plano</th>
+              <th data-field="plano_acumulado" class="n">Plano acumulado</th><th data-field="realizado_acumulado" class="n">Realizado acumulado</th><th data-field="pct_acumulado" class="n">% acumulado</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-pbf-curva">
+        <h2>Projeção pela curva (dia da semana)</h2>
+        <p class="bf-sub">Canal escolhido no topo. Fator = realizado ÷ plano nos dias já fechados daquele dia da semana (ex.: sextas 10% acima do plano → fator 110%). Cada dia restante é projetado pelo plano do dia × o fator do seu dia da semana; dia da semana sem dado usa o desempenho geral. Peças com fator próprio. Com poucas semanas fechadas, cada fator vem de 2 ou 3 dias: leia como tendência, não como certeza.</p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-pbf-curva-fat" data-source="pbf_curva_fatores" data-row-key="chave">
+            <thead><tr>
+              <th data-field="dia_semana">Dia da semana</th><th data-field="dias" class="n">Dias fechados</th><th data-field="realizado" class="n">Realizado</th><th data-field="plano" class="n">Plano (mesmos dias)</th>
+              <th data-field="fator" class="n">Fator</th><th data-field="vs_plano" class="n">Vs plano</th><th data-field="fator_pecas" class="n">Fator peças</th>
+            </tr></thead><tbody></tbody>
+          </table>
+        </div>
+        <div class="bf-chart" id="ch-pbf-curva" data-source="pbf_curva"></div>
+        <div class="bf-tablebox">
+          <table class="bf-table" id="tb-pbf-curva" data-source="pbf_curva" data-row-key="chave">
+            <thead><tr>
+              <th data-field="data">Data</th><th data-field="dia_semana">Dia</th><th data-field="tipo">Tipo</th><th data-field="etapa">Etapa</th><th data-field="plano_r" class="n">Plano</th>
+              <th data-field="valor_r" class="n">Realizado / projeção</th><th data-field="fator" class="n">Fator aplicado</th><th data-field="vs_plano" class="n">Vs plano</th>
+              <th data-field="plano_acum" class="n">Plano acumulado</th><th data-field="valor_acum" class="n">Realizado + projeção acum.</th><th data-field="acum_vs_plano" class="n">Acum. vs plano</th><th data-field="valor_p" class="n">Peças</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>
@@ -272,6 +310,22 @@
         <div class="bf-tablebox aberta">
           <table class="bf-table" id="tb-md-funil" data-source="ga4_funil" data-row-key="evento">
             <thead><tr><th data-field="etapa">Etapa</th><th data-field="usuarios" class="n">Usuários</th><th data-field="pct_do_inicio" class="n">% do início</th><th data-field="pct_da_etapa_anterior" class="n">% da anterior</th><th data-field="eventos" class="n">Eventos</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="bf-card bf-wide" id="card-md-novos">
+        <h2>Usuários novos × recorrentes</h2>
+        <p class="bf-sub">GA4, sem bots: além dos robôs que o GA4 já exclui, saem as sessões que entram por /Sistema/buscavazia (linha "Excluídos"). Comparação sempre nos mesmos dias: mês anterior e mesmo período do ano anterior. O total é de usuários únicos: quem chegou como novo e voltou no período conta nas duas linhas, por isso novos + recorrentes passa do total. <span id="md-novos-per"></span></p>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-md-novos" data-source="ga4_novos" data-row-key="tipo">
+            <thead><tr>
+              <th data-field="segmento">Usuários</th><th data-field="atual_usuarios" class="n">Período</th>
+              <th data-field="mes_anterior_usuarios" class="n">Mês anterior</th><th data-field="var_usuarios_mes" class="n">Vs mês anterior</th>
+              <th data-field="ano_anterior_usuarios" class="n">Ano anterior</th><th data-field="var_usuarios_ano" class="n">Vs ano anterior</th>
+              <th data-field="atual_sessoes" class="n">Sessões</th><th data-field="atual_engajamento" class="n">Engajamento</th>
+              <th data-field="atual_conversao" class="n">Conversão</th><th data-field="mes_anterior_conversao" class="n">Conv. mês ant.</th><th data-field="ano_anterior_conversao" class="n">Conv. ano ant.</th>
+              <th data-field="atual_receita" class="n">Receita GA4</th>
+            </tr></thead><tbody></tbody>
           </table>
         </div>
       </div>

@@ -30,6 +30,7 @@
     lojas_por_loja: { tool: 'bf_venda_lojas', args: { inicio: '2026-11-01', fim: '2026-11-30', agrupar: 'loja' } },
     midia_dia: { tool: 'bf_midia_por_dia', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     ga4_canais: { tool: 'bf_ga4_canais', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    ga4_novos: { tool: 'bf_ga4_novos_recorrentes', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     ga4_origens: { tool: 'bf_ga4_origens', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', limite: 30 } },
     ga4_paginas_entrada: { tool: 'bf_ga4_paginas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', tipo: 'entrada', limite: 50 } },
     ga4_paginas_vistas: { tool: 'bf_ga4_paginas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', tipo: 'vistas', limite: 50 } },

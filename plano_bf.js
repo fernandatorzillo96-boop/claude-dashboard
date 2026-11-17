@@ -26,7 +26,7 @@ dash.loader('lojas_out25', { description: 'Lê a resposta JSON do servidor VTEX 
 
 dash.calc('pbf_dia', {
   title: 'Plano BF: dia a dia por canal',
-  description: 'Plano líquido diário de lojas (R$ 8,5 mi) e site (R$ 2,7 mi) das abas 05i e 05f, com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado da base comercial líquida (vendas − devoluções) pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. Dias de bases antigas, sem Canal: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX) e lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
+  description: 'Plano líquido diário: lojas = meta diária do varejo (Diárias Varejo nov/26, R$ 8,175 mi; peças, SALE, valor DE e CMV do plano 05i na mesma proporção) e site = aba 05f (R$ 2,7 mi), com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado da base comercial líquida (vendas − devoluções) pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. Dias de bases antigas, sem Canal: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX) e lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
   inputs: ['plano_canais', 'dia', 'faturado', 'lojas_venda', 'base25', 'lojas_out25'],
   fn: (plano_canais, dia, faturado, lojas_venda, base25, lojas_out25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
@@ -221,11 +221,108 @@ dash.calc('pbf_tendencia', {
   },
 });
 
+// Projeção pela curva: o desempenho contra o plano de cada dia da semana (seg, ter, ...) nos dias fechados
+// é aplicado ao plano de cada dia restante do mesmo dia da semana. Sem dia da semana observado: desempenho geral.
+const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const dowDe = (d) => new Date(d + 'T12:00:00Z').getUTCDay();
+dash.calc('pbf_curva_fatores', {
+  title: 'Plano BF: desempenho contra o plano por dia da semana',
+  description: 'Por canal e dia da semana, nos dias fechados até a data de corte: realizado, plano dos mesmos dias, quantos dias e o fator (realizado ÷ plano) usado na projeção pela curva. Peças com fator próprio.',
+  inputs: ['pbf_dia', 'pbf_resumo'],
+  fn: (pbf_dia, pbf_resumo) => {
+    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+    const r = (x) => Math.round(x * 100) / 100;
+    const out = [];
+    for (const canal of ['Lojas', 'Site', 'Rede']) {
+      const res = pbf_resumo.find((x) => x.canal === canal) || {};
+      const f = pbf_dia.filter((x) => x.canal === canal && res.corte && x.data <= res.corte && x.real_r != null && !x.parcial);
+      const geral = f.reduce((t, x) => t + x.plano_r, 0) ? f.reduce((t, x) => t + x.real_r, 0) / f.reduce((t, x) => t + x.plano_r, 0) : null;
+      const geralP = f.reduce((t, x) => t + (x.plano_p || 0), 0) ? f.reduce((t, x) => t + (x.real_p || 0), 0) / f.reduce((t, x) => t + (x.plano_p || 0), 0) : null;
+      for (const dw of [1, 2, 3, 4, 5, 6, 0]) {
+        const xs = f.filter((x) => dowDe(x.data) === dw);
+        const rr = xs.reduce((t, x) => t + x.real_r, 0), pr = xs.reduce((t, x) => t + x.plano_r, 0);
+        const rp = xs.reduce((t, x) => t + (x.real_p || 0), 0), pp = xs.reduce((t, x) => t + (x.plano_p || 0), 0);
+        const fator = pr ? rr / pr : geral, fatorP = pp ? rp / pp : geralP;
+        out.push({ chave: canal + ' · ' + dw, canal, dow: dw, dia_semana: DIAS_SEMANA[dw], dias: xs.length, realizado: r(rr), plano: r(pr),
+          fator: p(fator), vs_plano: fator == null ? null : p(fator - 1), fator_pecas: p(fatorP), usa_geral: !pr, fator_geral: p(geral) });
+      }
+    }
+    return out;
+  },
+});
+
+dash.calc('pbf_curva', {
+  title: 'Plano BF: projeção dia a dia pela curva',
+  description: 'Por canal e dia: plano, realizado (até a data de corte) e, nos dias seguintes, a projeção = plano do dia × fator do mesmo dia da semana; acumulados de plano e de realizado + projeção.',
+  inputs: ['pbf_dia', 'pbf_resumo', 'pbf_curva_fatores'],
+  fn: (pbf_dia, pbf_resumo, fatores) => {
+    const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
+    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+    const out = [];
+    for (const canal of ['Lojas', 'Site', 'Rede']) {
+      const res = pbf_resumo.find((x) => x.canal === canal) || {};
+      const fat = new Map(fatores.filter((x) => x.canal === canal).map((x) => [x.dow, x]));
+      let acP = 0, acX = 0, acPP = 0, acXP = 0;
+      for (const x of pbf_dia.filter((y) => y.canal === canal)) {
+        const dw = dowDe(x.data), fz = fat.get(dw) || {};
+        const fechado = res.corte && x.data <= res.corte && x.real_r != null && !x.parcial;
+        const proj = fechado ? null : fz.fator == null ? null : x.plano_r * fz.fator;
+        const projP = fechado ? null : fz.fator_pecas == null ? null : (x.plano_p || 0) * fz.fator_pecas;
+        const v = fechado ? x.real_r : proj, vp = fechado ? x.real_p || 0 : projP;
+        acP += x.plano_r || 0; acPP += x.plano_p || 0; acX += v || 0; acXP += vp || 0;
+        out.push({ chave: canal + ' · ' + x.data, canal, data: x.data, dia_semana: DIAS_SEMANA[dw], etapa: x.etapa, tipo: fechado ? 'Realizado' : 'Projeção',
+          plano_r: r(x.plano_r), real_r: fechado ? r(x.real_r) : null, fator: fechado ? null : fz.fator, projecao_r: r(proj), valor_r: r(v),
+          vs_plano: v != null && x.plano_r ? p(v / x.plano_r - 1) : null, plano_acum: r(acP), valor_acum: res.corte ? r(acX) : null, acum_vs_plano: res.corte && acP ? p(acX / acP - 1) : null,
+          plano_p: x.plano_p == null ? null : Math.round(x.plano_p), valor_p: vp == null ? null : Math.round(vp), pecas_acum: Math.round(acXP), plano_pecas_acum: Math.round(acPP) });
+      }
+    }
+    return out;
+  },
+});
+
+// Venda por semana (segunda a domingo, dentro do mês) por canal: plano, realizado e projeção pela curva.
+dash.calc('pbf_semana', {
+  title: 'Plano BF: venda por semana × plano',
+  description: 'Lojas, site e rede por semana (segunda a domingo): plano da semana, plano até a data de corte, realizado, % do plano, realizado + projeção pela curva para a semana, e acumulados do mês.',
+  inputs: ['pbf_curva'],
+  fn: (pbf_curva) => {
+    const r = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 100) / 100);
+    const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+    const seg = (d) => { const t = new Date(d + 'T12:00:00Z'); return new Date(t - ((t.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); };
+    const curta = (d) => d.slice(8, 10) + '/' + d.slice(5, 7);
+    const out = [];
+    for (const canal of ['Lojas', 'Site', 'Rede']) {
+      const g = new Map();
+      for (const x of pbf_curva.filter((y) => y.canal === canal)) { const k = seg(x.data); if (!g.has(k)) g.set(k, []); g.get(k).push(x); }
+      let aP = 0, aR = 0, aPate = 0, aV = 0, i = 0;
+      for (const xs of g.values()) {
+        i++;
+        const ini = xs[0].data, fim = xs[xs.length - 1].data;
+        const fech = xs.filter((x) => x.tipo === 'Realizado');
+        const plano = xs.reduce((t, x) => t + (x.plano_r || 0), 0);
+        const planoAte = fech.reduce((t, x) => t + (x.plano_r || 0), 0);
+        const real = fech.reduce((t, x) => t + (x.real_r || 0), 0);
+        const proj = xs.reduce((t, x) => t + (x.valor_r || 0), 0);
+        const status = !fech.length ? 'futura' : fech.length === xs.length ? 'fechada' : 'em andamento';
+        aP += plano; aPate += planoAte; aR += real; aV += proj;
+        out.push({ chave: canal + ' · ' + ini, canal, semana: 'Semana ' + i, periodo: ini === fim ? curta(ini) : curta(ini) + ' a ' + curta(fim), inicio: ini, status,
+          plano_semana: r(plano), plano_ate_corte: status === 'futura' ? null : r(planoAte), realizado: status === 'futura' ? null : r(real),
+          pct_plano: status === 'futura' || !planoAte ? null : p(real / planoAte), diferenca: status === 'futura' ? null : r(real - planoAte),
+          projecao_semana: r(proj), projecao_vs_plano: plano ? p(proj / plano - 1) : null,
+          plano_acumulado: r(aP), realizado_acumulado: status === 'futura' ? null : r(aR), pct_acumulado: status === 'futura' || !aPate ? null : p(aR / aPate),
+          projecao_acumulada: r(aV) });
+      }
+    }
+    return out;
+  },
+});
+
 dash.calc('pbf_projecao', {
   title: 'Plano BF: projeção do mês por canal',
-  description: 'Lojas, site e rede: novembro de 2025, plano do mês, tendência (realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano), realizado + plano restante, tendência contra o plano e contra 2025, e o share de cada canal na tendência da rede.',
-  inputs: ['pbf_resumo'],
-  fn: (pbf_resumo) => {
+  description: 'Lojas, site e rede: novembro de 2025, plano do mês, tendência (realizado até a data de corte + plano restante corrigido pelo desempenho contra o plano), projeção pela curva (plano de cada dia restante × desempenho do mesmo dia da semana), realizado + plano restante, contra o plano e contra 2025, e o share de cada canal na tendência da rede.',
+  inputs: ['pbf_resumo', 'pbf_curva'],
+  fn: (pbf_resumo, pbf_curva) => {
+    const fimCurva = (canal) => { const xs = pbf_curva.filter((x) => x.canal === canal); return xs[xs.length - 1] || {}; };
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
     const q = (a, b) => (a == null || !b ? null : Math.round((a / b) * 100) / 100);
     const out = [];
@@ -235,8 +332,15 @@ dash.calc('pbf_projecao', {
         ['Preço médio', 'brl0', q(x.mes_receita_2025, x.mes_pecas_2025), q(x.mes_receita_plano, x.mes_pecas_plano), q(x.projecao_tendencia, x.projecao_pecas_tendencia), q(x.projecao_real_mais_plano, x.projecao_pecas_real_mais_plano)],
         ['Margem bruta', 'pct', x.mes_mb_2025, x.mes_mb_plano, null, null],
         ['% SALE na receita', 'pct', x.mes_pct_sale_2025, x.mes_pct_sale_plano, null, null]];
-      for (const [indicador, tipo, a, b, c, d] of linhas) out.push({ chave: x.canal + ' · ' + indicador, canal: x.canal, indicador, tipo, mes_2025: a, mes_plano: b, tendencia: c, real_mais_plano: d,
-        tend_vs_plano: c != null && b ? p(c / b - 1) : null, tend_vs_2025: c != null && a ? p(c / a - 1) : null, share_tendencia: null });
+      const fc = fimCurva(x.canal);
+      const curva = { Receita: fc.valor_acum ?? null, 'Peças vendidas': fc.pecas_acum ?? null };
+      curva['Preço médio'] = q(curva.Receita, curva['Peças vendidas']);
+      for (const [indicador, tipo, a, b, c, d] of linhas) {
+        const cv = curva[indicador] ?? null;
+        out.push({ chave: x.canal + ' · ' + indicador, canal: x.canal, indicador, tipo, mes_2025: a, mes_plano: b, tendencia: c, real_mais_plano: d,
+          tend_vs_plano: c != null && b ? p(c / b - 1) : null, tend_vs_2025: c != null && a ? p(c / a - 1) : null, share_tendencia: null,
+          curva: cv, curva_vs_plano: cv != null && b ? p(cv / b - 1) : null });
+      }
     }
     // share de cada canal na tendência da rede (receita e peças)
     for (const x of out) {
@@ -360,7 +464,7 @@ dash.calc('pbf_etapas', {
         if (th.classList.contains('n')) td.className = 'n';
         if (f === 'canal') { td.textContent = primeira ? nome[x.canal] || x.canal : ''; if (primeira) td.style.fontWeight = '600'; }
         else if (f === 'indicador') td.textContent = x.indicador;
-        else if (f === 'tend_vs_plano' || f === 'tend_vs_2025') { td.textContent = B.F.delta(x[f]); B.tomDelta(td, x[f]); }
+        else if (f === 'tend_vs_plano' || f === 'tend_vs_2025' || f === 'curva_vs_plano') { td.textContent = B.F.delta(x[f]); B.tomDelta(td, x[f]); }
         else td.textContent = fmtV(x.tipo, x[f]);
         tr.append(td);
       });
@@ -434,6 +538,48 @@ dash.calc('pbf_etapas', {
         fmtY: (v) => B.nf0.format(v * 100) + '%', fmtTip: B.F.pct, height: 220,
       });
     }
+    // venda por semana: lojas, site e rede em blocos
+    const sm = B.linhas('pbf_semana');
+    const ordemC = { Lojas: 0, Site: 1, Rede: 2 }, nomeC = { Lojas: 'Lojas físicas', Site: 'Site + app', Rede: 'Rede (total)' };
+    const smO = sm.slice().sort((a, b) => ordemC[a.canal] - ordemC[b.canal] || a.inicio.localeCompare(b.inicio));
+    B.tabela(document.getElementById('tb-pbf-semana'), smO.map((x, i) => ({ ...x, canal_nome: i === 0 || smO[i - 1].canal !== x.canal ? nomeC[x.canal] : '' })), {
+      plano_semana: 'brl0', plano_ate_corte: 'brl0', realizado: 'brl0', pct_plano: 'pct', diferenca: 'brl0', projecao_semana: 'brl0', projecao_vs_plano: 'delta',
+      plano_acumulado: 'brl0', realizado_acumulado: 'brl0', pct_acumulado: 'pct', projecao_acumulada: 'brl0',
+    }, { diferenca: (x) => x.diferenca, projecao_vs_plano: (x) => x.projecao_vs_plano, pct_plano: (x) => (x.pct_plano == null ? null : x.pct_plano - 1), pct_acumulado: (x) => (x.pct_acumulado == null ? null : x.pct_acumulado - 1) });
+    const stSm = new Map(sm.map((x) => [x.chave, x]));
+    document.querySelectorAll('#tb-pbf-semana tbody tr').forEach((tr) => {
+      const x = stSm.get(tr.dataset.key); if (!x) return;
+      if (x.semana === 'Semana 1') tr.classList.add('pbf-ini');
+      if (x.canal === 'Rede') tr.classList.add('pbf-rede');
+      if (x.status === 'em andamento') tr.style.fontWeight = '600';
+      if (x.status === 'futura') tr.style.color = 'var(--color-fg-muted, #777)';
+    });
+    const smC = sm.filter((x) => x.canal === canal);
+    const elSm = document.getElementById('ch-pbf-semana');
+    if (!B.falhou(elSm, 'dia')) B.combo(elSm, {
+      cats: smC.map((x) => x.semana), label: (s0, i) => (smC[i] ? smC[i].semana.replace('Semana ', 'S') + ' · ' + smC[i].periodo : s0),
+      bars: [{ name: 'Plano da semana', vals: smC.map((x) => x.plano_semana), color: c.b },
+        { name: 'Realizado', vals: smC.map((x) => x.realizado), color: c.a },
+        { name: 'Realizado + projeção pela curva', vals: smC.map((x) => (x.status === 'fechada' ? null : x.projecao_semana)), color: c.c }],
+      lines: [],
+      fmtY: B.F.brl, fmtTip: B.F.brl0, height: 240,
+    });
+    // projeção pela curva (dia da semana)
+    const fz = B.linhas('pbf_curva_fatores').filter((x) => x.canal === canal);
+    B.tabela(document.getElementById('tb-pbf-curva-fat'), fz, { realizado: 'brl0', plano: 'brl0', dias: 'int', fator: 'pct', vs_plano: 'delta', fator_pecas: 'pct' },
+      { vs_plano: (x) => x.vs_plano });
+    const cv = B.linhas('pbf_curva').filter((x) => x.canal === canal);
+    const elC = document.getElementById('ch-pbf-curva');
+    if (!B.falhou(elC, 'dia')) B.combo(elC, {
+      cats: cv.map((x) => x.data), label: lab, tipTitle: (i) => `${B.dataCurta(cv[i].data)} · ${cv[i].dia_semana} · ${cv[i].etapa}`,
+      bars: [{ name: 'Realizado', vals: cv.map((x) => x.real_r), color: c.a }, { name: 'Projeção pela curva', vals: cv.map((x) => x.projecao_r), color: c.c }],
+      lines: [{ name: 'Plano', vals: cv.map((x) => x.plano_r), color: c.b, dash: '5 4' }],
+      fmtY: B.F.brl, fmtTip: B.F.brl0, height: 260,
+    });
+    B.tabela(document.getElementById('tb-pbf-curva'), cv, {
+      data: 'data', plano_r: 'brl0', valor_r: 'brl0', fator: 'pct', vs_plano: 'delta', plano_acum: 'brl0', valor_acum: 'brl0', acum_vs_plano: 'delta', valor_p: 'int',
+    }, { vs_plano: (x) => x.vs_plano, acum_vs_plano: (x) => x.acum_vs_plano });
+    document.querySelectorAll('#tb-pbf-curva tbody tr').forEach((tr) => { if (/Proje/.test(tr.cells[2]?.textContent || '')) tr.style.color = 'var(--color-fg-muted, #666)'; });
     B.tabela(document.getElementById('tb-pbf-etapas'), B.linhas('pbf_etapas').filter((x) => x.canal === canal), {
       inicio: 'data', fim: 'data', receita_real: 'brl', receita_plano: 'brl', atingimento: 'pct', var_2025: 'delta', mb_real: 'pct', mb_plano: 'pct', mb_2025: 'pct', plano_etapa: 'brl',
     }, { var_2025: (x) => x.var_2025, atingimento: (x) => (x.atingimento == null ? null : x.atingimento - 1) });

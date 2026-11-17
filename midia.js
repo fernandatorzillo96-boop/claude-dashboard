@@ -135,6 +135,54 @@ export async function ga4Canais(inicio, fim) {
   })).sort((a, b) => b.sessoes - a.sessoes);
 }
 
+// Novos × recorrentes no período e nos mesmos dias do mês anterior e do ano anterior.
+// Bots: o GA4 já exclui os robôs conhecidos; além disso, saem as sessões que entram por /Sistema/buscavazia
+// (tráfego sem canal e sem engajamento identificado no painel). A linha "excluídos" mostra quanto saiu.
+const FILTRO_BOTS = { notExpression: { filter: { fieldName: 'landingPage', stringFilter: { matchType: 'CONTAINS', value: 'buscavazia', caseSensitive: false } } } };
+const somaMeses = (d, m) => {
+  const [y, mo, dd] = d.split('-').map(Number);
+  const t = new Date(Date.UTC(y, mo - 1 + m, 1));
+  const ult = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), Math.min(dd, ult))).toISOString().slice(0, 10);
+};
+export async function ga4NovosRecorrentes(inicio, fim) {
+  [inicio, fim] = periodo(inicio, fim);
+  if (!ga4Configurado()) return [];
+  const per = { atual: [inicio, fim], mes_anterior: [somaMeses(inicio, -1), somaMeses(fim, -1)], ano_anterior: [somaMeses(inicio, -12), somaMeses(fim, -12)] };
+  const dateRanges = Object.entries(per).map(([name, [a, b]]) => ({ startDate: a, endDate: b, name }));
+  const mets = ['totalUsers', 'sessions', 'engagedSessions', 'transactions', 'purchaseRevenue'];
+  const pega = (extra) => comCache(`ga4nr|${inicio}|${fim}|${JSON.stringify(extra)}`, ttlDe(fim),
+    () => ga4('runReport', { dateRanges, dimensions: [{ name: 'newVsReturning' }], metrics: mets.map((name) => ({ name })), limit: 100, ...extra }));
+  const [limpo, totLimpo, totTudo] = await Promise.all([
+    pega({ dimensionFilter: FILTRO_BOTS }),
+    comCache(`ga4nrt|${inicio}|${fim}|f`, ttlDe(fim), () => ga4('runReport', { dateRanges, metrics: mets.map((name) => ({ name })), dimensionFilter: FILTRO_BOTS })),
+    comCache(`ga4nrt|${inicio}|${fim}|t`, ttlDe(fim), () => ga4('runReport', { dateRanges, metrics: mets.map((name) => ({ name })) })),
+  ]);
+  const NOME = { new: 'Novos', returning: 'Recorrentes' };
+  const linha = (tipo, nome, pick) => {
+    const o = { tipo, segmento: nome };
+    for (const k of Object.keys(per)) {
+      const x = pick(k) || {};
+      o[k + '_usuarios'] = x.totalUsers ?? 0; o[k + '_sessoes'] = x.sessions ?? 0; o[k + '_compras'] = x.transactions ?? 0; o[k + '_receita'] = r2(x.purchaseRevenue ?? 0);
+      o[k + '_conversao'] = x.sessions ? p4(x.transactions / x.sessions) : null; o[k + '_engajamento'] = x.sessions ? p4(x.engagedSessions / x.sessions) : null;
+      o[k + '_inicio'] = per[k][0]; o[k + '_fim'] = per[k][1];
+    }
+    o.var_usuarios_mes = o.mes_anterior_usuarios ? p4(o.atual_usuarios / o.mes_anterior_usuarios - 1) : null;
+    o.var_usuarios_ano = o.ano_anterior_usuarios ? p4(o.atual_usuarios / o.ano_anterior_usuarios - 1) : null;
+    return o;
+  };
+  const de = (rows, k, v) => rows.find((x) => x.dateRange === k && x.newVsReturning === v);
+  const out = ['new', 'returning'].map((v) => linha(v, NOME[v], (k) => de(limpo, k, v)));
+  // total de usuários únicos do período (não é a soma: quem foi novo e voltou no período conta nas duas linhas)
+  out.push(linha('total', 'Total (usuários únicos)', (k) => totLimpo.find((x) => x.dateRange === k)));
+  const exc = linha('excluidos', 'Excluídos como bots (entrada em /Sistema/buscavazia)', (k) => {
+    const a = totTudo.find((x) => x.dateRange === k) || {}, b = totLimpo.find((x) => x.dateRange === k) || {};
+    return Object.fromEntries(mets.map((m) => [m, (a[m] || 0) - (b[m] || 0)]));
+  });
+  out.push(exc);
+  return out;
+}
+
 export async function ga4Origens(inicio, fim, limite = 30) {
   [inicio, fim] = periodo(inicio, fim);
   if (!ga4Configurado()) return [];

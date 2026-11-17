@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
 import { lojasPage } from './lojas-page.js';
-import { ga4EntradaDetalhe, midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
+import { ga4EntradaDetalhe, ga4NovosRecorrentes, midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
 import { googleAdsCampanhas, statusGoogleAds, urlConectar, concluirConexao, googleAdsTemCliente } from './googleads.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
 
@@ -204,6 +204,12 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(await ga4Canais(inicio, fim)));
 
+  s.registerTool('bf_ga4_novos_recorrentes', {
+    title: 'GA4: novos × recorrentes',
+    description: 'Usuários novos e recorrentes do GA4 (sem bots: além dos robôs que o GA4 já exclui, tira as sessões que entram por /Sistema/buscavazia) no período, nos mesmos dias do mês anterior e do ano anterior: usuários, sessões, engajamento, compras, receita e conversão; total de usuários únicos e quanto foi excluído como bot.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(await ga4NovosRecorrentes(inicio, fim)));
+
   s.registerTool('bf_ga4_origens', {
     title: 'GA4 por origem/mídia e campanha',
     description: 'Sessões, compras, receita e conversão do GA4 por origem/mídia e campanha, no período.',
@@ -316,7 +322,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 // As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar',
-  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
+  'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_novos_recorrentes', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
   'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });

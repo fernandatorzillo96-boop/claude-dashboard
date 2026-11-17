@@ -210,6 +210,18 @@ dash.calc('midia_resumo', {
     });
     B.tabela(document.getElementById('tb-rt-pag'), rt.filter((x) => x.tipo === 'pagina'), { usuarios_ativos: 'int', visualizacoes: 'int' });
     B.tabela(document.getElementById('tb-rt-disp'), rt.filter((x) => x.tipo === 'dispositivo'), { usuarios_ativos: 'int' });
+    const nv = B.linhas('ga4_novos');
+    B.tabela(document.getElementById('tb-md-novos'), nv, {
+      atual_usuarios: 'int', mes_anterior_usuarios: 'int', var_usuarios_mes: 'delta', ano_anterior_usuarios: 'int', var_usuarios_ano: 'delta',
+      atual_sessoes: 'int', atual_engajamento: 'pct', atual_conversao: 'pct', mes_anterior_conversao: 'pct', ano_anterior_conversao: 'pct', atual_receita: 'brl0',
+    }, { var_usuarios_mes: (x) => (x.tipo === 'excluidos' ? null : x.var_usuarios_mes), var_usuarios_ano: (x) => (x.tipo === 'excluidos' ? null : x.var_usuarios_ano) });
+    document.querySelectorAll('#tb-md-novos tbody tr').forEach((tr) => {
+      if (tr.dataset.key === 'total') tr.style.fontWeight = '600';
+      if (tr.dataset.key === 'excluidos') tr.style.color = 'var(--color-fg-muted, #888)';
+    });
+    const n0 = nv[0];
+    const per = document.getElementById('md-novos-per');
+    if (per) per.textContent = n0 ? `Período: ${B.dataCurta(n0.atual_inicio)} a ${B.dataCurta(n0.atual_fim)} · mês anterior: ${B.dataCurta(n0.mes_anterior_inicio)} a ${B.dataCurta(n0.mes_anterior_fim)} · ano anterior: ${B.dataCurta(n0.ano_anterior_inicio)}/${n0.ano_anterior_inicio.slice(2, 4)} a ${B.dataCurta(n0.ano_anterior_fim)}/${n0.ano_anterior_fim.slice(2, 4)}.` : '';
     B.tabela(document.getElementById('tb-md-funil'), B.linhas('ga4_funil'), { usuarios: 'int', eventos: 'int', pct_do_inicio: 'pct', pct_da_etapa_anterior: 'pct' });
     B.tabela(document.getElementById('tb-md-canais'), B.linhas('ga4_canais'), {
       sessoes: 'int', pct_sessoes: 'pct', taxa_engajamento: 'pct', add_to_cart: 'int', compras: 'int', receita: 'brl0', pct_receita: 'pct', conversao: 'pct', ticket_medio: 'brl0',
