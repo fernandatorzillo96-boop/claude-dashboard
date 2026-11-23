@@ -2,6 +2,7 @@
 import { config } from './config.js';
 import { state, cmvDoItem, referenciaDoItem, atributosRef } from './store.js';
 import { local, hojeLocal, dataValida } from './tempo.js';
+import { amostraPacotes } from './sync.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
 
@@ -441,6 +442,9 @@ export function status() {
     entregas_com_data_de_entrega: Object.values(state.orders).reduce((n, o) => n + (o.entregas || []).filter((e) => e.entregue).length, 0),
     url_importacao: process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/importar/${config.accessSecret}` : null,
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
+    etapas_pedidos_relidos_v2: orders.filter((o) => (o.v || 1) >= 2).length,
+    etapas_eventos_transporte: (() => { try { const x = eventosTransporte('2026-11-01', hojeLocal(), 25); return { pacotes_faturados: x.pacotes_faturados, pacotes_com_eventos: x.pacotes_com_eventos, eventos: x.eventos }; } catch (e) { return e.message; } })(),
+    etapas_amostra_pacotes: amostraPacotes,
   }];
 }
 

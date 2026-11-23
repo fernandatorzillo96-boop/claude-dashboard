@@ -10,6 +10,7 @@ const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consu
 
 // Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
 const VERSAO_PEDIDO = 2;
+export const amostraPacotes = { entregues: [], abertos: [] };
 const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
 
 function compactOrder(o) {
@@ -73,6 +74,19 @@ function compactOrder(o) {
         .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
         .slice(0, 20);
     }
+  }
+  // Amostra bruta (só em memória) para conferir os campos de nota e rastreio que a VTEX devolve.
+  for (const p of pk) {
+    const fin = !!p.courierStatus?.finished;
+    const lst = fin ? amostraPacotes.entregues : amostraPacotes.abertos;
+    if (lst.length >= 4) continue;
+    const cs = p.courierStatus || null;
+    lst.push({
+      pedido: o.orderId, status: o.status, authorizedDate: o.authorizedDate || null, invoicedDate: o.invoicedDate ?? '(campo ausente)',
+      issuanceDate: p.issuanceDate || null, courier: p.courier || null, type: p.type || null,
+      courierStatus: cs ? { ...cs, data: Array.isArray(cs.data) ? cs.data.slice(0, 8) : cs.data } : null,
+      chaves_pacote: Object.keys(p), chaves_pedido_datas: Object.keys(o).filter((k) => /date|Date/.test(k)),
+    });
   }
   return {
     id: o.orderId,
