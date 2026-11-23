@@ -60,8 +60,10 @@ const canalDe = (v) => {
   if (!c) return null;
   if (c.includes('omni')) return 'omni';
   if (c.includes('commerce') || c.includes('ecom') || c === 'site' || c === 'app') return 'ecom';
-  if (c.includes('varejo') || c.includes('loja')) return 'varejo';
-  return c;
+  if (c.includes('fabrica')) return 'fabrica';
+  if (c.includes('varejo')) return 'varejo';
+  // outros canais (Atacado, Exportação, Bazar Ext / Eventos...) não são loja nem site
+  return c.includes('bazar') || c.includes('evento') ? 'bazar' : c;
 };
 const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -173,9 +175,11 @@ export function vendaLojas(inicio, fim, agrupar = 'dia') {
       const pref = (o, px) => Object.fromEntries(Object.entries(o).map(([k, v]) => [px + k, v]));
       Object.assign(out,
         pref(fecha(soma(xs.filter((a) => a.canal === 'varejo'))), 'lojas_'),
-        pref(fecha(soma(xs.filter((a) => a.canal !== 'varejo'))), 'site_'),
+        pref(fecha(soma(xs.filter((a) => a.canal === 'ecom' || a.canal === 'omni'))), 'site_'),
+        pref(fecha(soma(xs.filter((a) => ['varejo', 'ecom', 'omni'].includes(a.canal)))), 'rede_'),
         { ecom_venda_liquida: r2(xs.filter((a) => a.canal === 'ecom').reduce((t, a) => t + a.liquida, 0)),
-          omni_venda_liquida: r2(xs.filter((a) => a.canal === 'omni').reduce((t, a) => t + a.liquida, 0)) });
+          omni_venda_liquida: r2(xs.filter((a) => a.canal === 'omni').reduce((t, a) => t + a.liquida, 0)),
+          outros_venda_liquida: r2(xs.filter((a) => !['varejo', 'ecom', 'omni'].includes(a.canal)).reduce((t, a) => t + a.liquida, 0)) });
     }
     return out;
   });

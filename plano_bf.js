@@ -26,7 +26,7 @@ dash.loader('lojas_out25', { description: 'Lê a resposta JSON do servidor VTEX 
 
 dash.calc('pbf_dia', {
   title: 'Plano BF: dia a dia por canal',
-  description: 'Plano líquido diário: lojas = meta diária do varejo (Diárias Varejo nov/26, R$ 8,175 mi; peças, SALE, valor DE e CMV do plano 05i na mesma proporção) e site = aba 05f (R$ 2,7 mi), com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado da base comercial líquida (vendas − devoluções) pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site. Dias de bases antigas, sem Canal: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX) e lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
+  description: 'Plano líquido diário: lojas = meta diária do varejo (Diárias Varejo nov/26, R$ 8,175 mi; peças, SALE, valor DE e CMV do plano 05i na mesma proporção) e site = aba 05f (R$ 2,7 mi), com 2025, out/26 e out/25 nos mesmos dias do mês, e o realizado da base comercial líquida (vendas − devoluções) pelo Canal: lojas = Varejo; site + app = E-commerce + E-commerce Omni; rede = lojas + site (outros canais, como Bazar Ext / Eventos, Atacado e Exportação, ficam fora). Dias de bases antigas, sem Canal: site = faturado líquido do 3351 (% SALE e desconto do captado VTEX) e lojas = rede − site. Out/25: lojas = base comercial líquida de outubro/2025; site = faturado líquido do 3351 de outubro/2025 (% SALE do captado VTEX 2025).',
   inputs: ['plano_canais', 'dia', 'faturado', 'lojas_venda', 'base25', 'lojas_out25'],
   fn: (plano_canais, dia, faturado, lojas_venda, base25, lojas_out25) => {
     const n = (x) => (x == null || x === '' ? null : Number(x));
@@ -56,6 +56,8 @@ dash.calc('pbf_dia', {
     // rede: base comercial líquida inteira (lojas + notas do site nas lojas e no CD)
     const rede = (d) => {
       const b = base.get(d), s = site(d); if (!b || !s) return null;
+      // com Canal: rede = Varejo + E-commerce + Omni (fora Bazar/Eventos, Atacado, Exportação, Loja Fábrica)
+      if (b.tem_canal) return { r: z(b.rede_venda_liquida), p: z(b.rede_pecas_liquidas), cmv: n(b.rede_cmv_liquido), sale: z(b.rede_venda_sale_liquida), de: z(b.rede_valor_de_liquido), parcial: s.parcial };
       return { r: z(b.venda_liquida), p: z(b.pecas_liquidas), cmv: n(b.cmv_liquido), sale: z(b.venda_sale_liquida), de: z(b.valor_de_liquido), parcial: s.parcial };
     };
     // lojas: Varejo da base (com Canal); sem Canal, rede − site (3351), como a aba 05i
