@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
@@ -135,6 +135,24 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: { ...periodo, situacao: z.enum(['abertos_atrasados', 'abertos_no_prazo', 'abertos', 'entregues_atrasados', 'entregues_no_prazo', 'entregues_sem_data', 'todos']).optional() },
     annotations: ro,
   }, async ({ inicio, fim, situacao }) => json(entregaPedidosLista(inicio, fim, situacao)));
+
+  s.registerTool('bf_tempo_etapas', {
+    title: 'Tempo por etapa: aprovação, nota, despacho e entrega',
+    description: 'Por pacote de pedidos aprovados no período (por data de criação, sem cancelados), em três etapas: aprovação → nota (horas úteis), nota → despacho (horas úteis; despacho = primeiro evento da transportadora que já é coleta/postagem) e despacho → entrega (dias úteis seg–sex, e dias corridos). Horas úteis no horário do warehouse: lojas seg–sáb 10h–21h e dom 14h–20h; CD seg–sex 9h–16h. Traz média, mediana e p90 de cada etapa, pendentes em cada etapa, em trânsito e ciclo total (aprovação → entrega, dias corridos). Retira em loja entra só na primeira etapa. Agrupa por warehouse (padrão), transportadora, semana (segunda a domingo), dia ou total.',
+    inputSchema: { ...periodo, agrupar: z.enum(['warehouse', 'transportadora', 'semana', 'dia', 'total']).optional().describe('Padrão: warehouse.') }, annotations: ro,
+  }, async ({ inicio, fim, agrupar }) => json(tempoEtapas(inicio, fim, agrupar)));
+
+  s.registerTool('bf_tempo_etapas_pedidos', {
+    title: 'Pacotes com os horários de cada etapa',
+    description: 'Um pacote por linha: pedido, loja/CD, transportadora, nota, horários de aprovação, nota, despacho e entrega, o evento usado como despacho, horas úteis em cada etapa e o que está em aberto. situacao: todos (padrão), aguardando_nota, aguardando_despacho, em_transito, entregues.',
+    inputSchema: { ...periodo, situacao: z.enum(['todos', 'aguardando_nota', 'aguardando_despacho', 'em_transito', 'entregues']).optional() }, annotations: ro,
+  }, async ({ inicio, fim, situacao }) => json(tempoEtapasPedidos(inicio, fim, situacao)));
+
+  s.registerTool('bf_eventos_transporte', {
+    title: 'Eventos de transporte (conferência do despacho)',
+    description: 'Descrições de eventos da transportadora nos pacotes do período, quantas vezes aparecem, quantas vezes são o primeiro evento e se contam como despacho na regra atual. Também diz quantos pacotes já têm eventos e quantos já foram relidos com a versão que guarda o horário da nota e os eventos.',
+    inputSchema: { ...periodo, limite: z.number().int().optional() }, annotations: ro,
+  }, async ({ inicio, fim, limite }) => json(eventosTransporte(inicio, fim, limite)));
 
   s.registerTool('bf_a_faturar', {
     title: 'Pedidos a faturar',
@@ -321,7 +339,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 // ---------- Site do painel com login (/login, /painel) ----------
 // As mesmas ferramentas do conector, chamadas pelo navegador com sessão (sem o código secreto).
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
-  'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar',
+  'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar', 'bf_tempo_etapas', 'bf_tempo_etapas_pedidos',
   'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_novos_recorrentes', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
   'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
 const ferramentas = new Map();

@@ -443,3 +443,186 @@ export function status() {
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
   }];
 }
+
+// ---------- Tempo por etapa: aprovação → nota → despacho → entrega ----------
+// Horas úteis por warehouse: lojas seg–sáb 10h–21h e dom 14h–20h; CD (1_1) seg–sex 9h–16h (horário de Brasília).
+const JANELAS_LOJA = { 0: [14, 20], 1: [10, 21], 2: [10, 21], 3: [10, 21], 4: [10, 21], 5: [10, 21], 6: [10, 21] };
+const JANELAS_CD = { 1: [9, 16], 2: [9, 16], 3: [9, 16], 4: [9, 16], 5: [9, 16] };
+const ehCD = (wh) => /^1_1$/.test(String(wh || ''));
+const OFF = config.utcOffsetHours * 3600e3;
+
+// Horas úteis entre dois instantes ISO, nas janelas do warehouse.
+export function horasUteis(aIso, bIso, wh) {
+  if (!aIso || !bIso) return null;
+  const a = Date.parse(aIso) + OFF, b = Date.parse(bIso) + OFF; // "relógio de Brasília" em ms UTC
+  if (!(a >= 0) || !(b >= 0)) return null;
+  if (b <= a) return 0;
+  const J = ehCD(wh) ? JANELAS_CD : JANELAS_LOJA;
+  let t = 0;
+  const d = new Date(a); d.setUTCHours(0, 0, 0, 0);
+  for (let dia = d.getTime(); dia <= b; dia += 86400e3) {
+    const w = J[new Date(dia).getUTCDay()];
+    if (!w) continue;
+    const s = Math.max(a, dia + w[0] * 3600e3), e = Math.min(b, dia + w[1] * 3600e3);
+    if (e > s) t += e - s;
+  }
+  return t / 3600e3;
+}
+
+// Dias úteis (seg–sex) entre as datas de Brasília de dois instantes.
+function diasUteisEntre(aIso, bIso) {
+  if (!aIso || !bIso) return null;
+  const a = local(aIso).data, b = local(bIso).data;
+  if (b <= a) return 0;
+  let n = 0;
+  const d = new Date(a + 'T12:00:00Z');
+  const fimD = new Date(b + 'T12:00:00Z');
+  while (d < fimD) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) n++; }
+  return n;
+}
+
+// Eventos que ainda não são a coleta/postagem (etiqueta, nota, aguardando coleta...).
+const PRE_DESPACHO = /aguardando|pr[eé][- ]?posta|etiqueta|nota fiscal|faturad|criad|cadastrad|recebemos|pedido recebido|separa|pronto para|dispon[ií]vel para coleta|solicita|gerad|emitid|informa[çc][õo]es enviadas/i;
+// Despacho = primeiro evento da transportadora que já é movimentação física.
+export function despachoDe(e) {
+  const ev = Array.isArray(e.ev) ? e.ev : [];
+  const x = ev.find((p) => p[0] && !PRE_DESPACHO.test(p[1] || ''));
+  if (x) return { em: x[0], evento: x[1] || null };
+  if (e.entregue) return { em: null, evento: null, sem_evento: true };
+  return null;
+}
+
+const semanaDe = (data) => {
+  const d = new Date(data + 'T12:00:00Z');
+  const w = (d.getUTCDay() + 6) % 7; // segunda = 0
+  d.setUTCDate(d.getUTCDate() - w);
+  return d.toISOString().slice(0, 10);
+};
+
+function pacotesEtapas(i, f) {
+  const agora = new Date().toISOString();
+  const out = [];
+  for (const { o, data } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe || !o.aprovado || !o.entregas) continue;
+    for (const e of o.entregas) {
+      const retira = /pickup/i.test(e.canal || '');
+      const faturou = !!(e.nf || e.emissao);
+      const tFat = faturou ? (e.faturado || o.faturado || o.fat_visto || null) : null;
+      const d = faturou && !retira ? despachoDe(e) : null;
+      const tDesp = d?.em || null;
+      const tEnt = e.entregue || null;
+      const r = {
+        o, e, data, retira, wh: e.wh, faturou, tFat, tDesp, tEnt,
+        h_fat: tFat ? horasUteis(o.aprovado, tFat, e.wh) : null,
+        h_fat_aberto: !faturou ? horasUteis(o.aprovado, agora, e.wh) : null,
+        h_desp: tFat && tDesp ? horasUteis(tFat, tDesp, e.wh) : null,
+        h_desp_aberto: tFat && !retira && !tDesp && !tEnt && !e.finalizado ? horasUteis(tFat, agora, e.wh) : null,
+        d_ent: tDesp && tEnt ? diasUteisEntre(tDesp, tEnt) : null,
+        dc_ent: tDesp && tEnt ? Math.max((Date.parse(tEnt) - Date.parse(tDesp)) / 864e5, 0) : null,
+        dc_ciclo: tEnt ? Math.max((Date.parse(tEnt) - Date.parse(o.aprovado)) / 864e5, 0) : null,
+        em_transito: !!tDesp && !tEnt && !e.finalizado,
+        sem_hora_fat: faturou && !tFat,
+        sem_evento: faturou && !retira && !!d?.sem_evento,
+        evento_despacho: d?.evento || null,
+      };
+      out.push(r);
+    }
+  }
+  return out;
+}
+
+const estat = (a) => {
+  const v = a.filter((x) => x != null && isFinite(x)).sort((p, q) => p - q);
+  if (!v.length) return { n: 0, media: null, mediana: null, p90: null };
+  const q = (p) => v[Math.min(v.length - 1, Math.floor(p * v.length))];
+  const r1 = (x) => Math.round(x * 10) / 10;
+  return { n: v.length, media: r1(v.reduce((s, x) => s + x, 0) / v.length), mediana: r1(q(0.5)), p90: r1(q(0.9)) };
+};
+
+// agrupar: warehouse (padrão), transportadora, semana, dia ou total.
+export function tempoEtapas(inicio, fim, agrupar = 'warehouse') {
+  const [i, f] = periodo(inicio, fim);
+  const nomes = nomeWarehouse();
+  const chave = {
+    warehouse: (p) => p.wh,
+    transportadora: (p) => (p.retira ? 'Retira em loja' : p.e.courier || 'Sem transportadora'),
+    semana: (p) => semanaDe(p.data),
+    dia: (p) => p.data,
+    total: () => 'total',
+  }[agrupar] || ((p) => p.wh);
+  const g = new Map();
+  for (const p of pacotesEtapas(i, f)) {
+    const k = chave(p);
+    if (!g.has(k)) g.set(k, []);
+    g.get(k).push(p);
+  }
+  const linhas = [...g.entries()].map(([k, ps]) => {
+    const fat = estat(ps.map((p) => p.h_fat));
+    const desp = estat(ps.filter((p) => !p.retira).map((p) => p.h_desp));
+    const ent = estat(ps.filter((p) => !p.retira).map((p) => p.d_ent));
+    const entc = estat(ps.filter((p) => !p.retira).map((p) => p.dc_ent));
+    const ciclo = estat(ps.filter((p) => !p.retira).map((p) => p.dc_ciclo));
+    const pendF = ps.filter((p) => p.h_fat_aberto != null);
+    const pendD = ps.filter((p) => p.h_desp_aberto != null);
+    const ate4 = ps.filter((p) => p.h_fat != null);
+    return {
+      grupo: k, nome: agrupar === 'warehouse' ? nomes[k] || k : k,
+      pacotes: ps.length, retira: ps.filter((p) => p.retira).length,
+      fat_n: fat.n, fat_media_h: fat.media, fat_mediana_h: fat.mediana, fat_p90_h: fat.p90,
+      fat_pct_ate_4h: ate4.length ? Math.round((ate4.filter((p) => p.h_fat <= 4).length / ate4.length) * 10000) / 10000 : null,
+      fat_pendentes: pendF.length, fat_pendentes_acima_8h: pendF.filter((p) => p.h_fat_aberto > 8).length,
+      desp_n: desp.n, desp_media_h: desp.media, desp_mediana_h: desp.mediana, desp_p90_h: desp.p90,
+      desp_pendentes: pendD.length, desp_pendentes_acima_8h: pendD.filter((p) => p.h_desp_aberto > 8).length,
+      ent_n: ent.n, ent_media_dias_uteis: ent.media, ent_mediana_dias_uteis: ent.mediana, ent_p90_dias_uteis: ent.p90,
+      ent_media_dias_corridos: entc.media, em_transito: ps.filter((p) => p.em_transito).length,
+      ciclo_media_dias_corridos: ciclo.media, ciclo_mediana_dias_corridos: ciclo.mediana,
+      sem_horario_nota: ps.filter((p) => p.sem_hora_fat).length,
+      entregues_sem_evento_despacho: ps.filter((p) => p.sem_evento).length,
+    };
+  });
+  return linhas.sort((a, b) => (agrupar === 'semana' || agrupar === 'dia' ? String(a.grupo).localeCompare(String(b.grupo)) : b.pacotes - a.pacotes));
+}
+
+// Um pacote por linha, com os horários de cada etapa (para conferir ou exportar).
+// situacao: todos (padrão), aguardando_nota, aguardando_despacho, em_transito, entregues.
+export function tempoEtapasPedidos(inicio, fim, situacao = 'todos') {
+  const [i, f] = periodo(inicio, fim);
+  const nomes = nomeWarehouse();
+  const filtro = {
+    aguardando_nota: (p) => !p.faturou,
+    aguardando_despacho: (p) => p.h_desp_aberto != null,
+    em_transito: (p) => p.em_transito,
+    entregues: (p) => !!p.tEnt,
+  }[situacao] || (() => true);
+  const r1 = (x) => (x == null ? null : Math.round(x * 10) / 10);
+  return pacotesEtapas(i, f).filter(filtro).map((p) => ({
+    pedido: p.o.id, criado: p.data, loja: nomes[p.wh] || p.wh, warehouse_id: p.wh,
+    tipo: p.retira ? 'Retira em loja' : 'Entrega em casa', transportadora: p.e.courier || null, nota_fiscal: p.e.nf || null,
+    aprovado_em: p.o.aprovado, faturado_em: p.tFat, despachado_em: p.tDesp, entregue_em: p.tEnt,
+    evento_despacho: p.evento_despacho,
+    horas_uteis_ate_nota: r1(p.h_fat ?? p.h_fat_aberto), horas_uteis_nota_ate_despacho: r1(p.h_desp ?? p.h_desp_aberto),
+    dias_uteis_despacho_ate_entrega: p.d_ent, dias_corridos_aprovacao_ate_entrega: r1(p.dc_ciclo),
+    em_aberto: !p.faturou ? 'aguardando nota' : p.h_desp_aberto != null ? 'aguardando despacho' : p.em_transito ? 'em trânsito' : null,
+  }));
+}
+
+// Eventos de transporte mais comuns (para conferir a regra de despacho).
+export function eventosTransporte(inicio, fim, limite = 60) {
+  const [i, f] = periodo(inicio, fim);
+  const c = new Map();
+  for (const { e } of entregasNoPeriodo(i, f)) {
+    (e.ev || []).forEach((x, idx) => {
+      const k = (x[1] || '(sem descrição)').trim();
+      const y = c.get(k) || { evento: k, vezes: 0, primeiro_do_pacote: 0, conta_como_despacho: !PRE_DESPACHO.test(k) };
+      y.vezes++; if (idx === 0) y.primeiro_do_pacote++;
+      c.set(k, y);
+    });
+  }
+  const pac = entregasNoPeriodo(i, f).filter(({ e }) => e.nf || e.emissao);
+  return {
+    pacotes_faturados: pac.length,
+    pacotes_com_eventos: pac.filter(({ e }) => (e.ev || []).length).length,
+    pacotes_relidos_na_versao_nova: pac.filter(({ o }) => (o.v || 1) >= 2).length,
+    eventos: [...c.values()].sort((a, b) => b.vezes - a.vezes).slice(0, Math.min(Number(limite) || 60, 300)),
+  };
+}
