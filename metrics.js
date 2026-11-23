@@ -294,7 +294,7 @@ export function entregaPorTransportadora(inicio, fim) {
     if (/pickup/i.test(e.canal || '')) x.retira++;
     const prom = diaLocal(e.prometido);
     if (!prom) x.sem_prazo++;
-    if (e.entregue || e.finalizado) {
+    if (e.finalizado) {
       x.entregues++;
       const ent = diaLocal(e.entregue);
       if (prom && ent) { if (ent <= prom) x.no_prazo++; else x.entregues_atrasadas++; }
@@ -439,7 +439,7 @@ export function status() {
     faturado_dias_importados: Object.keys(state.faturado).length,
     amostra_sem_referencia: amostraSemReferencia(),
     entregas_lidas: Object.values(state.orders).filter((o) => o.entregas).length,
-    entregas_com_data_de_entrega: Object.values(state.orders).reduce((n, o) => n + (o.entregas || []).filter((e) => e.entregue).length, 0),
+    entregas_com_data_de_entrega: Object.values(state.orders).reduce((n, o) => n + (o.entregas || []).filter((e) => e.finalizado && e.entregue).length, 0),
     url_importacao: process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/importar/${config.accessSecret}` : null,
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
     etapas_pedidos_relidos_v3: orders.filter((o) => (o.v || 1) >= 3).length,
@@ -495,10 +495,12 @@ export function despachoDe(e, tFat) {
   const ev = (Array.isArray(e.ev) ? e.ev : []).map(normEv).filter((x) => !PRE_DESPACHO.test(x.desc || ''));
   const fat = tFat ? Date.parse(tFat) : null;
   const auto = (x) => !x.quando && fat != null && x.reg && Date.parse(x.reg) - fat <= 30 * 60e3;
-  const reais = ev.filter((x) => !auto(x)).map((x) => ({ ...x, t: x.quando || x.reg })).filter((x) => x.t).sort((a, b) => a.t.localeCompare(b.t));
+  // Só eventos com horário próprio (lastChange com hora). O createDate é quando a integração gravou na VTEX,
+  // muitas vezes horas depois e em lote, então não serve como hora do despacho.
+  const reais = ev.filter((x) => x.quando && !auto(x)).map((x) => ({ ...x, t: x.quando })).sort((a, b) => a.t.localeCompare(b.t));
   if (reais.length) return { em: reais[0].t, evento: reais[0].desc || null, horario_proprio: !!reais[0].quando };
   if (ev.length) return { em: null, evento: null, so_automatico: true };
-  if (e.entregue) return { em: null, evento: null, sem_evento: true };
+  if (e.finalizado) return { em: null, evento: null, sem_evento: true };
   return null;
 }
 
@@ -520,7 +522,7 @@ function pacotesEtapas(i, f) {
       const tFat = faturou ? (e.faturado || o.faturado || o.fat_visto || null) : null;
       const d = faturou && !retira ? despachoDe(e, tFat) : null;
       const tDesp = d?.em || null;
-      const tEnt = e.entregue || null;
+      const tEnt = e.finalizado ? e.entregue || null : null;
       const r = {
         o, e, data, retira, wh: e.wh, faturou, tFat, tDesp, tEnt,
         h_fat: tFat ? horasUteis(o.aprovado, tFat, e.wh) : null,

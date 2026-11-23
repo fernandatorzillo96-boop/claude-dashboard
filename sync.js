@@ -63,7 +63,9 @@ function compactOrder(o) {
       // isDelivered da VTEX (API de rastreio) vira courierStatus.finished; a data vem em deliveredDate ou no último evento.
       const ev = Array.isArray(cs.data) ? cs.data : [];
       const ultimoEvento = ev.map((x) => x.createDate || x.lastChange || x.date).filter(Boolean).sort().pop() || null;
-      g.entregue = cs.deliveredDate || (cs.finished ? ultimoEvento : null);
+      // Só conta como entregue com finished = true: a VTEX preenche deliveredDate também em pacotes ainda em trânsito
+      // (com a data em que gravou o "Coletado"), então deliveredDate sozinho não é entrega.
+      g.entregue = cs.finished ? (cs.deliveredDate || ultimoEvento) : null;
       g.status_transp = cs.status || null;
       // Etapas: horário da nota (issuanceDate só serve quando vem com horário; senão invoicedDate do pedido)
       // e os eventos da transportadora (data + descrição), para achar o despacho (primeira movimentação).
