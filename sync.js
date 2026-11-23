@@ -8,6 +8,10 @@ import { inicioDoDiaUTC } from './tempo.js';
 const CHUNK_MS = 6 * 3600 * 1000;
 const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consulta
 
+// Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
+const VERSAO_PEDIDO = 2;
+const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
+
 function compactOrder(o) {
   const promos = {};
   for (const p of o.ratesAndBenefitsData?.rateAndBenefitsIdentifiers || []) {
@@ -60,12 +64,22 @@ function compactOrder(o) {
       const ultimoEvento = ev.map((x) => x.createDate || x.lastChange || x.date).filter(Boolean).sort().pop() || null;
       g.entregue = cs.deliveredDate || (cs.finished ? ultimoEvento : null);
       g.status_transp = cs.status || null;
+      // Etapas: horário da nota (issuanceDate só serve quando vem com horário; senão invoicedDate do pedido)
+      // e os eventos da transportadora (data + descrição), para achar o despacho (primeira movimentação).
+      g.faturado = temHorario(p.issuanceDate) ? p.issuanceDate : (o.invoicedDate || null);
+      g.ev = ev
+        .map((x) => [x.createDate || x.lastChange || x.date || null, String(x.description || x.status || '').slice(0, 80)])
+        .filter((x) => x[0])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        .slice(0, 20);
     }
   }
   return {
     id: o.orderId,
     base: o.orderId.replace(/-\d+$/, ''),
     aprovado: o.authorizedDate || null,
+    faturado: o.invoicedDate || null,
+    v: VERSAO_PEDIDO,
     entregas: Object.values(grupos),
     atualizado: new Date().toISOString(),
     criado: o.creationDate,
@@ -138,6 +152,8 @@ export async function syncOrders() {
       const cur = state.orders[l.orderId];
       if (cur) {
         if (cur.detalhe && cur.status !== l.status && l.status !== 'canceled') refetch.add(l.orderId);
+        // Momento em que a sincronização viu o pedido virar faturado (reserva, se a VTEX não trouxer invoicedDate).
+        if (l.status === 'invoiced' && cur.status !== 'invoiced' && !cur.fat_visto) cur.fat_visto = now.toISOString();
         cur.status = l.status;
       } else {
         state.orders[l.orderId] = {
@@ -153,10 +169,17 @@ export async function syncOrders() {
       }
       if (!state.orders[l.orderId].detalhe && l.status !== 'canceled') toFetch.push(l.orderId);
     }
+    // Pedidos salvos antes da versão atual (sem horário da nota e eventos da transportadora): relê até 300 por ciclo.
+    const limiteV = Date.now() - 60 * 86400e3;
+    for (const o of Object.values(state.orders)) {
+      if (refetch.size >= 300) break;
+      if (!o.detalhe || o.status === 'canceled' || (o.v || 1) >= VERSAO_PEDIDO || new Date(o.criado).getTime() < limiteV) continue;
+      refetch.add(o.id);
+    }
     // Pedidos faturados com entrega ainda em aberto: relê a cada 6 h para pegar a entrega.
     const limite = Date.now() - 30 * 86400e3;
     for (const o of Object.values(state.orders)) {
-      if (refetch.size >= 400) break;
+      if (refetch.size >= 700) break;
       if (!o.detalhe || o.status === 'canceled' || new Date(o.criado).getTime() < limite) continue;
       const velho = !o.atualizado || Date.now() - new Date(o.atualizado).getTime() > 6 * 3600e3;
       const semEntregas = !o.entregas;
@@ -170,6 +193,7 @@ export async function syncOrders() {
       if (!o) { errors++; return; }
       const c = compactOrder(o);
       c.status = state.orders[id]?.status || c.status;
+      if (state.orders[id]?.fat_visto) c.fat_visto = state.orders[id].fat_visto;
       state.orders[id] = c;
     }).then((r) => { errors += r.filter((x) => x && x.__error).length; });
 

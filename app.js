@@ -19,6 +19,9 @@ const F = {
   int: (v) => (vazio(v) ? '—' : nf0.format(v)),
   txt: (v) => (vazio(v) ? '—' : String(v)),
   dec: (v) => (vazio(v) ? '—' : nf1.format(v)),
+  horas: (v) => (vazio(v) ? '—' : nf1.format(v) + ' h'),
+  dias: (v) => (vazio(v) ? '—' : nf1.format(v) + ' d.u.'),
+  diasc: (v) => (vazio(v) ? '—' : nf1.format(v) + ' dias'),
   pct: (v) => (vazio(v) ? '—' : nf1.format(v * 100) + '%'),
   pct0: (v) => (vazio(v) ? '—' : nf0.format(v * 100) + '%'),
   delta: (v) => (vazio(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf1.format(Math.abs(v) * 100) + '%'),
@@ -451,6 +454,10 @@ function desenharLogistica() {
     if (k === 'pedidos' || k === 'dentro_do_prazo') tr.style.fontWeight = '600';
     if (k === 'abertos_atrasados' || k === 'entregues_atrasados') tr.cells[0].style.color = 'var(--bf-neg, #b42318)';
   });
+  const fe = { pacotes: 'int', fat_media_h: 'horas', fat_p90_h: 'horas', fat_pct_ate_4h: 'pct', fat_pendentes: 'int', desp_media_h: 'horas', desp_p90_h: 'horas',
+    desp_pendentes_acima_8h: 'int', ent_media_dias_uteis: 'dias', em_transito: 'int', ciclo_media_dias_corridos: 'diasc', grupo: 'data' };
+  tabela(document.getElementById('tb-etapas-semana'), linhas('etapas_semana'), fe);
+  tabela(document.getElementById('tb-etapas-loja'), linhas('etapas_loja'), { ...fe, grupo: 'txt' });
   tabela(document.getElementById('tb-lojas'), linhas('lojas'), {
     pct_no_prazo: 'pct', pct_mesmo_dia: 'pct', entregas: 'int', faturadas: 'int', faturadas_no_prazo: 'int', pendentes: 'int', pendentes_atrasadas: 'int', dias_mediana: 'int', mais_antiga_pendente: 'dt',
   });
