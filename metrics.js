@@ -224,6 +224,17 @@ const diaLocal = (iso) => (iso ? local(iso).data : null);
 // Data da nota: '2026-10-20T00:00:00' (sem horário) vale como a própria data; com horário, converte para Brasília.
 const diaLocalNota = (iso) => (/T00:00:00(\.0+)?(Z|\+00:00)?$/.test(iso) || /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.slice(0, 10) : local(iso).data);
 
+// Entrega de um pacote: finished da VTEX, ou um evento "Entregue" da transportadora (muitos pacotes entregues
+// ficam com finished = false). Data = evento Entregue (lastChange) ou deliveredDate quando finished.
+const EV_ENTREGUE = /^entregue|objeto entregue|entrega realizada|delivered/i;
+function entregaDe(e) {
+  const ev = (Array.isArray(e.ev) ? e.ev : []).map((x) => (x.length >= 4 ? { quando: x[0], data: x[1], reg: x[2], desc: x[3] } : { quando: null, data: null, reg: x[0], desc: x[1] }));
+  const x = ev.find((y) => EV_ENTREGUE.test((y.desc || '').trim()));
+  if (x) return x.quando || (x.data ? x.data + 'T15:00:00Z' : null) || x.reg;
+  if (e.finalizado) return e.entregue || null;
+  return null;
+}
+
 function entregasNoPeriodo(i, f) {
   const out = [];
   for (const { o, data } of pedidosNoPeriodo(i, f)) {
@@ -294,9 +305,10 @@ export function entregaPorTransportadora(inicio, fim) {
     if (/pickup/i.test(e.canal || '')) x.retira++;
     const prom = diaLocal(e.prometido);
     if (!prom) x.sem_prazo++;
-    if (e.finalizado) {
+    const tEnt_ = entregaDe(e);
+    if (tEnt_ || e.finalizado) {
       x.entregues++;
-      const ent = diaLocal(e.entregue);
+      const ent = diaLocal(tEnt_);
       if (prom && ent) { if (ent <= prom) x.no_prazo++; else x.entregues_atrasadas++; }
     } else {
       x.abertas++;
@@ -325,8 +337,8 @@ function classificaPedidos(inicio, fim) {
     const es = o.entregas;
     const retira = es.every((e) => /pickup/i.test(e.canal || ''));
     const prom = es.map((e) => diaLocal(e.prometido)).filter(Boolean).sort().pop() || null;
-    const entregue = es.every((e) => e.finalizado);
-    const dEnt = entregue ? es.map((e) => diaLocal(e.entregue)).filter(Boolean).sort().pop() || null : null;
+    const entregue = es.every((e) => e.finalizado || entregaDe(e));
+    const dEnt = entregue ? es.map((e) => diaLocal(entregaDe(e))).filter(Boolean).sort().pop() || null : null;
     let situacao;
     if (entregue) situacao = !dEnt || !prom ? 'entregues_sem_data' : dEnt <= prom ? 'entregues_no_prazo' : 'entregues_atrasados';
     else situacao = prom && hoje > prom ? 'abertos_atrasados' : 'abertos_no_prazo';
@@ -492,7 +504,7 @@ const PRE_DESPACHO = /aguardando|pr[eé][- ]?posta|etiqueta|nota fiscal|faturad|
 // "Coletado" gravado na VTEX até 30 min depois da nota e sem horário próprio é automático da integração, não a coleta real.
 const normEv = (x) => (x.length >= 4 ? { quando: x[0], data: x[1], reg: x[2], desc: x[3] } : { quando: null, data: null, reg: x[0], desc: x[1] });
 export function despachoDe(e, tFat) {
-  const ev = (Array.isArray(e.ev) ? e.ev : []).map(normEv).filter((x) => !PRE_DESPACHO.test(x.desc || ''));
+  const ev = (Array.isArray(e.ev) ? e.ev : []).map(normEv).filter((x) => !PRE_DESPACHO.test(x.desc || '') && !EV_ENTREGUE.test((x.desc || '').trim()));
   const fat = tFat ? Date.parse(tFat) : null;
   const auto = (x) => !x.quando && fat != null && x.reg && Date.parse(x.reg) - fat <= 30 * 60e3;
   // Só eventos com horário próprio (lastChange com hora). O createDate é quando a integração gravou na VTEX,
@@ -500,7 +512,7 @@ export function despachoDe(e, tFat) {
   const reais = ev.filter((x) => x.quando && !auto(x)).map((x) => ({ ...x, t: x.quando })).sort((a, b) => a.t.localeCompare(b.t));
   if (reais.length) return { em: reais[0].t, evento: reais[0].desc || null, horario_proprio: !!reais[0].quando };
   if (ev.length) return { em: null, evento: null, so_automatico: true };
-  if (e.finalizado) return { em: null, evento: null, sem_evento: true };
+  if (e.finalizado || entregaDe(e)) return { em: null, evento: null, sem_evento: true };
   return null;
 }
 
@@ -522,19 +534,19 @@ function pacotesEtapas(i, f) {
       const tFat = faturou ? (e.faturado || o.faturado || o.fat_visto || null) : null;
       const d = faturou && !retira ? despachoDe(e, tFat) : null;
       const tDesp = d?.em || null;
-      const tEnt = e.finalizado ? e.entregue || null : null;
+      const tEnt = entregaDe(e);
       const r = {
         o, e, data, retira, wh: e.wh, faturou, tFat, tDesp, tEnt,
         h_fat: tFat ? horasUteis(o.aprovado, tFat, e.wh) : null,
         h_fat_aberto: !faturou ? horasUteis(o.aprovado, agora, e.wh) : null,
         h_desp: tFat && tDesp ? horasUteis(tFat, tDesp, e.wh) : null,
-        h_desp_aberto: tFat && !retira && !tDesp && !tEnt && !e.finalizado ? horasUteis(tFat, agora, e.wh) : null,
+        h_desp_aberto: tFat && !retira && !tDesp && !tEnt ? horasUteis(tFat, agora, e.wh) : null,
         d_ent: tDesp && tEnt ? diasUteisEntre(tDesp, tEnt) : null,
         dc_ent: tDesp && tEnt ? Math.max((Date.parse(tEnt) - Date.parse(tDesp)) / 864e5, 0) : null,
         dc_ciclo: tEnt ? Math.max((Date.parse(tEnt) - Date.parse(o.aprovado)) / 864e5, 0) : null,
         d_nota_ent: tFat && tEnt && !retira ? diasUteisEntre(tFat, tEnt) : null,
         so_coleta_automatica: !!d?.so_automatico,
-        em_transito: !!tDesp && !tEnt && !e.finalizado,
+        em_transito: !!tDesp && !tEnt,
         sem_hora_fat: faturou && !tFat,
         sem_evento: faturou && !retira && !!d?.sem_evento,
         evento_despacho: d?.evento || null,
