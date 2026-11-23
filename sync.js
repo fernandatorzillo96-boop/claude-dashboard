@@ -9,7 +9,7 @@ const CHUNK_MS = 6 * 3600 * 1000;
 const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consulta
 
 // Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
-const VERSAO_PEDIDO = 2;
+const VERSAO_PEDIDO = 3;
 export const amostraPacotes = { entregues: [], abertos: [] };
 const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
 
@@ -68,10 +68,15 @@ function compactOrder(o) {
       // Etapas: horário da nota (issuanceDate só serve quando vem com horário; senão invoicedDate do pedido)
       // e os eventos da transportadora (data + descrição), para achar o despacho (primeira movimentação).
       g.faturado = temHorario(p.issuanceDate) ? p.issuanceDate : (o.invoicedDate || null);
+      // Evento: [quando aconteceu (lastChange, só se vier com horário), data do evento, quando a VTEX registrou (createDate), descrição].
+      // O lastChange às vezes vem só com a data; o createDate é a hora em que a integração gravou na VTEX (pode ser em lote).
       g.ev = ev
-        .map((x) => [x.createDate || x.lastChange || x.date || null, String(x.description || x.status || '').slice(0, 80)])
-        .filter((x) => x[0])
-        .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        .map((x) => {
+          const lc = x.lastChange || x.date || null;
+          return [temHorario(lc) ? lc : null, lc ? String(lc).slice(0, 10) : null, x.createDate || null, String(x.description || x.status || '').slice(0, 80)];
+        })
+        .filter((x) => x[0] || x[2])
+        .sort((a, b) => String(a[0] || a[2]).localeCompare(String(b[0] || b[2])))
         .slice(0, 20);
     }
   }

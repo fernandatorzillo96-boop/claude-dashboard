@@ -442,7 +442,7 @@ export function status() {
     entregas_com_data_de_entrega: Object.values(state.orders).reduce((n, o) => n + (o.entregas || []).filter((e) => e.entregue).length, 0),
     url_importacao: process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '')}/importar/${config.accessSecret}` : null,
     faturado_ultima_importacao: Object.values(state.faturado).reduce((m, d) => (d.importado_em > m ? d.importado_em : m), '') || null,
-    etapas_pedidos_relidos_v2: orders.filter((o) => (o.v || 1) >= 2).length,
+    etapas_pedidos_relidos_v3: orders.filter((o) => (o.v || 1) >= 3).length,
     etapas_eventos_transporte: (() => { try { const x = eventosTransporte('2026-11-01', hojeLocal(), 25); return { pacotes_faturados: x.pacotes_faturados, pacotes_com_eventos: x.pacotes_com_eventos, eventos: x.eventos }; } catch (e) { return e.message; } })(),
     etapas_amostra_pacotes: amostraPacotes,
   }];
@@ -488,10 +488,16 @@ function diasUteisEntre(aIso, bIso) {
 // Eventos que ainda não são a coleta/postagem (etiqueta, nota, aguardando coleta...).
 const PRE_DESPACHO = /aguardando|pr[eé][- ]?posta|etiqueta|nota fiscal|faturad|criad|cadastrad|recebemos|pedido recebido|separa|pronto para|dispon[ií]vel para coleta|solicita|gerad|emitid|informa[çc][õo]es enviadas/i;
 // Despacho = primeiro evento da transportadora que já é movimentação física.
-export function despachoDe(e) {
-  const ev = Array.isArray(e.ev) ? e.ev : [];
-  const x = ev.find((p) => p[0] && !PRE_DESPACHO.test(p[1] || ''));
-  if (x) return { em: x[0], evento: x[1] || null };
+// Eventos [quando, data, registrado, descrição] (versão 3) ou [registrado, descrição] (versão 2).
+// "Coletado" gravado na VTEX até 30 min depois da nota e sem horário próprio é automático da integração, não a coleta real.
+const normEv = (x) => (x.length >= 4 ? { quando: x[0], data: x[1], reg: x[2], desc: x[3] } : { quando: null, data: null, reg: x[0], desc: x[1] });
+export function despachoDe(e, tFat) {
+  const ev = (Array.isArray(e.ev) ? e.ev : []).map(normEv).filter((x) => !PRE_DESPACHO.test(x.desc || ''));
+  const fat = tFat ? Date.parse(tFat) : null;
+  const auto = (x) => !x.quando && fat != null && x.reg && Date.parse(x.reg) - fat <= 30 * 60e3;
+  const reais = ev.filter((x) => !auto(x)).map((x) => ({ ...x, t: x.quando || x.reg })).filter((x) => x.t).sort((a, b) => a.t.localeCompare(b.t));
+  if (reais.length) return { em: reais[0].t, evento: reais[0].desc || null, horario_proprio: !!reais[0].quando };
+  if (ev.length) return { em: null, evento: null, so_automatico: true };
   if (e.entregue) return { em: null, evento: null, sem_evento: true };
   return null;
 }
@@ -512,7 +518,7 @@ function pacotesEtapas(i, f) {
       const retira = /pickup/i.test(e.canal || '');
       const faturou = !!(e.nf || e.emissao);
       const tFat = faturou ? (e.faturado || o.faturado || o.fat_visto || null) : null;
-      const d = faturou && !retira ? despachoDe(e) : null;
+      const d = faturou && !retira ? despachoDe(e, tFat) : null;
       const tDesp = d?.em || null;
       const tEnt = e.entregue || null;
       const r = {
@@ -524,6 +530,8 @@ function pacotesEtapas(i, f) {
         d_ent: tDesp && tEnt ? diasUteisEntre(tDesp, tEnt) : null,
         dc_ent: tDesp && tEnt ? Math.max((Date.parse(tEnt) - Date.parse(tDesp)) / 864e5, 0) : null,
         dc_ciclo: tEnt ? Math.max((Date.parse(tEnt) - Date.parse(o.aprovado)) / 864e5, 0) : null,
+        d_nota_ent: tFat && tEnt && !retira ? diasUteisEntre(tFat, tEnt) : null,
+        so_coleta_automatica: !!d?.so_automatico,
         em_transito: !!tDesp && !tEnt && !e.finalizado,
         sem_hora_fat: faturou && !tFat,
         sem_evento: faturou && !retira && !!d?.sem_evento,
@@ -566,6 +574,8 @@ export function tempoEtapas(inicio, fim, agrupar = 'warehouse') {
     const ent = estat(ps.filter((p) => !p.retira).map((p) => p.d_ent));
     const entc = estat(ps.filter((p) => !p.retira).map((p) => p.dc_ent));
     const ciclo = estat(ps.filter((p) => !p.retira).map((p) => p.dc_ciclo));
+    const ne = estat(ps.filter((p) => !p.retira).map((p) => p.d_nota_ent));
+    const fatCasa = ps.filter((p) => !p.retira && p.tFat).length;
     const pendF = ps.filter((p) => p.h_fat_aberto != null);
     const pendD = ps.filter((p) => p.h_desp_aberto != null);
     const ate4 = ps.filter((p) => p.h_fat != null);
@@ -580,6 +590,9 @@ export function tempoEtapas(inicio, fim, agrupar = 'warehouse') {
       ent_n: ent.n, ent_media_dias_uteis: ent.media, ent_mediana_dias_uteis: ent.mediana, ent_p90_dias_uteis: ent.p90,
       ent_media_dias_corridos: entc.media, em_transito: ps.filter((p) => p.em_transito).length,
       ciclo_media_dias_corridos: ciclo.media, ciclo_mediana_dias_corridos: ciclo.mediana,
+      nota_entrega_n: ne.n, nota_entrega_media_dias_uteis: ne.media, nota_entrega_mediana_dias_uteis: ne.mediana, nota_entrega_p90_dias_uteis: ne.p90,
+      desp_cobertura: fatCasa ? Math.round((desp.n / fatCasa) * 10000) / 10000 : null,
+      so_coleta_automatica: ps.filter((p) => p.so_coleta_automatica).length,
       sem_horario_nota: ps.filter((p) => p.sem_hora_fat).length,
       entregues_sem_evento_despacho: ps.filter((p) => p.sem_evento).length,
     };
@@ -615,8 +628,9 @@ export function eventosTransporte(inicio, fim, limite = 60) {
   const [i, f] = periodo(inicio, fim);
   const c = new Map();
   for (const { e } of entregasNoPeriodo(i, f)) {
-    (e.ev || []).forEach((x, idx) => {
-      const k = (x[1] || '(sem descrição)').trim();
+    (e.ev || []).forEach((x0, idx) => {
+      const x = normEv(x0);
+      const k = (x.desc || '(sem descrição)').trim();
       const y = c.get(k) || { evento: k, vezes: 0, primeiro_do_pacote: 0, conta_como_despacho: !PRE_DESPACHO.test(k) };
       y.vezes++; if (idx === 0) y.primeiro_do_pacote++;
       c.set(k, y);
@@ -626,7 +640,7 @@ export function eventosTransporte(inicio, fim, limite = 60) {
   return {
     pacotes_faturados: pac.length,
     pacotes_com_eventos: pac.filter(({ e }) => (e.ev || []).length).length,
-    pacotes_relidos_na_versao_nova: pac.filter(({ o }) => (o.v || 1) >= 2).length,
+    pacotes_relidos_na_versao_nova: pac.filter(({ o }) => (o.v || 1) >= 3).length,
     eventos: [...c.values()].sort((a, b) => b.vezes - a.vezes).slice(0, Math.min(Number(limite) || 60, 300)),
   };
 }

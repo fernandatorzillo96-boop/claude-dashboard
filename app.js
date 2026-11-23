@@ -455,7 +455,7 @@ function desenharLogistica() {
     if (k === 'abertos_atrasados' || k === 'entregues_atrasados') tr.cells[0].style.color = 'var(--bf-neg, #b42318)';
   });
   const fe = { pacotes: 'int', fat_media_h: 'horas', fat_p90_h: 'horas', fat_pct_ate_4h: 'pct', fat_pendentes: 'int', desp_media_h: 'horas', desp_p90_h: 'horas',
-    desp_pendentes_acima_8h: 'int', ent_media_dias_uteis: 'dias', em_transito: 'int', ciclo_media_dias_corridos: 'diasc', grupo: 'data' };
+    desp_pendentes_acima_8h: 'int', ent_media_dias_uteis: 'dias', nota_entrega_media_dias_uteis: 'dias', desp_cobertura: 'pct', em_transito: 'int', ciclo_media_dias_corridos: 'diasc', grupo: 'data' };
   tabela(document.getElementById('tb-etapas-semana'), linhas('etapas_semana'), fe);
   tabela(document.getElementById('tb-etapas-loja'), linhas('etapas_loja'), { ...fe, grupo: 'txt' });
   tabela(document.getElementById('tb-lojas'), linhas('lojas'), {

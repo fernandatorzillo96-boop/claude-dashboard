@@ -607,17 +607,17 @@
     </div>
     <div class="bf-card" id="card-etapas">
       <h2>Tempo por etapa</h2>
-      <p class="bf-sub">Cada pacote conta na loja ou CD de onde sai. Aprovação → nota e nota → despacho em horas úteis do warehouse (lojas seg–sáb 10h–21h e dom 14h–20h; CD seg–sex 9h–16h). Despacho = primeiro evento da transportadora que já é coleta ou postagem. Despacho → entrega em dias úteis (seg–sex). Retira em loja entra só na primeira etapa.</p>
+      <p class="bf-sub">Cada pacote conta na loja ou CD de onde sai. Aprovação → nota e nota → despacho em horas úteis do warehouse (lojas seg–sáb 10h–21h e dom 14h–20h; CD seg–sex 9h–16h). Despacho = primeiro evento da transportadora com horário real (o “Coletado” que a integração grava junto com a nota não conta). Despacho → entrega em dias úteis (seg–sex). Retira em loja entra só na primeira etapa.</p>
       <div class="bf-tiles">
         <div class="bf-tile"><div class="bf-lbl">1 · Aprovação → nota</div>
           <div class="bf-big dash-skeleton" data-source="etapas_total" data-field="fat_media_h" data-row="0" data-fmt="horas">—</div>
           <div class="bf-delta">mediana <span data-source="etapas_total" data-field="fat_mediana_h" data-row="0" data-fmt="horas">—</span> · <span data-source="etapas_total" data-field="fat_pendentes" data-row="0" data-fmt="int">—</span> aguardando nota</div></div>
         <div class="bf-tile"><div class="bf-lbl">2 · Nota → despacho</div>
           <div class="bf-big dash-skeleton" data-source="etapas_total" data-field="desp_media_h" data-row="0" data-fmt="horas">—</div>
-          <div class="bf-delta">mediana <span data-source="etapas_total" data-field="desp_mediana_h" data-row="0" data-fmt="horas">—</span> · <span data-source="etapas_total" data-field="desp_pendentes" data-row="0" data-fmt="int">—</span> aguardando coleta</div></div>
-        <div class="bf-tile"><div class="bf-lbl">3 · Despacho → entrega</div>
-          <div class="bf-big dash-skeleton" data-source="etapas_total" data-field="ent_media_dias_uteis" data-row="0" data-fmt="dias">—</div>
-          <div class="bf-delta">mediana <span data-source="etapas_total" data-field="ent_mediana_dias_uteis" data-row="0" data-fmt="dias">—</span> · <span data-source="etapas_total" data-field="em_transito" data-row="0" data-fmt="int">—</span> em trânsito</div></div>
+          <div class="bf-delta">mediana <span data-source="etapas_total" data-field="desp_mediana_h" data-row="0" data-fmt="horas">—</span> · coleta real em <span data-source="etapas_total" data-field="desp_cobertura" data-row="0" data-fmt="pct">—</span> dos pacotes</div></div>
+        <div class="bf-tile"><div class="bf-lbl">Nota → entrega</div>
+          <div class="bf-big dash-skeleton" data-source="etapas_total" data-field="nota_entrega_media_dias_uteis" data-row="0" data-fmt="dias">—</div>
+          <div class="bf-delta">mediana <span data-source="etapas_total" data-field="nota_entrega_mediana_dias_uteis" data-row="0" data-fmt="dias">—</span> · despacho → entrega <span data-source="etapas_total" data-field="ent_media_dias_uteis" data-row="0" data-fmt="dias">—</span></div></div>
         <div class="bf-tile"><div class="bf-lbl">Ciclo total (aprovação → entrega)</div>
           <div class="bf-big dash-skeleton" data-source="etapas_total" data-field="ciclo_media_dias_corridos" data-row="0" data-fmt="diasc">—</div>
           <div class="bf-delta">mediana <span data-source="etapas_total" data-field="ciclo_mediana_dias_corridos" data-row="0" data-fmt="diasc">—</span> · dias corridos</div></div>
@@ -628,7 +628,7 @@
           <thead><tr>
             <th data-field="grupo">Semana de</th><th data-field="pacotes" class="n">Pacotes</th>
             <th data-field="fat_media_h" class="n">1 · Nota (h, média)</th><th data-field="fat_pct_ate_4h" class="n">% nota em até 4 h</th>
-            <th data-field="desp_media_h" class="n">2 · Despacho (h, média)</th><th data-field="ent_media_dias_uteis" class="n">3 · Entrega (d. úteis)</th>
+            <th data-field="desp_media_h" class="n">2 · Despacho (h, média)</th><th data-field="desp_cobertura" class="n">% com coleta real</th><th data-field="nota_entrega_media_dias_uteis" class="n">Nota → entrega (d. úteis)</th>
             <th data-field="ciclo_media_dias_corridos" class="n">Ciclo (dias)</th>
           </tr></thead><tbody></tbody>
         </table>
@@ -640,7 +640,7 @@
             <th data-field="nome">Loja / CD</th><th data-field="pacotes" class="n">Pacotes</th>
             <th data-field="fat_media_h" class="n">1 · Nota (h)</th><th data-field="fat_p90_h" class="n">Nota p90</th><th data-field="fat_pendentes" class="n">Sem nota</th>
             <th data-field="desp_media_h" class="n">2 · Despacho (h)</th><th data-field="desp_p90_h" class="n">Despacho p90</th><th data-field="desp_pendentes_acima_8h" class="n">Sem coleta &gt; 8 h</th>
-            <th data-field="ent_media_dias_uteis" class="n">3 · Entrega (d. úteis)</th><th data-field="em_transito" class="n">Em trânsito</th>
+            <th data-field="nota_entrega_media_dias_uteis" class="n">Nota → entrega (d. úteis)</th><th data-field="em_transito" class="n">Em trânsito</th>
           </tr></thead><tbody></tbody>
         </table>
       </div>
