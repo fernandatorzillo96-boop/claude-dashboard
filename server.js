@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
 import { lojasPage } from './lojas-page.js';
+import { recordeCaptacao } from './recorde.js';
 import { ga4EntradaDetalhe, ga4NovosRecorrentes, midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
 import { googleAdsCampanhas, statusGoogleAds, urlConectar, concluirConexao, googleAdsTemCliente } from './googleads.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
@@ -270,6 +271,12 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: { ...periodo, pagina: z.string().describe('Caminho da página de entrada, como aparece no GA4.'), agrupar: z.enum(['origem', 'campanha', 'canal', 'dispositivo', 'pais', 'cidade', 'url', 'navegador', 'dia', 'hora', 'novo']).optional(), limite: z.number().int().optional() }, annotations: ro,
   }, async ({ inicio, fim, pagina, agrupar, limite }) => json(await ga4EntradaDetalhe(pagina, inicio, fim, agrupar, limite)));
 
+  s.registerTool('bf_recorde_captacao', {
+    title: 'Recorde de captação (últimos 2 anos)',
+    description: 'Maiores dias, horas e meses de captado da VTEX nos últimos 2 anos (limite da plataforma). Com iniciar = true, começa ou retoma a varredura em segundo plano; chame de novo para ver o progresso.',
+    inputSchema: { iniciar: z.boolean().optional(), top: z.number().int().min(1).max(50).optional() }, annotations: ro,
+  }, async ({ iniciar, top }) => json(recordeCaptacao({ iniciar, top })));
+
   s.registerTool('bf_status', {
     title: 'Status da sincronização',
     description: 'Quando os dados foram atualizados pela última vez, erros e cobertura.',
@@ -341,7 +348,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar', 'bf_tempo_etapas', 'bf_tempo_etapas_pedidos',
   'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_novos_recorrentes', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
-  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_status']);
+  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_recorde_captacao', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
 
