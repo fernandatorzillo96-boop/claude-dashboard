@@ -9,7 +9,7 @@ const CHUNK_MS = 6 * 3600 * 1000;
 const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consulta
 
 // Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
-const VERSAO_PEDIDO = 3;
+const VERSAO_PEDIDO = 4; // v4: UF e cidade de entrega
 export const amostraPacotes = { entregues: [], abertos: [] };
 const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
 
@@ -105,6 +105,8 @@ function compactOrder(o) {
     atualizado: new Date().toISOString(),
     criado: o.creationDate,
     status: o.status,
+    uf: o.shippingData?.address?.state ? String(o.shippingData.address.state).toUpperCase().slice(0, 2) : null,
+    cidade: o.shippingData?.address?.city || null,
     origin: o.origin,
     sc: o.salesChannel,
     cupom: o.marketingData?.coupon || null,
@@ -190,10 +192,10 @@ export async function syncOrders() {
       }
       if (!state.orders[l.orderId].detalhe && l.status !== 'canceled') toFetch.push(l.orderId);
     }
-    // Pedidos salvos antes da versão atual (sem horário da nota e eventos da transportadora): relê até 300 por ciclo.
-    const limiteV = Date.now() - 60 * 86400e3;
+    // Pedidos salvos antes da versão atual (sem horário da nota e eventos da transportadora): relê até 1000 por ciclo.
+    const limiteV = Date.now() - 70 * 86400e3;
     for (const o of Object.values(state.orders)) {
-      if (refetch.size >= 300) break;
+      if (refetch.size >= 1000) break;
       if (!o.detalhe || o.status === 'canceled' || (o.v || 1) >= VERSAO_PEDIDO || new Date(o.criado).getTime() < limiteV) continue;
       refetch.add(o.id);
     }

@@ -661,3 +661,20 @@ export function eventosTransporte(inicio, fim, limite = 60) {
     eventos: [...c.values()].sort((a, b) => b.vezes - a.vezes).slice(0, Math.min(Number(limite) || 60, 300)),
   };
 }
+
+// Captado por UF de entrega (endereço do pedido na VTEX), mesmo critério do captado por dia.
+export function vendasPorEstado(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const map = new Map();
+  let semVersao = 0;
+  for (const { o } of pedidosNoPeriodo(i, f)) {
+    const uf = o.uf || (o.detalhe && (o.v || 1) >= 4 ? 'Sem UF' : 'Ainda sem UF (relendo)');
+    if (uf.startsWith('Ainda') && o.status !== 'canceled') semVersao++;
+    if (!map.has(uf)) map.set(uf, novoBalde());
+    acumula(map.get(uf), o);
+  }
+  const linhas = [...map.entries()].map(([uf, b]) => ({ uf, ...fecha(b) })).sort((a, b) => b.captado - a.captado);
+  const tot = linhas.reduce((t, x) => t + x.captado, 0);
+  return { periodo: { inicio: i, fim: f }, pedidos_ainda_sem_uf: semVersao,
+    estados: linhas.map((x, k) => ({ posicao: k + 1, uf: x.uf, captado: x.captado, share: tot ? Math.round((x.captado / tot) * 10000) / 10000 : null, pedidos: x.pedidos, pecas: x.pecas, ticket_medio: x.ticket_medio, margem_bruta: x.margem_bruta, pct_sale: x.captado ? Math.round((x.captado_sale / x.captado) * 10000) / 10000 : null })) };
+}
