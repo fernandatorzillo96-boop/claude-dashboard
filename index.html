@@ -583,7 +583,7 @@
     </div>
     <div class="bf-card" id="card-entrega-ped">
       <h2>Entrega ao cliente (por pedido)</h2>
-      <p class="bf-sub">Pedidos aprovados criados no período, sem cancelados. Entregue = confirmação de entrega da VTEX (isDelivered) em todos os pacotes do pedido. Prazo = data prometida ao cliente no checkout (só a data). "Dentro do prazo" = entregues no prazo + em aberto que ainda não venceram.</p>
+      <p class="bf-sub">Pedidos aprovados criados no período, sem cancelados, só entrega em casa: retira em loja fica fora, e nos pedidos com entrega em casa e retira em loja juntos conta só a parte entregue em casa. Entregue = confirmação de entrega da VTEX (isDelivered) em todos os pacotes de entrega em casa do pedido. Prazo = data prometida ao cliente no checkout (só a data). "Dentro do prazo" = entregues no prazo + em aberto que ainda não venceram.</p>
       <div class="bf-filtros" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 10px">
         <label for="sel-exp-ped">Exportar pedidos:</label>
         <select id="sel-exp-ped">
@@ -600,7 +600,6 @@
         <table class="bf-table" id="tb-entrega-ped" data-source="entrega_quadro" data-row-key="campo">
           <thead><tr>
             <th data-field="indicador">Indicador</th><th data-field="total" class="n">Pedidos</th><th data-field="pct_total" class="n">% dos pedidos</th>
-            <th data-field="entrega" class="n">Entrega em casa</th><th data-field="retira" class="n">Retira em loja</th>
           </tr></thead><tbody></tbody>
         </table>
       </div>

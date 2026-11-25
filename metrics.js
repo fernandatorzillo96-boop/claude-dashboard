@@ -334,8 +334,11 @@ function classificaPedidos(inicio, fim) {
     if (o.status === 'canceled' || !o.detalhe || !o.aprovado || !o.entregas?.length) continue;
     if (vistos.has(o.id)) continue;
     vistos.add(o.id);
-    const es = o.entregas;
-    const retira = es.every((e) => /pickup/i.test(e.canal || ''));
+    // Só entregas em casa: retira em loja fica fora. Pedido só de retira sai da conta; pedido misto
+    // (entrega em casa + retira) é avaliado só pelos pacotes de entrega em casa.
+    const es = o.entregas.filter((e) => !/pickup/i.test(e.canal || ''));
+    if (!es.length) continue;
+    const retira = false;
     const prom = es.map((e) => diaLocal(e.prometido)).filter(Boolean).sort().pop() || null;
     const entregue = es.every((e) => e.finalizado || entregaDe(e));
     const dEnt = entregue ? es.map((e) => diaLocal(entregaDe(e))).filter(Boolean).sort().pop() || null : null;
@@ -349,8 +352,8 @@ function classificaPedidos(inicio, fim) {
   return out;
 }
 
-// Pedidos do período (aprovados, não cancelados) e a entrega ao cliente.
-// Entregue = isDelivered da VTEX (courierStatus.finished) em TODOS os pacotes do pedido.
+// Pedidos do período (aprovados, não cancelados) com entrega em casa (retira em loja fica fora).
+// Entregue = isDelivered da VTEX (courierStatus.finished) em todos os pacotes de entrega em casa do pedido.
 // Prazo = maior shippingEstimateDate do pedido (só a data). Data da entrega = maior data de entrega dos pacotes.
 export function entregaPedidos(inicio, fim) {
   const novo = () => ({ pedidos: 0, dentro_do_prazo: 0, entregues: 0, entregues_no_prazo: 0, entregues_atrasados: 0, entregues_sem_data: 0, abertos: 0, abertos_no_prazo: 0, abertos_atrasados: 0, sem_prazo: 0 });
