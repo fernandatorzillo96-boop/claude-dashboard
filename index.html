@@ -475,11 +475,11 @@
     </div>
     <div class="bf-card" id="card-vendedores">
       <h2>Vendas por código de vendedor</h2>
-      <p class="bf-sub">Captado da VTEX (pedidos não cancelados, mesmo critério do card "Captado") pelo código de vendedor gravado no pedido, no período escolhido acima. A busca também filtra esta tabela. "Ainda relendo o pedido" = pedidos com a promoção Código de Vendedor que o painel ainda está relendo na VTEX.</p>
+      <p class="bf-sub">Captado da VTEX (pedidos não cancelados, mesmo critério do card "Captado") pelo código de vendedor do pedido: campo OBS ("código - nome") ou, sem ele, o código da aspai (utmi). Período escolhido acima. A busca também filtra esta tabela. "Ainda relendo o pedido" = pedidos com a promoção Código de Vendedor que o painel ainda está relendo na VTEX.</p>
       <div class="bf-tablebox aberta">
         <table class="bf-table" id="tb-vendedores" data-source="vendedores" data-row-key="codigo">
           <thead><tr>
-            <th data-field="codigo">Código</th><th data-field="captado" class="n">Captado</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th>
+            <th data-field="codigo">Código</th><th data-field="vendedor">Vendedor</th><th data-field="captado" class="n">Captado</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th>
             <th data-field="ticket_medio" class="n">TM</th><th data-field="margem_bruta" class="n">MB</th><th data-field="campo">Campo</th>
           </tr></thead><tbody></tbody>
         </table>

@@ -676,34 +676,35 @@ export function vendasPorEstado(inicio, fim) {
   return linhas.map((x, k) => ({ posicao: k + 1, uf: x.uf, inicio: i, fim: f, captado: x.captado, share: tot ? Math.round((x.captado / tot) * 10000) / 10000 : null, pedidos: x.pedidos, pecas: x.pecas, ticket_medio: x.ticket_medio, margem_bruta: x.margem_bruta, pct_sale: x.captado ? Math.round((x.captado_sale / x.captado) * 10000) / 10000 : null }));
 }
 
-// Código de vendedor por pedido: procura nos campos de marketing do pedido; preferência para campos
-// com "vend"/"seller" no nome; depois utmiCampaign, utmCampaign, campo aberto e cupom.
+// Código de vendedor por pedido: campo OBS do pedido (openTextField, "código - NOME") e, sem ele,
+// o código em utmiPart quando utmiCampaign = codigovendedor (aspai). O nome vem dos pedidos que têm o OBS.
 function codigoVendedor(o) {
   const m = o.mkt || {};
-  const ks = Object.keys(m);
-  const k1 = ks.find((k) => /vend|seller|consult/i.test(k) && m[k]);
-  if (k1) return { codigo: m[k1], campo: k1 };
-  for (const k of ['utmiCampaign', 'utmCampaign', 'utmiPart', 'openTextField']) if (m[k]) return { codigo: m[k], campo: k };
+  const obs = m.openTextField ? String(m.openTextField).trim() : '';
+  const mo = obs.match(/^\s*([A-Za-z0-9]+)\s*-\s*(.*)$/);
+  if (mo) return { cod: mo[1].toUpperCase(), nome: mo[2].trim(), campo: 'OBS' };
+  if (obs) return { cod: obs.toUpperCase(), nome: '', campo: 'OBS' };
+  if (/codigovendedor/i.test(m.utmiCampaign || '') && m.utmiPart) return { cod: String(m.utmiPart).trim().toUpperCase(), nome: '', campo: 'utmi (aspai)' };
   return null;
 }
 export function vendasPorVendedor(inicio, fim) {
   const [i, f] = periodo(inicio, fim);
+  const nomes = {};
+  for (const o of Object.values(state.orders)) { const c = codigoVendedor(o); if (c && c.nome && !nomes[c.cod]) nomes[c.cod] = c.nome; }
   const map = new Map();
   for (const { o } of pedidosNoPeriodo(i, f)) {
     if (o.status === 'canceled' || !o.detalhe) continue;
-    const temPromo = Object.values(o.promos || {}).some((n) => /vendedor/i.test(String(n))) || (o.itens || []).some((it) => (it.promos || []).some((n) => /vendedor/i.test(String(n))));
+    const temPromo = Object.values(o.promos || {}).some((n) => /vendedor/i.test(String(n)));
     const cv = codigoVendedor(o);
     if (!temPromo && !cv) continue;
-    const nome = cv ? String(cv.codigo).trim() : ((o.v || 1) >= 5 ? 'Promoção de vendedor sem código no pedido' : 'Ainda relendo o pedido');
-    const k = nome.toLowerCase();
-    if (!map.has(k)) map.set(k, { codigo: nome, campos: new Set(), com_promocao: 0, b: novoBalde() });
+    const k = cv ? cv.cod : ((o.v || 1) >= 5 ? '(sem código)' : '(relendo)');
+    const nome = cv ? (nomes[cv.cod] || '') : (k === '(relendo)' ? 'Ainda relendo o pedido' : 'Promoção de vendedor sem código no pedido');
+    if (!map.has(k)) map.set(k, { codigo: k, nome, campos: new Set(), b: novoBalde() });
     const x = map.get(k);
     if (cv) x.campos.add(cv.campo);
-    if (temPromo) x.com_promocao++;
     acumula(x.b, o);
   }
-  return [...map.values()].map((x) => ({ codigo: x.codigo, campo: [...x.campos].join(', '), pedidos_com_promocao_vendedor: x.com_promocao, inicio: i, fim: f, ...fecha(x.b) }))
-    .map(({ codigo, campo, pedidos_com_promocao_vendedor, inicio, fim, captado, pedidos, pecas, ticket_medio, margem_bruta }) => ({ codigo, captado, pedidos, pecas, ticket_medio, margem_bruta, pedidos_com_promocao_vendedor, campo, inicio, fim }))
+  return [...map.values()].map((x) => { const r = fecha(x.b); return { codigo: x.codigo, vendedor: x.nome, captado: r.captado, pedidos: r.pedidos, pecas: r.pecas, ticket_medio: r.ticket_medio, margem_bruta: r.margem_bruta, campo: [...x.campos].join(', '), inicio: i, fim: f }; })
     .sort((a, b) => b.captado - a.captado);
 }
 // Amostra dos campos de marketing dos pedidos com a promoção "Código de Vendedor" (para conferir onde vem o código).
