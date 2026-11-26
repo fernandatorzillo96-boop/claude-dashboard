@@ -210,6 +210,9 @@ dash.calc('midia_resumo', {
     });
     B.tabela(document.getElementById('tb-rt-pag'), rt.filter((x) => x.tipo === 'pagina'), { usuarios_ativos: 'int', visualizacoes: 'int' });
     B.tabela(document.getElementById('tb-rt-disp'), rt.filter((x) => x.tipo === 'dispositivo'), { usuarios_ativos: 'int' });
+    const fUF = { posicao: 'int', captado: 'brl0', share: 'pct', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', margem_bruta: 'pct', pct_sale: 'pct' };
+    B.tabela(document.getElementById('tb-md-uf-nov'), B.linhas('uf_nov'), fUF);
+    B.tabela(document.getElementById('tb-md-uf-out'), B.linhas('uf_out'), fUF);
     const nv = B.linhas('ga4_novos');
     B.tabela(document.getElementById('tb-md-novos'), nv, {
       atual_usuarios: 'int', mes_anterior_usuarios: 'int', var_usuarios_mes: 'delta', ano_anterior_usuarios: 'int', var_usuarios_ano: 'delta',

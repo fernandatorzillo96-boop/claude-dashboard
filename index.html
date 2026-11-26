@@ -313,6 +313,22 @@
           </table>
         </div>
       </div>
+      <div class="bf-card bf-wide" id="card-md-uf">
+        <h2>Vendas por estado (VTEX)</h2>
+        <p class="bf-sub">Captado da VTEX (pedidos não cancelados, mesmo critério do card "Captado") pela UF do endereço de entrega do pedido. Retira em loja entra na UF da loja. Outubro e novembro separados. "Ainda sem UF" = pedidos que o painel ainda está relendo na VTEX.</p>
+        <h3>Novembro</h3>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-md-uf-nov" data-source="uf_nov" data-row-key="uf">
+            <thead><tr><th data-field="posicao" class="n">#</th><th data-field="uf">UF</th><th data-field="captado" class="n">Captado</th><th data-field="share" class="n">Share</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">Ticket médio</th><th data-field="margem_bruta" class="n">Margem</th><th data-field="pct_sale" class="n">% SALE</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+        <h3>Outubro</h3>
+        <div class="bf-tablebox aberta">
+          <table class="bf-table" id="tb-md-uf-out" data-source="uf_out" data-row-key="uf">
+            <thead><tr><th data-field="posicao" class="n">#</th><th data-field="uf">UF</th><th data-field="captado" class="n">Captado</th><th data-field="share" class="n">Share</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">Ticket médio</th><th data-field="margem_bruta" class="n">Margem</th><th data-field="pct_sale" class="n">% SALE</th></tr></thead><tbody></tbody>
+          </table>
+        </div>
+      </div>
       <div class="bf-card bf-wide" id="card-md-novos">
         <h2>Usuários novos × recorrentes</h2>
         <p class="bf-sub">GA4, sem bots: além dos robôs que o GA4 já exclui, saem as sessões que entram por /Sistema/buscavazia (linha "Excluídos"). Comparação sempre nos mesmos dias: mês anterior e mesmo período do ano anterior. O total é de usuários únicos: quem chegou como novo e voltou no período conta nas duas linhas, por isso novos + recorrentes passa do total. <span id="md-novos-per"></span></p>
