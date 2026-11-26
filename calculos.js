@@ -127,13 +127,17 @@ dash.calc('curva_hora', {
     const real = new Map(hora.map((x) => [x.data + '|' + n(x.hora), x]));
     const dias = [...new Set(hora.map((x) => x.data))].sort();
     const out = [];
+    const ontem = (d) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); return t.toISOString().slice(0, 10); };
     for (const d of dias) {
-      let a = 0, b = 0;
+      let a = 0, b = 0, o = 0;
+      const d1 = ontem(d);
+      const temOntem = dias.includes(d1);
       for (let h = 0; h < 24; h++) {
-        const x = real.get(d + '|' + h), y = ly.get(d + '|' + h);
+        const x = real.get(d + '|' + h), y = ly.get(d + '|' + h), z = real.get(d1 + '|' + h);
         a += x ? n(x.captado) : 0;
         b += y ? n(y.captado) : 0;
-        out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: y ? n(y.captado) : 0, acumulado: r(a), acumulado_2025: r(b) });
+        o += z ? n(z.captado) : 0;
+        out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: y ? n(y.captado) : 0, captado_ontem: z ? n(z.captado) : 0, acumulado: r(a), acumulado_2025: r(b), acumulado_ontem: temOntem ? r(o) : null, data_ontem: d1 });
       }
     }
     return out;

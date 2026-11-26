@@ -345,6 +345,7 @@ function desenharCurva() {
       bars: [],
       lines: [
         { name: '2026', vals: ch.map((x) => (x.hora <= ate ? x.acumulado : null)), color: c.a, width: 2.5 },
+        { name: ch.length ? `Dia anterior (${dataCurta(ch[0].data_ontem)})` : 'Dia anterior', vals: ch.map((x) => x.acumulado_ontem), color: c.b, width: 1.8 },
         { name: '2025 (mesmo dia da semana)', vals: ch.map((x) => x.acumulado_2025), color: c.mudo, dash: '5 4' },
       ],
       fmtY: F.brl, fmtTip: F.brl0,
