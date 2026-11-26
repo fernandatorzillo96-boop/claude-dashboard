@@ -42,6 +42,7 @@
     google_campanhas: { tool: 'bf_google_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     ga4_entrada_det: { tool: 'bf_ga4_entrada_detalhe', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}', pagina: '{{md_pagina}}', agrupar: '{{md_det}}', limite: 50 } },
     meta_campanhas: { tool: 'bf_meta_campanhas', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    vendedores: { tool: 'bf_vendas_por_vendedor', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
     uf_out: { tool: 'bf_vendas_por_estado', args: { inicio: '2026-10-01', fim: '2026-10-31' } },
     uf_nov: { tool: 'bf_vendas_por_estado', args: { inicio: '2026-11-01', fim: '2026-11-30' } },
     plano_canais: { file: 'data/plano_bf_canais.json' },

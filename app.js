@@ -401,6 +401,9 @@ function desenharPromos() {
   tabela(document.getElementById('tb-promos'), linhas('promos').filter((r) => !q || String(r.promocao).toLowerCase().includes(q)), {
     captado_hoje: 'brl0', captado: 'brl0', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', desconto_sobre_de: 'pct', desconto_concedido: 'brl0', lucro_bruto: 'brl0', margem_bruta: 'pct',
   });
+  tabela(document.getElementById('tb-vendedores'), linhas('vendedores').filter((r) => !q || String(r.codigo).toLowerCase().includes(q)), {
+    captado: 'brl0', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', margem_bruta: 'pct',
+  });
   tabela(document.getElementById('tb-promos25'), linhas('promos25').filter((r) => !q || String(r.promo).toLowerCase().includes(q)), {
     inicio: 'data', fim: 'data', captado: 'brl0', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', desconto_medio_sobre_de: 'pct',
   });

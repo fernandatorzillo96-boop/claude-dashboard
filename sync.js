@@ -9,7 +9,7 @@ const CHUNK_MS = 6 * 3600 * 1000;
 const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consulta
 
 // Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
-const VERSAO_PEDIDO = 4; // v4: UF e cidade de entrega
+const VERSAO_PEDIDO = 5; // v4: UF e cidade de entrega; v5: campos de marketing (código de vendedor)
 export const amostraPacotes = { entregues: [], abertos: [] };
 const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
 
@@ -110,12 +110,26 @@ function compactOrder(o) {
     origin: o.origin,
     sc: o.salesChannel,
     cupom: o.marketingData?.coupon || null,
+    mkt: camposMarketing(o),
     promos,
     itens,
     frete: (totals.Shipping || 0) / 100,
     total: (o.value || 0) / 100,
     detalhe: true,
   };
+}
+
+// Campos onde o código de vendedor pode vir: marketingData (utmi, utm, tags), customData e campo aberto.
+function camposMarketing(o) {
+  const md = o.marketingData || {};
+  const out = {};
+  for (const k of ['utmSource', 'utmMedium', 'utmCampaign', 'utmiCampaign', 'utmiPage', 'utmiPart', 'utmPartner']) if (md[k]) out[k] = String(md[k]).slice(0, 80);
+  if (Array.isArray(md.marketingTags) && md.marketingTags.length) out.tags = md.marketingTags.slice(0, 5).map((x) => String(x).slice(0, 60));
+  for (const app of o.customData?.customApps || []) {
+    for (const [k, v] of Object.entries(app.fields || {})) if (v != null && v !== '') out['custom.' + (app.id || 'app') + '.' + k] = String(v).slice(0, 80);
+  }
+  if (o.openTextField?.value) out.openTextField = String(o.openTextField.value).slice(0, 120);
+  return Object.keys(out).length ? out : null;
 }
 
 async function listWindow(from, to, out) {

@@ -675,3 +675,44 @@ export function vendasPorEstado(inicio, fim) {
   const tot = linhas.reduce((t, x) => t + x.captado, 0);
   return linhas.map((x, k) => ({ posicao: k + 1, uf: x.uf, inicio: i, fim: f, captado: x.captado, share: tot ? Math.round((x.captado / tot) * 10000) / 10000 : null, pedidos: x.pedidos, pecas: x.pecas, ticket_medio: x.ticket_medio, margem_bruta: x.margem_bruta, pct_sale: x.captado ? Math.round((x.captado_sale / x.captado) * 10000) / 10000 : null }));
 }
+
+// Código de vendedor por pedido: procura nos campos de marketing do pedido; preferência para campos
+// com "vend"/"seller" no nome; depois utmiCampaign, utmCampaign, campo aberto e cupom.
+function codigoVendedor(o) {
+  const m = o.mkt || {};
+  const ks = Object.keys(m);
+  const k1 = ks.find((k) => /vend|seller|consult/i.test(k) && m[k]);
+  if (k1) return { codigo: m[k1], campo: k1 };
+  for (const k of ['utmiCampaign', 'utmCampaign', 'utmiPart', 'openTextField']) if (m[k]) return { codigo: m[k], campo: k };
+  return null;
+}
+export function vendasPorVendedor(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const map = new Map();
+  for (const { o } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe) continue;
+    const temPromo = Object.values(o.promos || {}).some((n) => /vendedor/i.test(String(n))) || (o.itens || []).some((it) => (it.promos || []).some((n) => /vendedor/i.test(String(n))));
+    const cv = codigoVendedor(o);
+    if (!temPromo && !cv) continue;
+    const nome = cv ? String(cv.codigo).trim() : ((o.v || 1) >= 5 ? 'Promoção de vendedor sem código no pedido' : 'Ainda relendo o pedido');
+    const k = nome.toLowerCase();
+    if (!map.has(k)) map.set(k, { codigo: nome, campos: new Set(), com_promocao: 0, b: novoBalde() });
+    const x = map.get(k);
+    if (cv) x.campos.add(cv.campo);
+    if (temPromo) x.com_promocao++;
+    acumula(x.b, o);
+  }
+  return [...map.values()].map((x) => ({ codigo: x.codigo, campo: [...x.campos].join(', '), pedidos_com_promocao_vendedor: x.com_promocao, inicio: i, fim: f, ...fecha(x.b) }))
+    .map(({ codigo, campo, pedidos_com_promocao_vendedor, inicio, fim, captado, pedidos, pecas, ticket_medio, margem_bruta }) => ({ codigo, captado, pedidos, pecas, ticket_medio, margem_bruta, pedidos_com_promocao_vendedor, campo, inicio, fim }))
+    .sort((a, b) => b.captado - a.captado);
+}
+// Amostra dos campos de marketing dos pedidos com a promoção "Código de Vendedor" (para conferir onde vem o código).
+export function amostraCamposVendedor(n = 15) {
+  const out = [];
+  for (const o of Object.values(state.orders)) {
+    if (out.length >= n) break;
+    if (!o.mkt) continue;
+    out.push({ pedido: o.id, promos: Object.values(o.promos || {}), mkt: o.mkt });
+  }
+  return out;
+}

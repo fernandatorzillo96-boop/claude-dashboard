@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado, vendasPorVendedor, amostraCamposVendedor } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
@@ -277,6 +277,12 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: periodo, annotations: ro,
   }, async ({ inicio, fim }) => json(vendasPorEstado(inicio, fim)));
 
+  s.registerTool('bf_vendas_por_vendedor', {
+    title: 'Vendas por código de vendedor',
+    description: 'Captado da VTEX (não cancelados) por código de vendedor do pedido (campos de marketing / customData / utmi), com pedidos, peças, ticket, margem e o campo de onde o código veio. Com amostra = true, devolve exemplos dos campos de marketing gravados.',
+    inputSchema: { ...periodo, amostra: z.boolean().optional() }, annotations: ro,
+  }, async ({ inicio, fim, amostra }) => json(amostra ? amostraCamposVendedor() : vendasPorVendedor(inicio, fim)));
+
   s.registerTool('bf_recorde_captacao', {
     title: 'Recorde de captação (últimos 2 anos)',
     description: 'Maiores dias, horas e meses de captado da VTEX nos últimos 2 anos (limite da plataforma). Com iniciar = true, começa ou retoma a varredura em segundo plano; chame de novo para ver o progresso.',
@@ -354,7 +360,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar', 'bf_tempo_etapas', 'bf_tempo_etapas_pedidos',
   'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_novos_recorrentes', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
-  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_recorde_captacao', 'bf_vendas_por_estado', 'bf_status']);
+  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_recorde_captacao', 'bf_vendas_por_estado', 'bf_vendas_por_vendedor', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
 
