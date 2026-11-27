@@ -48,6 +48,7 @@
     plano_canais: { file: 'data/plano_bf_canais.json' },
     faturado25: { file: 'data/faturado_2025.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
+    vtex25h: { tool: 'bf_recorde_captacao', args: { inicio: '2025-10-01', fim: '2026-01-05' } },
     meta: { file: 'data/meta_diaria.json' },
     plano: { file: 'data/plano_bf26_site_diario_v2.json' },
     promos25: { file: 'data/promocoes_bf25.json' },

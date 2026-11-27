@@ -123,13 +123,25 @@ const agoraBR = () => {
   return { data: t.toISOString().slice(0, 10), hora: t.getUTCHours(), frac: (t.getUTCMinutes() + t.getUTCSeconds() / 60) / 60 };
 };
 
+// 2025 por hora: captado e pedidos da VTEX (varredura de pedidos não cancelados, horário de Brasília) quando há;
+// a base importada só para os dias sem a varredura.
+const base2025Horas = (base25, vtex25h) => {
+  const n = (x) => Number(x) || 0;
+  const m = new Map((Array.isArray(base25) ? base25 : []).map((x) => [x.data26 + '|' + n(x.hora), x]));
+  const v = Array.isArray(vtex25h) ? vtex25h : [];
+  const diasV = new Set(v.map((x) => x.data26));
+  for (const k of [...m.keys()]) if (diasV.has(k.split('|')[0])) m.delete(k);
+  for (const x of v) m.set(x.data26 + '|' + n(x.hora), x);
+  return m;
+};
+
 dash.calc('curva_hora', {
   title: 'Curva por hora × 2025',
-  inputs: ['hora', 'base25'],
-  fn: (hora, base25) => {
+  inputs: ['hora', 'base25', 'vtex25h'],
+  fn: (hora, base25, vtex25h) => {
     const n = (x) => Number(x) || 0;
     const r = (x) => Math.round(x * 100) / 100;
-    const ly = new Map(base25.map((x) => [x.data26 + '|' + n(x.hora), x]));
+    const ly = base2025Horas(base25, vtex25h);
     const real = new Map(hora.map((x) => [x.data + '|' + n(x.hora), x]));
     const dias = [...new Set(hora.map((x) => x.data))].sort();
     const out = [];
@@ -166,8 +178,9 @@ dash.calc('curva_hora', {
 
 dash.calc('resumo_dia', {
   title: 'Dia × 2025 até a mesma hora',
-  inputs: ['hora', 'base25'],
-  fn: (hora, base25) => {
+  inputs: ['hora', 'base25', 'vtex25h'],
+  fn: (hora, base25raw, vtex25h) => {
+    const base25 = [...base2025Horas(base25raw, vtex25h).values()];
     const n = (x) => Number(x) || 0;
     const r = (x) => Math.round(x * 100) / 100;
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);

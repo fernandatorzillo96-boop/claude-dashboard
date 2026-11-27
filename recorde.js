@@ -69,8 +69,20 @@ async function rodar() {
   rodando = false;
 }
 
-export function recordeCaptacao({ iniciar = false, top = 10, dia = null } = {}) {
+export function recordeCaptacao({ iniciar = false, top = 10, dia = null, inicio = null, fim = null } = {}) {
   const d = carregar();
+  // Horas de um intervalo de dias (para a curva de 2025 do painel): data25, data26 (+364 dias), hora, captado, pedidos.
+  if (inicio && fim) {
+    const out = [];
+    for (let x = inicio; x <= fim; x = somaDias(x, 1)) {
+      if (!d.dias[x]) continue;
+      for (let h = 0; h < 24; h++) {
+        const v = d.horas[x + ' ' + String(h).padStart(2, '0')] || { captado: 0, pedidos: 0 };
+        out.push({ data25: x, data26: somaDias(x, 364), hora: h, captado: Math.round(v.captado * 100) / 100, pedidos: v.pedidos });
+      }
+    }
+    return out;
+  }
   if (dia) {
     const hs = []; let ac = 0, ap = 0;
     for (let h = 0; h < 24; h++) { const v = d.horas[dia + ' ' + String(h).padStart(2, '0')] || { captado: 0, pedidos: 0 }; ac += v.captado; ap += v.pedidos; hs.push({ hora: h, captado: Math.round(v.captado * 100) / 100, pedidos: v.pedidos, acumulado: Math.round(ac * 100) / 100, pedidos_acum: ap }); }
