@@ -790,6 +790,34 @@ export function vendasPorDepartamento(inicio, fim) {
   const ordem = ['Inside Sales', 'Personal Shopper', 'Lojas físicas', 'Sem código'];
   return out.sort((a, b) => ordem.indexOf(a.departamento) - ordem.indexOf(b.departamento));
 }
+// Formas de pagamento por departamento de vendedor (pedidos com código) e do site (sem código de vendedor).
+export function pagamentosPorDepartamento(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const dep = new Map(); // depto -> { pedidos:Set, valor, sem, formas: Map(nome -> { pedidos:Set, valor }) }
+  for (const { o } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled' || !o.detalhe) continue;
+    const cv = codigoVendedor(o);
+    const temPromo = Object.values(o.promos || {}).some((n) => /vendedor/i.test(String(n)));
+    const d = cv ? departamentoDoCodigo(cv.cod) : temPromo ? 'Sem código' : 'Site (sem vendedor)';
+    const e = dep.get(d) || { pedidos: new Set(), valor: 0, sem: 0, formas: new Map() };
+    dep.set(d, e);
+    e.pedidos.add(o.base);
+    if (!Array.isArray(o.pag)) { e.sem++; continue; }
+    for (const p of o.pag) {
+      const nome = String(p.n || '?');
+      const x = e.formas.get(nome) || { pedidos: new Set(), valor: 0, grupo: p.g };
+      x.pedidos.add(o.base); x.valor += p.v || 0; e.valor += p.v || 0;
+      e.formas.set(nome, x);
+    }
+  }
+  const out = [];
+  for (const [d, e] of dep) {
+    for (const [nome, x] of e.formas) out.push({ departamento: d, forma: nome, grupo: x.grupo, pedidos: x.pedidos.size, valor_pago: Math.round(x.valor * 100) / 100,
+      pct_pedidos: e.pedidos.size ? r4(x.pedidos.size / e.pedidos.size) : null, pct_valor: e.valor ? r4(x.valor / e.valor) : null,
+      pedidos_departamento: e.pedidos.size, pedidos_ainda_sem_pagamento: e.sem, inicio: i, fim: f });
+  }
+  return out.sort((a, b) => a.departamento.localeCompare(b.departamento) || b.valor_pago - a.valor_pago);
+}
 // Amostra dos campos de marketing dos pedidos com a promoção "Código de Vendedor" (para conferir onde vem o código).
 export function amostraCamposVendedor(n = 15) {
   const out = [];

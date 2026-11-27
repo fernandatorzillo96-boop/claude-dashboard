@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado, clientesCompradores, vendasPorVendedor, amostraCamposVendedor, vendasPorDepartamento } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado, clientesCompradores, vendasPorVendedor, amostraCamposVendedor, vendasPorDepartamento, pagamentosPorDepartamento } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
@@ -291,7 +291,13 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: { ...periodo, amostra: z.boolean().optional() }, annotations: ro,
   }, async ({ inicio, fim, amostra }) => json(amostra ? amostraCamposVendedor() : vendasPorVendedor(inicio, fim)));
 
-  s.registerTool('bf_vendas_por_departamento', {
+  s.registerTool('bf_pagamentos_por_departamento', {
+    title: 'Formas de pagamento por departamento',
+    description: 'Formas de pagamento (Vale, Pix, cartões, boleto...) dos pedidos não cancelados por departamento do código de vendedor (Inside Sales, Personal Shopper, Lojas físicas) e do site sem vendedor: pedidos, valor pago, % dos pedidos e % do valor. pedidos_ainda_sem_pagamento = pedidos que o painel ainda está relendo.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(pagamentosPorDepartamento(inicio, fim)));
+
+  s.registerTool('bf_vendas_por_departamento', 'bf_pagamentos_por_departamento', {
     title: 'Vendas por departamento (código de vendedor)',
     description: 'Captado da VTEX com código de vendedor por departamento: Inside Sales (códigos 300 a 399), Personal Shopper (códigos que começam com 64) e Lojas físicas (demais). Pedidos, ticket, margem, share e quanto veio da prateleira infinita (UTM).',
     inputSchema: periodo, annotations: ro,
