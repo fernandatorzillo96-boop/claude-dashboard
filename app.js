@@ -450,6 +450,16 @@ function desenharCurva() {
     preencher(el, r[f]);
     if (el.dataset.fmt === 'delta') tomDelta(el, r[f]);
   });
+  // Clientes compradores do dia escolhido
+  const cliT = linhas('cli_dia').find((x) => x.data === 'total');
+  const cliEl = document.getElementById('cli-dia');
+  if (cliEl) {
+    cliEl.classList.remove('dash-skeleton');
+    cliEl.textContent = cliT && cliT.inicio === diaSel ? F.int(cliT.clientes) : '—';
+    document.getElementById('cli-dia-sub').textContent = cliT && cliT.inicio === diaSel
+      ? `${F.dec2(cliT.pedidos_por_cliente)} pedidos por cliente` + (cliT.pedidos_ainda_sem_cliente ? ` · ${F.int(cliT.pedidos_ainda_sem_cliente)} pedidos ainda sendo relidos` : '')
+      : 'clientes diferentes no dia';
+  }
   // PA do dia comparado: a varredura da VTEX não traz peças; para 2025 usa o dia inteiro do plano.
   const paC = document.getElementById('pa-cmp');
   if (r && paC && r.pa_cmp == null && cmpSel.modo === 'ly364') {

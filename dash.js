@@ -46,6 +46,8 @@
     vendedores: { tool: 'bf_vendas_por_vendedor', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
     deptos: { tool: 'bf_vendas_por_departamento', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
     est_saude: { tool: 'bf_estoque_saude', args: { inicio: '{{col_inicio}}', fim: '{{col_fim}}', grade: '{{est_grade}}' } },
+    cli_pg: { tool: 'bf_clientes_compradores', args: { inicio: '{{pg_inicio}}', fim: '{{pg_fim}}' } },
+    cli_dia: { tool: 'bf_clientes_compradores', args: { inicio: '{{cmp_dia}}', fim: '{{cmp_dia}}' } },
     uf_md: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     uf_md_cmp: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
     midia_dia_cmp: { tool: 'bf_midia_por_dia', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },

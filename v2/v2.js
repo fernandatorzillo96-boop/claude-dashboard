@@ -350,6 +350,7 @@
     let a = p.pg_inicio || p.promo_inicio || h, b = p.pg_fim || p.promo_fim || h;
     if (b > h) b = h;
     if (a > b) a = b;
+    if (p.pg_inicio !== a || p.pg_fim !== b) { dash.setParams({ pg_inicio: a, pg_fim: b }); }
     const box = $('#v2-hoje [data-hoje]');
     const it = (rot, v, sub) => `<div><span>${rot}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
     const dl = (v) => `<span class="${tom(v)}">${F.delta(v)}</span>`;
@@ -376,6 +377,8 @@
       it('Venda captada', F.brl(cap), cap25 ? `${dl(cap / cap25 - 1)} vs 2025${a === h || b === h ? ' (hoje até a mesma hora)' : ''}` : ''),
       it('Pedidos', F.int(ped), ped25 ? `${dl(ped / ped25 - 1)} vs 2025` : ''),
       it('Ticket médio', F.brl0(tk), tk25 ? `2025: ${F.brl0(tk25)}` : ''),
+      (() => { const t = B.linhas('cli_pg').find((x) => x.data === 'total'); const ok = t && t.inicio === a && t.fim === b;
+        return it('Clientes compradores', ok ? F.int(t.clientes) : '—', ok ? `${F.dec2(t.pedidos_por_cliente)} pedidos por cliente${t.pedidos_ainda_sem_cliente ? ` · ${F.int(t.pedidos_ainda_sem_cliente)} pedidos sendo relidos` : ''}` : 'carregando'); })(),
       it('Peças por pedido (PA)', paTxt(pa), pa25Dia ? `2025: ${paTxt(pa25Dia)}${pa25 == null ? ' (dia inteiro)' : ''}` : ''),
       it('% SALE', F.pct(cap ? sale / cap : null), ''),
       it('Margem bruta', F.pct(cap ? (cap - cmv) / cap : null), de ? `desconto s/ DE ${F.pct(1 - cap / de)}` : ''),

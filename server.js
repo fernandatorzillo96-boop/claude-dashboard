@@ -6,7 +6,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { config } from './config.js';
 import { state, load } from './store.js';
 import { start, sweepProgress } from './sync.js';
-import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado, vendasPorVendedor, amostraCamposVendedor, vendasPorDepartamento } from './metrics.js';
+import { vendasPorHora, vendasPorDia, resultadoPromocoes, faturadoLiquido, status, aFaturar, vendasPorGrupo, topReferencias, AGRUPAMENTOS, faturamentoPorLoja, entregaPorTransportadora, entregaPedidos, entregaPedidosLista, tempoEtapas, tempoEtapasPedidos, eventosTransporte, vendasPorEstado, clientesCompradores, vendasPorVendedor, amostraCamposVendedor, vendasPorDepartamento } from './metrics.js';
 import { importar3351 } from './erp3351.js';
 import { diagnosticoOctadesk, startOctadesk, atendimentoPorDia, atendimentoPorGrupo, atendimentoTempo, statusOctadesk } from './octadesk.js';
 import { uploadPage } from './upload-page.js';
@@ -273,6 +273,12 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
     inputSchema: { ...periodo, pagina: z.string().describe('Caminho da página de entrada, como aparece no GA4.'), agrupar: z.enum(['origem', 'campanha', 'canal', 'dispositivo', 'pais', 'cidade', 'url', 'navegador', 'dia', 'hora', 'novo']).optional(), limite: z.number().int().optional() }, annotations: ro,
   }, async ({ inicio, fim, pagina, agrupar, limite }) => json(await ga4EntradaDetalhe(pagina, inicio, fim, agrupar, limite)));
 
+  s.registerTool('bf_clientes_compradores', {
+    title: 'Clientes compradores (únicos)',
+    description: 'Quantos clientes diferentes compraram (pedidos não cancelados) por dia e no período todo (linha data = total), com pedidos por cliente. O cliente é um código anônimo do perfil da VTEX. pedidos_ainda_sem_cliente = pedidos que o painel ainda está relendo para ganhar o código.',
+    inputSchema: periodo, annotations: ro,
+  }, async ({ inicio, fim }) => json(clientesCompradores(inicio, fim)));
+
   s.registerTool('bf_vendas_por_estado', {
     title: 'Captado por estado (UF de entrega)',
     description: 'Ranking de estados pelo captado da VTEX (pedidos não cancelados), pela UF do endereço de entrega: captado, share, pedidos, peças, ticket médio, margem e % SALE.',
@@ -374,7 +380,7 @@ app.get('/estoque/:secret/divergencias.csv', checkSecret, (req, res) => {
 const WEB_TOOLS = new Set(['bf_vendas_por_hora', 'bf_vendas_por_dia', 'bf_resultado_promocoes', 'bf_estoque_por_warehouse', 'bf_resumo_catalogo',
   'bf_faturado_liquido', 'bf_vendas_por_grupo', 'bf_top_referencias', 'bf_faturamento_por_loja', 'bf_entrega_por_transportadora', 'bf_entrega_pedidos', 'bf_entrega_pedidos_lista', 'bf_a_faturar', 'bf_tempo_etapas', 'bf_tempo_etapas_pedidos',
   'bf_venda_lojas', 'bf_midia_por_dia', 'bf_ga4_canais', 'bf_ga4_novos_recorrentes', 'bf_ga4_origens', 'bf_ga4_paginas', 'bf_ga4_funil', 'bf_ga4_tempo_real', 'bf_meta_campanhas', 'bf_google_campanhas', 'bf_ga4_entrada_detalhe',
-  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_recorde_captacao', 'bf_vendas_por_estado', 'bf_vendas_por_vendedor', 'bf_vendas_por_departamento', 'bf_estoque_saude', 'bf_status']);
+  'bf_atendimento_por_dia', 'bf_atendimento_por_grupo', 'bf_atendimento_tempo', 'bf_match_estoque_resumo', 'bf_match_estoque_divergencias', 'bf_recorde_captacao', 'bf_vendas_por_estado', 'bf_clientes_compradores', 'bf_vendas_por_vendedor', 'bf_vendas_por_departamento', 'bf_estoque_saude', 'bf_status']);
 const ferramentas = new Map();
 buildServer({ registerTool: (nome, def, fn) => { if (WEB_TOOLS.has(nome)) ferramentas.set(nome, { schema: z.object(def.inputSchema || {}), fn }); } });
 

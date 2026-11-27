@@ -4,15 +4,22 @@ import { config } from './config.js';
 import { vtexGet, mapLimit } from './vtex.js';
 import { state, save, referenciaDoItem } from './store.js';
 import { inicioDoDiaUTC } from './tempo.js';
+import { createHash } from 'node:crypto';
 
 const CHUNK_MS = 6 * 3600 * 1000;
 const MAX_LIST = 2900; // a VTEX devolve no máximo 30 páginas × 100 por consulta
 
 // Versão do pedido compacto: pedidos salvos numa versão anterior são relidos aos poucos (sem eventos de transporte).
-const VERSAO_PEDIDO = 5; // v4: UF e cidade de entrega; v5: campos de marketing (código de vendedor)
+const VERSAO_PEDIDO = 6; // v6: cliente (código anônimo, para contar compradores únicos); v4: UF e cidade de entrega; v5: campos de marketing (código de vendedor)
 export const amostraPacotes = { entregues: [], abertos: [] };
 const temHorario = (iso) => typeof iso === 'string' && /T\d\d:\d\d/.test(iso) && !/T00:00:00(\.0+)?(Z|[+-]00:?00)?$/.test(iso);
 
+// Cliente do pedido como código anônimo (hash): conta compradores únicos sem guardar e-mail, CPF ou nome.
+function codigoCliente(o) {
+  const c = o.clientProfileData || {};
+  const k = c.userProfileId || (c.document ? 'doc:' + String(c.document).replace(/\D/g, '') : '') || (c.email ? 'em:' + String(c.email).toLowerCase() : '');
+  return k ? createHash('sha256').update(k).digest('base64url').slice(0, 16) : null;
+}
 function compactOrder(o) {
   const promos = {};
   for (const p of o.ratesAndBenefitsData?.rateAndBenefitsIdentifiers || []) {
@@ -110,6 +117,7 @@ function compactOrder(o) {
     origin: o.origin,
     sc: o.salesChannel,
     cupom: o.marketingData?.coupon || null,
+    cli: codigoCliente(o),
     mkt: camposMarketing(o),
     promos,
     itens,

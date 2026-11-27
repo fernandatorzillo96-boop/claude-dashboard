@@ -682,6 +682,25 @@ export function eventosTransporte(inicio, fim, limite = 60) {
 }
 
 // Captado por UF de entrega (endereço do pedido na VTEX), mesmo critério do captado por dia.
+// Compradores únicos (cliente anônimo do pedido), por dia e no período todo.
+export function clientesCompradores(inicio, fim) {
+  const [i, f] = periodo(inicio, fim);
+  const total = new Set(), porDia = new Map(), pedDia = new Map();
+  let ped = 0, semCli = 0, pedTotal = new Set();
+  for (const { o, data } of pedidosNoPeriodo(i, f)) {
+    if (o.status === 'canceled') continue;
+    if (!pedTotal.has(o.base)) { pedTotal.add(o.base); ped++; pedDia.set(data, (pedDia.get(data) || 0) + 1); }
+    if (!o.cli) { if ((o.v || 1) < 6) semCli++; continue; }
+    total.add(o.cli);
+    if (!porDia.has(data)) porDia.set(data, new Set());
+    porDia.get(data).add(o.cli);
+  }
+  const linhas = [...new Set([...porDia.keys(), ...pedDia.keys()])].sort().map((d) => ({ data: d, clientes: porDia.get(d)?.size || 0, pedidos: pedDia.get(d) || 0 }));
+  const cobertura = ped ? Math.round(((ped - semCli) / ped) * 1e4) / 1e4 : null;
+  return [...linhas, { data: 'total', inicio: i, fim: f, clientes: total.size, pedidos: ped, pedidos_por_cliente: total.size ? Math.round((ped / total.size) * 100) / 100 : null,
+    pedidos_ainda_sem_cliente: semCli, cobertura }];
+}
+
 export function vendasPorEstado(inicio, fim) {
   const [i, f] = periodo(inicio, fim);
   const map = new Map();
