@@ -134,77 +134,86 @@ const presets = [
 // só o mês corrente nas curvas
 const doMes = (rows) => { const m = hojeBR().slice(0, 7); return rows.filter((x) => x.data.slice(0, 7) === m); };
 const periodoDe = (p) => (p[3] === 'hoje' ? [hojeBR(), hojeBR()] : p[3] === 'ontem' ? [ontem(), ontem()] : [p[1], p[2]]);
-// Promoções: hoje, ontem, semana (segunda até hoje) ou datas livres; comparativo opcional.
-const promoEl = (id) => document.getElementById(id);
+// Filtros de período das abas: Hoje, Ontem, Semana (segunda até hoje) ou Personalizado (datas);
+// comparativo opcional (período anterior com o mesmo nº de dias ou datas livres).
 const diaMais = (d, k) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
 const diasEntre = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
 const segunda = (d) => { const w = new Date(d + 'T12:00:00Z').getUTCDay(); return diaMais(d, -((w + 6) % 7)); };
-const periodoPromo = (modo) => {
+const dataBR = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
+const periodoRapido = (modo) => {
   const h = hojeBR();
   if (modo === 'hoje') return [h, h];
   if (modo === 'ontem') return [ontem(), ontem()];
   if (modo === 'semana') return [segunda(h), h];
   return null;
 };
-const cmpPromo = (a, b) => { const n = diasEntre(a, b) + 1; return [diaMais(a, -n), diaMais(a, -1)]; };
-function aplicaPromo(muda = {}) {
-  const p = { ...dash.params(), ...muda };
-  const modo = p.promo_per || 'pers';
-  let [a, b] = periodoPromo(modo) || [p.promo_inicio, p.promo_fim];
-  const out = { ...muda, promo_inicio: a, promo_fim: b };
-  if (p.promo_cmp_modo === 'anterior') [out.promo_cmp_inicio, out.promo_cmp_fim] = cmpPromo(a, b);
-  const atual = dash.params();
-  if (Object.keys(out).some((k) => atual[k] !== out[k])) dash.setParams(out);
-}
-selPromo.addEventListener('change', () => {
-  const modo = selPromo.value;
-  if (modo === 'pers') { const p = dash.params(); promoEl('promo-ini').value = p.promo_inicio; promoEl('promo-fim').value = p.promo_fim; }
-  aplicaPromo({ promo_per: modo });
-});
-['promo-ini', 'promo-fim'].forEach((id) => promoEl(id).addEventListener('change', () => {
-  const a = promoEl('promo-ini').value, b = promoEl('promo-fim').value;
-  if (a && b && a <= b) aplicaPromo({ promo_per: 'pers', promo_inicio: a, promo_fim: b });
-}));
-promoEl('sel-promo-cmp').addEventListener('change', (e) => {
-  const m = e.target.value, p = dash.params();
-  if (m === 'pers') { const [x, y] = cmpPromo(p.promo_inicio, p.promo_fim); aplicaPromo({ promo_cmp_modo: m, promo_cmp_inicio: x, promo_cmp_fim: y }); }
-  else aplicaPromo({ promo_cmp_modo: m });
-});
-['promo-cmp-ini', 'promo-cmp-fim'].forEach((id) => promoEl(id).addEventListener('change', () => {
-  const a = promoEl('promo-cmp-ini').value, b = promoEl('promo-cmp-fim').value;
-  if (a && b && a <= b) aplicaPromo({ promo_cmp_modo: 'pers', promo_cmp_inicio: a, promo_cmp_fim: b });
-}));
-const dataBR = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
-const syncPromoSel = () => {
-  aplicaPromo();
-  const p = dash.params();
-  const modo = p.promo_per || 'pers';
-  selPromo.value = modo;
-  promoEl('promo-pers').hidden = modo !== 'pers';
-  promoEl('promo-ini').value = p.promo_inicio || ''; promoEl('promo-fim').value = p.promo_fim || '';
-  const h = hojeBR(); ['promo-ini', 'promo-fim', 'promo-cmp-ini', 'promo-cmp-fim'].forEach((id) => { promoEl(id).max = h; });
-  const cm = p.promo_cmp_modo || 'nenhum';
-  promoEl('sel-promo-cmp').value = cm;
-  promoEl('promo-cmp-pers').hidden = cm !== 'pers';
-  promoEl('promo-cmp-ini').value = p.promo_cmp_inicio || ''; promoEl('promo-cmp-fim').value = p.promo_cmp_fim || '';
-  root.querySelectorAll('#tb-promos .k-pcmp').forEach((th) => { th.hidden = cm === 'nenhum'; });
-  const thc = root.querySelector('#tb-promos th[data-field="captado_cmp"]');
-  if (thc) thc.textContent = cm === 'nenhum' ? 'Comparativo' : `${dataBR(p.promo_cmp_inicio)}–${dataBR(p.promo_cmp_fim)}`;
-  promoEl('promo-nota').textContent = `${dataBR(p.promo_inicio)} a ${dataBR(p.promo_fim)}` + (cm === 'nenhum' ? '' : ` × ${dataBR(p.promo_cmp_inicio)} a ${dataBR(p.promo_cmp_fim)}`);
-};
-// mesmos períodos para coleções e logística
-const ligaPeriodo = (sel, pIni, pFim) => {
-  sel.replaceChildren(...presets.map((p, i) => new Option(p[0], String(i))));
-  sel.addEventListener('change', () => {
-    const [a, b] = periodoDe(presets[Number(sel.value)]);
-    dash.setParams({ [pIni]: a, [pFim]: b });
-  });
-  return () => {
-    const pr = dash.params();
-    const i = presets.findIndex((p) => { const [x, y] = periodoDe(p); return x === pr[pIni] && y === pr[pFim]; });
-    if (i >= 0) sel.value = String(i);
+const anterior = (a, b) => { const n = diasEntre(a, b) + 1; return [diaMais(a, -n), diaMais(a, -1)]; };
+function filtroPeriodo(cfg) {
+  const sel = typeof cfg.sel === 'string' ? document.getElementById(cfg.sel) : cfg.sel;
+  sel.replaceChildren(...[['hoje', 'Hoje'], ['ontem', 'Ontem'], ['semana', 'Semana (segunda até hoje)'], ['pers', 'Personalizado']].map(([v, t]) => new Option(t, v)));
+  const datas = (rot) => {
+    const sp = document.createElement('span'); sp.className = 'bf-datas'; sp.hidden = true;
+    sp.innerHTML = `<input type="date" aria-label="${rot}: início" min="2026-10-01"> a <input type="date" aria-label="${rot}: fim" min="2026-10-01">`;
+    return sp;
   };
+  const lab = sel.closest('label') || sel;
+  const d1 = datas('Período'); lab.after(d1);
+  const [i1, f1] = d1.querySelectorAll('input');
+  let csel = null, d2 = null, i2 = null, f2 = null;
+  const c = cfg.cmp;
+  if (c) {
+    const cl = document.createElement('label'); cl.className = 'bf-ctl';
+    cl.innerHTML = 'Comparar com <select aria-label="Comparar com"><option value="nenhum">Sem comparativo</option><option value="anterior">Período anterior (mesmo nº de dias)</option><option value="pers">Personalizado</option></select>';
+    d1.after(cl); csel = cl.querySelector('select');
+    d2 = datas('Comparativo'); cl.after(d2); [i2, f2] = d2.querySelectorAll('input');
+  }
+  const aplica = (muda = {}) => {
+    const p = { ...dash.params(), ...muda };
+    const [a, b] = periodoRapido(p[cfg.per] || 'pers') || [p[cfg.ini], p[cfg.fim]];
+    const out = { ...muda, [cfg.ini]: a, [cfg.fim]: b };
+    if (c && p[c.modo] === 'anterior') [out[c.ini], out[c.fim]] = anterior(a, b);
+    const at = dash.params();
+    if (Object.keys(out).some((k) => at[k] !== out[k])) dash.setParams(out);
+  };
+  sel.addEventListener('change', () => aplica({ [cfg.per]: sel.value }));
+  [i1, f1].forEach((el) => el.addEventListener('change', () => { if (i1.value && f1.value && i1.value <= f1.value) aplica({ [cfg.per]: 'pers', [cfg.ini]: i1.value, [cfg.fim]: f1.value }); }));
+  if (c) {
+    csel.addEventListener('change', () => {
+      const m = csel.value, p = dash.params();
+      if (m === 'pers') { const [x, y] = anterior(p[cfg.ini], p[cfg.fim]); aplica({ [c.modo]: m, [c.ini]: x, [c.fim]: y }); } else aplica({ [c.modo]: m });
+    });
+    [i2, f2].forEach((el) => el.addEventListener('change', () => { if (i2.value && f2.value && i2.value <= f2.value) aplica({ [c.modo]: 'pers', [c.ini]: i2.value, [c.fim]: f2.value }); }));
+  }
+  const api = {
+    sync() {
+      aplica();
+      const p = dash.params(), h = hojeBR();
+      sel.value = p[cfg.per] || 'pers';
+      d1.hidden = sel.value !== 'pers';
+      i1.value = p[cfg.ini] || ''; f1.value = p[cfg.fim] || '';
+      [i1, f1, i2, f2].forEach((el) => { if (el) el.max = h; });
+      if (c) {
+        csel.value = p[c.modo] || 'nenhum';
+        d2.hidden = csel.value !== 'pers';
+        i2.value = p[c.ini] || ''; f2.value = p[c.fim] || '';
+      }
+    },
+    ativo: () => !!c && (dash.params()[c.modo] || 'nenhum') !== 'nenhum',
+    rotulo: () => { const p = dash.params(); return `${dataBR(p[cfg.ini])}${p[cfg.fim] !== p[cfg.ini] ? '–' + dataBR(p[cfg.fim]) : ''}`; },
+    rotuloCmp: () => { const p = dash.params(); return c ? `${dataBR(p[c.ini])}${p[c.fim] !== p[c.ini] ? '–' + dataBR(p[c.fim]) : ''}` : ''; },
+  };
+  return api;
+}
+const fPromo = filtroPeriodo({ sel: selPromo, ini: 'promo_inicio', fim: 'promo_fim', per: 'promo_per', cmp: { ini: 'promo_cmp_inicio', fim: 'promo_cmp_fim', modo: 'promo_cmp_modo' } });
+const syncPromoSel = () => {
+  fPromo.sync();
+  const on = fPromo.ativo();
+  root.querySelectorAll('#tb-promos .k-pcmp').forEach((th) => { th.hidden = !on; });
+  const thc = root.querySelector('#tb-promos th[data-field="captado_cmp"]');
+  if (thc) thc.textContent = on ? fPromo.rotuloCmp() : 'Comparativo';
+  document.getElementById('promo-nota').textContent = fPromo.rotulo() + (on ? ' × ' + fPromo.rotuloCmp() : '');
 };
+const ligaPeriodo = (sel, pIni, pFim) => { const f = filtroPeriodo({ sel, ini: pIni, fim: pFim, per: pIni.replace('_inicio', '_per') }); return () => f.sync(); };
 const syncCol = ligaPeriodo(document.getElementById('sel-col'), 'col_inicio', 'col_fim');
 const syncLog = ligaPeriodo(document.getElementById('sel-log'), 'log_inicio', 'log_fim');
 const syncAt = ligaPeriodo(document.getElementById('sel-at'), 'at_inicio', 'at_fim');
@@ -503,7 +512,7 @@ function desenharPlano() {
 function desenharPromos() {
   syncPromoSel();
   const q = busca;
-  const cmpOn = (dash.params().promo_cmp_modo || 'nenhum') !== 'nenhum';
+  const cmpOn = fPromo.ativo();
   const base = new Map((cmpOn ? linhas('promos_cmp') : []).map((x) => [String(x.promocao).toUpperCase(), x]));
   const vr = (a, b) => (a != null && b ? a / b - 1 : null);
   const rowsP = linhas('promos').map((r) => { const c = base.get(String(r.promocao).toUpperCase()); return { ...r, captado_cmp: c ? c.captado : null, var_captado_cmp: vr(r.captado, c?.captado), var_pedidos_cmp: vr(r.pedidos, c?.pedidos) }; });
@@ -734,7 +743,7 @@ function desenhar() {
   if (extra) extra();
 }
 // usado pelas abas que ficam em arquivos próprios (plano_bf.js, midia_painel.js)
-window.BF = { F, nf0, nf1, vazio, tomDelta, preencher, fillStatic, combo, tabela, cores, falhou, linhas, dataCurta, hojeBR, presets, periodoDe, okUrl, desenhar: () => desenhar(), aba: () => aba, ordem };
+window.BF = { F, nf0, nf1, vazio, tomDelta, preencher, fillStatic, combo, tabela, cores, falhou, linhas, dataCurta, hojeBR, presets, periodoDe, filtroPeriodo, okUrl, desenhar: () => desenhar(), aba: () => aba, ordem };
 
 dash.onData(desenhar);
 let larg = window.innerWidth;

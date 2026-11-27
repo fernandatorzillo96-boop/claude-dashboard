@@ -46,8 +46,9 @@
     vendedores: { tool: 'bf_vendas_por_vendedor', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
     deptos: { tool: 'bf_vendas_por_departamento', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
     est_saude: { tool: 'bf_estoque_saude', args: { inicio: '{{col_inicio}}', fim: '{{col_fim}}', grade: '{{est_grade}}' } },
-    uf_out: { tool: 'bf_vendas_por_estado', args: { inicio: '2026-10-01', fim: '2026-10-31' } },
-    uf_nov: { tool: 'bf_vendas_por_estado', args: { inicio: '2026-11-01', fim: '2026-11-30' } },
+    uf_md: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
+    uf_md_cmp: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
+    midia_dia_cmp: { tool: 'bf_midia_por_dia', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
     plano_canais: { file: 'data/plano_bf_canais.json' },
     faturado25: { file: 'data/faturado_2025.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
@@ -62,7 +63,7 @@
     promo_inicio: '2026-11-01', promo_fim: '2026-11-30', col_inicio: '2026-11-01', col_fim: '2026-11-30',
     log_inicio: '2026-11-01', log_fim: '2026-11-30', at_inicio: '2026-11-01', at_fim: '2026-11-30',
     sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30', md_pagina: '/Sistema/buscavazia', md_det: 'origem', est_grade: 'todas',
-    promo_cmp_modo: 'nenhum', promo_cmp_inicio: '2026-10-01', promo_cmp_fim: '2026-10-01', promo_per: null,
+    md_cmp_modo: 'nenhum', md_cmp_inicio: '2026-10-01', md_cmp_fim: '2026-10-01', promo_cmp_modo: 'nenhum', promo_cmp_inicio: '2026-10-01', promo_cmp_fim: '2026-10-01', promo_per: null,
     cmp_modo: 'ly364', cmp_data: null, cmp_dia: null, cmp_alvo: null,
   };
   const ATUALIZA_MIN = 5;

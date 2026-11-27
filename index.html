@@ -325,17 +325,10 @@
       </div>
       <div class="bf-card bf-wide" id="card-md-uf">
         <h2>Vendas por estado (VTEX)</h2>
-        <p class="bf-sub">Captado da VTEX (pedidos não cancelados, mesmo critério do card "Captado") pela UF do endereço de entrega do pedido. Retira em loja entra na UF da loja. Outubro e novembro separados. "Ainda sem UF" = pedidos que o painel ainda está relendo na VTEX.</p>
-        <h3>Novembro</h3>
+        <p class="bf-sub">Captado da VTEX (pedidos não cancelados, mesmo critério do card "Captado") pela UF do endereço de entrega, no período do filtro: <span id="md-uf-per"></span>. Retira em loja entra na UF da loja. "Ainda sem UF" = pedidos que o painel ainda está relendo na VTEX.</p>
         <div class="bf-tablebox aberta">
-          <table class="bf-table" id="tb-md-uf-nov" data-source="uf_nov" data-row-key="uf">
-            <thead><tr><th data-field="posicao" class="n">#</th><th data-field="uf">UF</th><th data-field="captado" class="n">Captado</th><th data-field="share" class="n">Share</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">Ticket médio</th><th data-field="margem_bruta" class="n">Margem</th><th data-field="pct_sale" class="n">% SALE</th></tr></thead><tbody></tbody>
-          </table>
-        </div>
-        <h3>Outubro</h3>
-        <div class="bf-tablebox aberta">
-          <table class="bf-table" id="tb-md-uf-out" data-source="uf_out" data-row-key="uf">
-            <thead><tr><th data-field="posicao" class="n">#</th><th data-field="uf">UF</th><th data-field="captado" class="n">Captado</th><th data-field="share" class="n">Share</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">Ticket médio</th><th data-field="margem_bruta" class="n">Margem</th><th data-field="pct_sale" class="n">% SALE</th></tr></thead><tbody></tbody>
+          <table class="bf-table" id="tb-md-uf" data-source="uf_md" data-row-key="uf">
+            <thead><tr><th data-field="posicao" class="n">#</th><th data-field="uf">UF</th><th data-field="captado" class="n">Captado</th><th data-field="captado_cmp" class="n k-ufcmp" hidden>Comparativo</th><th data-field="var_captado_cmp" class="n k-ufcmp" hidden>Δ captado</th><th data-field="share" class="n">Share</th><th data-field="pedidos" class="n">Pedidos</th><th data-field="var_pedidos_cmp" class="n k-ufcmp" hidden>Δ pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">Ticket médio</th><th data-field="margem_bruta" class="n">Margem</th><th data-field="pct_sale" class="n">% SALE</th></tr></thead><tbody></tbody>
           </table>
         </div>
       </div>
@@ -466,14 +459,7 @@
   <!-- PROMOÇÕES -->
   <section class="bf-page" data-page="promos" id="promos" hidden>
     <div class="bf-bar">
-      <label class="bf-ctl">Período <select id="sel-promo" aria-label="Período das promoções">
-        <option value="hoje">Hoje</option><option value="ontem">Ontem</option><option value="semana">Semana (segunda até hoje)</option><option value="pers">Personalizado</option>
-      </select></label>
-      <span class="bf-datas" id="promo-pers" hidden><input type="date" id="promo-ini" aria-label="Início" min="2026-10-01"> a <input type="date" id="promo-fim" aria-label="Fim" min="2026-10-01"></span>
-      <label class="bf-ctl">Comparar com <select id="sel-promo-cmp" aria-label="Comparar promoções com">
-        <option value="nenhum">Sem comparativo</option><option value="anterior">Período anterior (mesmo nº de dias)</option><option value="pers">Personalizado</option>
-      </select></label>
-      <span class="bf-datas" id="promo-cmp-pers" hidden><input type="date" id="promo-cmp-ini" aria-label="Início do comparativo" min="2026-10-01"> a <input type="date" id="promo-cmp-fim" aria-label="Fim do comparativo" min="2026-10-01"></span>
+      <label class="bf-ctl">Período <select id="sel-promo" aria-label="Período das promoções"></select></label>
       <input class="bf-search" id="busca-promo" type="search" placeholder="Buscar promoção" aria-label="Buscar promoção">
       <span class="bf-note" id="promo-nota"></span>
     </div>

@@ -74,7 +74,7 @@ dash.loader('ga4_entrada_det', { description: 'Lê a resposta JSON do servidor V
   return a;
 } });
 
-dash.calc('midia_roi_dia', {
+const _roiDia = {
   title: 'Mídia × venda por dia',
   description: 'Por dia do período de mídia: investimento Google Ads (da API do Google Ads quando conectada; senão o custo importado no GA4) e Meta Ads, captado VTEX e venda bruta das lojas do mesmo dia, ROI de mídia (receita bruta ÷ investimento) do site e da rede, ROAS de cada plataforma, sessões do GA4 e conversão (pedidos VTEX ÷ sessões).',
   inputs: ['midia_dia', 'dia', 'lojas_venda'],
@@ -96,9 +96,10 @@ dash.calc('midia_roi_dia', {
       };
     });
   },
-});
+};
+dash.calc('midia_roi_dia', _roiDia);
 
-dash.calc('midia_resumo', {
+const _resumo = {
   title: 'Mídia no período',
   description: 'Soma do período de mídia (até hoje): investimento por plataforma, ROI de mídia do site (captado VTEX ÷ investimento) e da rede (site + lojas, só nos dias com lojas importadas), ROAS das plataformas, custo por pedido, sessões e conversão.',
   inputs: ['midia_roi_dia', 'midia_dia'],
@@ -128,19 +129,36 @@ dash.calc('midia_resumo', {
       custo_por_sessao: inv && ses ? r(inv / ses) : null, receita_ga4: nz(temGa, r(S(m, 'receita_ga4'))),
     }];
   },
-});
+};
+dash.calc('midia_resumo', _resumo);
+// O mesmo resumo no período de comparação.
+dash.calc('midia_roi_dia_cmp', { inputs: ['midia_dia_cmp', 'dia', 'lojas_venda'], fn: _roiDia.fn });
+dash.calc('midia_resumo_cmp', { inputs: ['midia_roi_dia_cmp', 'midia_dia_cmp'], fn: _resumo.fn });
 
 (function () {
   const B = window.BF;
   if (!B) return;
-  const sel = document.getElementById('sel-md');
-  sel.replaceChildren(...B.presets.map((p, i) => new Option(p[0], String(i))));
-  sel.addEventListener('change', () => { const [a, b] = B.periodoDe(B.presets[Number(sel.value)]); dash.setParams({ md_inicio: a, md_fim: b }); });
-  const syncSel = () => {
-    const pr = dash.params();
-    const i = B.presets.findIndex((p) => { const [x, y] = B.periodoDe(p); return x === pr.md_inicio && y === pr.md_fim; });
-    if (i >= 0) sel.value = String(i);
-  };
+  const fMd = B.filtroPeriodo({ sel: 'sel-md', ini: 'md_inicio', fim: 'md_fim', per: 'md_per', cmp: { ini: 'md_cmp_inicio', fim: 'md_cmp_fim', modo: 'md_cmp_modo' } });
+  // Comparativo nos cards do topo: valor do período comparado e a variação.
+  const CMP = [['investimento_total', 'brl', null], ['roi_site', 'dec', true], ['meta_roas', 'dec', true], ['custo_por_pedido', 'brl0', false], ['sessoes', 'int', true]];
+  function comparativoCards() {
+    const on = fMd.ativo();
+    const a = B.linhas('midia_resumo')[0] || {}, b = on ? B.linhas('midia_resumo_cmp')[0] || {} : {};
+    document.querySelectorAll('#midia .bf-tiles .bf-tile').forEach((t, i) => {
+      let el = t.querySelector('.md-cmp');
+      if (!el) { el = document.createElement('div'); el.className = 'bf-delta md-cmp'; t.append(el); }
+      el.hidden = !on || !CMP[i];
+      if (!on || !CMP[i]) return;
+      const [f, fmt, maiorMelhor] = CMP[i];
+      const v = a[f], w = b[f];
+      const d = v != null && w ? v / w - 1 : null;
+      el.textContent = '';
+      const sp = document.createElement('span'); sp.textContent = B.F.delta(d);
+      if (d != null && maiorMelhor != null) B.tomDelta(sp, maiorMelhor ? d : -d);
+      el.append(sp, ` vs ${fMd.rotuloCmp()} (${B.F[fmt](w)})`);
+    });
+  }
+  const syncSel = () => fMd.sync();
   document.getElementById('btn-rt').addEventListener('click', () => dash.refresh('ga4_tempo_real'));
   const selDet = document.getElementById('sel-md-det');
   selDet.addEventListener('change', () => dash.setParams({ md_det: selDet.value }));
@@ -211,8 +229,14 @@ dash.calc('midia_resumo', {
     B.tabela(document.getElementById('tb-rt-pag'), rt.filter((x) => x.tipo === 'pagina'), { usuarios_ativos: 'int', visualizacoes: 'int' });
     B.tabela(document.getElementById('tb-rt-disp'), rt.filter((x) => x.tipo === 'dispositivo'), { usuarios_ativos: 'int' });
     const fUF = { posicao: 'int', captado: 'brl0', share: 'pct', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', margem_bruta: 'pct', pct_sale: 'pct' };
-    B.tabela(document.getElementById('tb-md-uf-nov'), B.linhas('uf_nov'), fUF);
-    B.tabela(document.getElementById('tb-md-uf-out'), B.linhas('uf_out'), fUF);
+    const ufOn = fMd.ativo();
+    const ufC = new Map((ufOn ? B.linhas('uf_md_cmp') : []).map((x) => [x.uf, x]));
+    document.querySelectorAll('#tb-md-uf .k-ufcmp').forEach((th) => { th.hidden = !ufOn; });
+    const thU = document.querySelector('#tb-md-uf th[data-field="captado_cmp"]'); if (thU) thU.textContent = ufOn ? fMd.rotuloCmp() : 'Comparativo';
+    document.getElementById('md-uf-per').textContent = fMd.rotulo() + (ufOn ? ' × ' + fMd.rotuloCmp() : '');
+    B.tabela(document.getElementById('tb-md-uf'), B.linhas('uf_md').map((x) => { const y = ufC.get(x.uf); return { ...x, captado_cmp: y ? y.captado : null, var_captado_cmp: y && y.captado ? x.captado / y.captado - 1 : null, var_pedidos_cmp: y && y.pedidos ? x.pedidos / y.pedidos - 1 : null }; }),
+      { ...fUF, captado_cmp: 'brl0', var_captado_cmp: 'delta', var_pedidos_cmp: 'delta' }, { var_captado_cmp: (r) => r.var_captado_cmp, var_pedidos_cmp: (r) => r.var_pedidos_cmp });
+    comparativoCards();
     const nv = B.linhas('ga4_novos');
     B.tabela(document.getElementById('tb-md-novos'), nv, {
       atual_usuarios: 'int', mes_anterior_usuarios: 'int', var_usuarios_mes: 'delta', ano_anterior_usuarios: 'int', var_usuarios_ano: 'delta',
