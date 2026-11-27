@@ -692,9 +692,16 @@ function codigoVendedor(o) {
   return null;
 }
 // Departamento pelo código do vendedor: 300 a 399 = Inside Sales; começa com 64 = Personal Shopper; demais = Lojas físicas.
+// Exceções à regra pelo prefixo do código (pessoa que mudou de área sem trocar de código).
+const DEPTO_EXCECOES = {
+  '6402': 'Inside Sales',      // Julya Ester Silva Pinheiro
+  '4655': 'Personal Shopper',  // Idaiane Araujo
+  '9607': 'Personal Shopper',  // Sarah Pinheiro
+};
 export function departamentoDoCodigo(cod) {
   const c = String(cod || '').trim().toUpperCase();
   if (!c || c.startsWith('(')) return 'Sem código';
+  if (DEPTO_EXCECOES[c]) return DEPTO_EXCECOES[c];
   if (/^3\d\d$/.test(c)) return 'Inside Sales';
   if (/^64/.test(c)) return 'Personal Shopper';
   return 'Lojas físicas';
