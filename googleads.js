@@ -48,7 +48,7 @@ export async function concluirConexao(code, state, redirectUri) {
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error('O Google recusou a conexão: ' + (j.error_description || j.error || r.status));
   if (!j.refresh_token) throw new Error('O Google não devolveu o acesso permanente. Remova o acesso do app em myaccount.google.com/permissions e conecte de novo.');
-  salvo = { ...salvo, refresh_token: j.refresh_token, conectado_em: new Date().toISOString() };
+  salvo = { ...salvo, refresh_token: j.refresh_token, conectado_em: new Date().toISOString(), login_cid: null };
   gravar();
   tokenAtual = { token: j.access_token, exp: Date.now() + (j.expires_in || 3600) * 1000 };
   estado.erro = null;
@@ -74,8 +74,35 @@ async function token() {
 // ---------- consultas (GAQL) ----------
 // A API troca de versão algumas vezes por ano: tenta da mais nova para a mais antiga e guarda a que respondeu.
 const VERSOES = (process.env.GOOGLE_ADS_API_VERSION ? [process.env.GOOGLE_ADS_API_VERSION] : []).concat(['v24', 'v23', 'v22', 'v21', 'v20', 'v25', 'v26']);
+// Contas que a conta Google conectada acessa diretamente (IDs sem traço).
+async function contasAcessiveis() {
+  const headers = { Authorization: 'Bearer ' + (await token()), 'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN };
+  for (const v of (estado.versao ? [estado.versao] : []).concat(VERSOES)) {
+    const r = await fetch(`https://googleads.googleapis.com/${v}/customers:listAccessibleCustomers`, { headers });
+    if (r.status === 404) continue;
+    const j = await r.json().catch(() => ({}));
+    return (j.resourceNames || []).map((x) => String(x).split('/').pop());
+  }
+  return [];
+}
+const comTraco = (id) => String(id).replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3');
+// Sem acesso com o MCC configurado: tenta sem MCC e com cada conta acessível como MCC; guarda a que funcionar.
 async function gaql(query) {
-  const cid = soNum(process.env.GOOGLE_ADS_CUSTOMER_ID), mcc = soNum(process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID);
+  try { return await gaqlCom(query, salvo.login_cid ?? null); }
+  catch (e) {
+    if (!/não tem acesso/.test(String(e.message))) throw e;
+    const cid = soNum(process.env.GOOGLE_ADS_CUSTOMER_ID);
+    const ac = await contasAcessiveis().catch(() => []);
+    for (const tentativa of ['', ...ac.filter((x) => x !== cid)]) {
+      try { const out = await gaqlCom(query, tentativa); salvo.login_cid = tentativa; try { gravar(); } catch {} return out; } catch (e2) { if (!/não tem acesso/.test(String(e2.message))) throw e2; }
+    }
+    estado.erro = `A conta Google conectada não tem acesso à conta de anúncios ${comTraco(cid)}. ` +
+      (ac.length ? `Ela acessa diretamente: ${ac.map(comTraco).join(', ')}. Conecte com um usuário que tenha acesso à ${comTraco(cid)} (ou à MCC dela) ou corrija GOOGLE_ADS_CUSTOMER_ID no Render.` : 'Ela não acessa nenhuma conta de anúncios: conecte com outro e-mail Google.');
+    throw new Error(estado.erro);
+  }
+}
+async function gaqlCom(query, loginCid) {
+  const cid = soNum(process.env.GOOGLE_ADS_CUSTOMER_ID), mcc = loginCid != null ? soNum(loginCid) : soNum(process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID);
   const headers = { Authorization: 'Bearer ' + (await token()), 'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN, 'Content-Type': 'application/json' };
   if (mcc && mcc !== cid) headers['login-customer-id'] = mcc;
   const lista = estado.versao ? [estado.versao, ...VERSOES.filter((v) => v !== estado.versao)] : [...new Set(VERSOES)];
