@@ -1,7 +1,7 @@
 // Agregações que o painel consome.
 import { config } from './config.js';
 import { state, cmvDoItem, referenciaDoItem, atributosRef } from './store.js';
-import { local, hojeLocal, dataValida } from './tempo.js';
+import { local, hojeLocal, dataValida, inicioDoDiaUTC, somaDias } from './tempo.js';
 import { amostraPacotes } from './sync.js';
 
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -405,10 +405,14 @@ export function faturadoLiquido(inicio, fim) {
 
 // Pedidos captados ainda não faturados (status atual na VTEX), por status.
 const FATURADO = new Set(['invoiced', 'invoice']);
+// A faturar: só pedidos criados a partir do início de 2 dias atrás (hoje, ontem e anteontem, horário de Brasília).
+// Pedidos mais antigos parados em status não faturado ficam fora.
 export function aFaturar() {
   const grupos = new Map();
+  const desde = inicioDoDiaUTC(somaDias(hojeLocal(), -2)).toISOString();
   for (const o of Object.values(state.orders)) {
     if (o.status === 'canceled' || FATURADO.has(o.status)) continue;
+    if (!o.criado || new Date(o.criado).toISOString() < desde) continue;
     const g = grupos.get(o.status) || { status: o.status, pedidos: new Set(), valor: 0, pecas: 0, mais_antigo: null };
     g.pedidos.add(o.base);
     if (o.detalhe) {

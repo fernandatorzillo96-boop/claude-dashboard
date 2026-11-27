@@ -157,7 +157,7 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
 
   s.registerTool('bf_a_faturar', {
     title: 'Pedidos a faturar',
-    description: 'Pedidos captados desde o início do acompanhamento que ainda não foram faturados nem cancelados, pelo status atual na VTEX: pedidos, peças, valor e pedido mais antigo.',
+    description: 'Pedidos criados de 2 dias atrás até agora (hoje, ontem e anteontem) que ainda não foram faturados nem cancelados, pelo status atual na VTEX: pedidos, peças, valor e pedido mais antigo.',
     inputSchema: {}, annotations: ro,
   }, async () => json(aFaturar()));
 
