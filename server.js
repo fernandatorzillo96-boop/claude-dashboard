@@ -487,7 +487,7 @@ painel.get(['/:arquivo', '/data/:arquivo'], (req, res, next) => {
   res.sendFile(f);
 });
 // ---------- v2 (E-commerce Intelligence): mesma base, nova organização em /painel/v2/ ----------
-const ARQUIVOS_V2 = ['index.html', 'v2.js', 'v2.css'];
+const ARQUIVOS_V2 = ['index.html', 'v2.js', 'v2.css', 'html2canvas.min.js', 'jspdf.umd.min.js'];
 painel.get(['/v2', '/v2/', '/v2/:arquivo'], (req, res, next) => {
   if (req.path === '/v2' || req.path === '/v2/' || req.params.arquivo === 'index.html') return res.redirect(301, '/painel/');
   const nome = req.params.arquivo;

@@ -86,7 +86,54 @@
     setTimeout(B.desenhar, 200);
   });
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && raiz.classList.contains('apresentacao')) { raiz.classList.remove('apresentacao'); setTimeout(B.desenhar, 200); } });
+  // PDF: no computador usa a impressão do navegador; no celular (onde imprimir costuma não funcionar,
+  // principalmente dentro de apps) gera o PDF na própria página e abre o compartilhar/baixar.
+  const carregaJs = (src) => new Promise((ok, erro) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => erro(new Error('não carregou ' + src)); document.head.append(s); });
+  const celular = () => window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+  async function pdfNaPagina() {
+    const bt = $('#v2-pdf'); const txt = bt.textContent; bt.textContent = '…'; bt.disabled = true;
+    try {
+      if (!window.html2canvas) await carregaJs('v2/html2canvas.min.js');
+      if (!window.jspdf) await carregaJs('v2/jspdf.umd.min.js');
+      const pg = document.querySelector('.bf-page:not([hidden])') || document.querySelector('.v2-main');
+      const titulo = ($('.v2-h1') || {}).textContent || 'Painel';
+      const largura = 1100; // renderiza como tela de computador para caber no A4 deitado
+      document.documentElement.classList.add('v2-gerando-pdf');
+      const canvas = await window.html2canvas(pg, { scale: 1.6, backgroundColor: '#ffffff', windowWidth: largura, useCORS: true, logging: false,
+        ignoreElements: (el) => el.classList && (el.classList.contains('bf-bar') || el.classList.contains('v2-bottom')) });
+      document.documentElement.classList.remove('v2-gerando-pdf');
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const W = 297, H = 210, M = 8, cab = 10;
+      const w = W - 2 * M, hPag = H - 2 * M - cab;
+      const pxPorMm = canvas.width / w, fatia = Math.floor(hPag * pxPorMm);
+      const quando = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+      for (let y = 0, n = 0; y < canvas.height; y += fatia, n++) {
+        if (n) doc.addPage();
+        const c = document.createElement('canvas'); c.width = canvas.width; c.height = Math.min(fatia, canvas.height - y);
+        c.getContext('2d').drawImage(canvas, 0, y, c.width, c.height, 0, 0, c.width, c.height);
+        doc.setFontSize(10); doc.text(`ÁGUA DE COCO · ${titulo} · ${quando}`, M, M + 4);
+        doc.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', M, M + cab, w, c.height / pxPorMm);
+      }
+      const nome = `painel-${titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${hoje()}.pdf`;
+      const blob = doc.output('blob');
+      const arq = new File([blob], nome, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [arq] })) {
+        try { await navigator.share({ files: [arq], title: nome }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = nome; document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60e3);
+    } catch (e) {
+      console.error('v2 pdf', e);
+      alert('Não consegui gerar o PDF: ' + (e.message || e));
+    } finally {
+      document.documentElement.classList.remove('v2-gerando-pdf');
+      bt.textContent = txt; bt.disabled = false;
+    }
+  }
   $('#v2-pdf').addEventListener('click', () => {
+    if (celular()) return pdfNaPagina();
     const det = $('#v2-todos'); const aberto = det.open;
     window.print();
     det.open = aberto;
