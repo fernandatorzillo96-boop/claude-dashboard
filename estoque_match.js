@@ -181,7 +181,7 @@ export function matchDivergencias(loja, tipo, limite) {
 // CSV para abrir no Excel (separador ; e BOM UTF-8).
 export function matchCsv(loja, tipo) {
   const cols = ['loja', 'empresa', 'cd_produto', 'sku_vtex', 'referencia', 'produto', 'tamanho', 'cor', 'sale', 'preco', 'estoque_erp', 'estoque_vtex', 'reservado_vtex', 'diferenca', 'tipo', 'ativo_vtex'];
-  const head = ['Loja', 'Empresa', 'Cód. reduzido (ERP)', 'SKU VTEX', 'Referência', 'Produto', 'Tamanho', 'Cor', 'Sale', 'Preço varejo', 'Estoque ERP', 'Estoque VTEX', 'Reservado VTEX', 'Diferença (VTEX − ERP)', 'Tipo', 'Ativo na VTEX'];
+  const head = ['Loja', 'Empresa', 'Cód. reduzido ERP = Cód. referência do SKU VTEX', 'ID do SKU VTEX (só informativo)', 'Referência', 'Produto', 'Tamanho', 'Cor', 'Sale', 'Preço varejo', 'Estoque ERP', 'Estoque VTEX', 'Reservado VTEX', 'Diferença (VTEX − ERP)', 'Tipo', 'Ativo na VTEX'];
   const cel = (v) => {
     if (v == null) return '';
     if (typeof v === 'number') return String(v).replace('.', ',');
