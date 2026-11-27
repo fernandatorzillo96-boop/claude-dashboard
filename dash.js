@@ -12,6 +12,7 @@
     warehouses: { tool: 'bf_estoque_por_warehouse' },
     afaturar: { tool: 'bf_a_faturar' },
     promos: { tool: 'bf_resultado_promocoes', args: { inicio: '{{promo_inicio}}', fim: '{{promo_fim}}' } },
+    promos_cmp: { tool: 'bf_resultado_promocoes', args: { inicio: '{{promo_cmp_inicio}}', fim: '{{promo_cmp_fim}}' } },
     colecao: { tool: 'bf_vendas_por_grupo', args: { agrupar: 'colecao', inicio: '{{col_inicio}}', fim: '{{col_fim}}' } },
     idade: { tool: 'bf_vendas_por_grupo', args: { agrupar: 'idade_estoque', inicio: '{{col_inicio}}', fim: '{{col_fim}}' } },
     toprefs: { tool: 'bf_top_referencias', args: { inicio: '{{col_inicio}}', fim: '{{col_fim}}', limite: 50 } },
@@ -61,6 +62,7 @@
     promo_inicio: '2026-11-01', promo_fim: '2026-11-30', col_inicio: '2026-11-01', col_fim: '2026-11-30',
     log_inicio: '2026-11-01', log_fim: '2026-11-30', at_inicio: '2026-11-01', at_fim: '2026-11-30',
     sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30', md_pagina: '/Sistema/buscavazia', md_det: 'origem', est_grade: 'todas',
+    promo_cmp_modo: 'nenhum', promo_cmp_inicio: '2026-10-01', promo_cmp_fim: '2026-10-01', promo_per: null,
     cmp_modo: 'ly364', cmp_data: null, cmp_dia: null, cmp_alvo: null,
   };
   const ATUALIZA_MIN = 5;

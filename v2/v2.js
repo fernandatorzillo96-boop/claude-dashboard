@@ -139,7 +139,7 @@
   }
   const aplicarPeriodo = (a, b) => {
     if (!a || !b || b < a) return;
-    const p = {}; PARAMS.forEach(([x, y]) => { p[x] = a; p[y] = b; });
+    const p = { promo_per: 'pers' }; PARAMS.forEach(([x, y]) => { p[x] = a; p[y] = b; });
     dash.setParams(p);
     sincronizarPeriodo();
   };

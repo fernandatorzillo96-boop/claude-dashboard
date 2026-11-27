@@ -449,16 +449,25 @@
 
     <section class="bf-page" data-page="promos" id="promos" hidden>
     <div class="bf-bar">
-      <label class="bf-ctl">Período <select id="sel-promo" aria-label="Período das promoções"></select></label>
+      <label class="bf-ctl">Período <select id="sel-promo" aria-label="Período das promoções">
+        <option value="hoje">Hoje</option><option value="ontem">Ontem</option><option value="semana">Semana (segunda até hoje)</option><option value="pers">Personalizado</option>
+      </select></label>
+      <span class="bf-datas" id="promo-pers" hidden><input type="date" id="promo-ini" aria-label="Início" min="2026-10-01"> a <input type="date" id="promo-fim" aria-label="Fim" min="2026-10-01"></span>
+      <label class="bf-ctl">Comparar com <select id="sel-promo-cmp" aria-label="Comparar promoções com">
+        <option value="nenhum">Sem comparativo</option><option value="anterior">Período anterior (mesmo nº de dias)</option><option value="pers">Personalizado</option>
+      </select></label>
+      <span class="bf-datas" id="promo-cmp-pers" hidden><input type="date" id="promo-cmp-ini" aria-label="Início do comparativo" min="2026-10-01"> a <input type="date" id="promo-cmp-fim" aria-label="Fim do comparativo" min="2026-10-01"></span>
       <input class="bf-search" id="busca-promo" type="search" placeholder="Buscar promoção" aria-label="Buscar promoção">
+      <span class="bf-note" id="promo-nota"></span>
     </div>
     <div class="bf-card" id="card-promos">
       <h2>Resultado por promoção e cupom</h2>
-      <p class="bf-sub">Captado dos itens que receberam cada desconto (um item pode ter mais de uma promoção, então as linhas não somam o total). Frete grátis fica de fora. Toque no título da coluna para ordenar.</p>
+      <p class="bf-sub">Captado dos itens que receberam cada desconto (um item pode ter mais de uma promoção, então as linhas não somam o total). Frete grátis fica de fora. Promoção e cupom com o mesmo nome (WELCOME, VOLTA…) e o mesmo cupom digitado em maiúsculas ou minúsculas aparecem numa linha só, sem contar o item duas vezes. Os pedidos detalhados começam em 01/10/2026. Toque no título da coluna para ordenar.</p>
       <div class="bf-tablebox">
         <table class="bf-table" id="tb-promos" data-source="promos" data-row-key="promocao">
           <thead><tr>
             <th data-field="promocao">Promoção</th><th data-field="captado_hoje" class="n">Hoje</th><th data-field="captado" class="n">Captado</th>
+            <th data-field="captado_cmp" class="n k-pcmp" hidden>Comparativo</th><th data-field="var_captado_cmp" class="n k-pcmp" hidden>Δ captado</th><th data-field="var_pedidos_cmp" class="n k-pcmp" hidden>Δ pedidos</th>
             <th data-field="pedidos" class="n">Pedidos</th><th data-field="pecas" class="n">Peças</th><th data-field="ticket_medio" class="n">TM</th>
             <th data-field="desconto_sobre_de" class="n">Desc. s/ DE</th><th data-field="desconto_concedido" class="n">Desconto dado</th>
             <th data-field="lucro_bruto" class="n">LB</th><th data-field="margem_bruta" class="n">MB</th>

@@ -134,15 +134,63 @@ const presets = [
 // só o mês corrente nas curvas
 const doMes = (rows) => { const m = hojeBR().slice(0, 7); return rows.filter((x) => x.data.slice(0, 7) === m); };
 const periodoDe = (p) => (p[3] === 'hoje' ? [hojeBR(), hojeBR()] : p[3] === 'ontem' ? [ontem(), ontem()] : [p[1], p[2]]);
-selPromo.replaceChildren(...presets.map((p, i) => new Option(p[0], String(i))));
+// Promoções: hoje, ontem, semana (segunda até hoje) ou datas livres; comparativo opcional.
+const promoEl = (id) => document.getElementById(id);
+const diaMais = (d, k) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
+const diasEntre = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 864e5);
+const segunda = (d) => { const w = new Date(d + 'T12:00:00Z').getUTCDay(); return diaMais(d, -((w + 6) % 7)); };
+const periodoPromo = (modo) => {
+  const h = hojeBR();
+  if (modo === 'hoje') return [h, h];
+  if (modo === 'ontem') return [ontem(), ontem()];
+  if (modo === 'semana') return [segunda(h), h];
+  return null;
+};
+const cmpPromo = (a, b) => { const n = diasEntre(a, b) + 1; return [diaMais(a, -n), diaMais(a, -1)]; };
+function aplicaPromo(muda = {}) {
+  const p = { ...dash.params(), ...muda };
+  const modo = p.promo_per || 'pers';
+  let [a, b] = periodoPromo(modo) || [p.promo_inicio, p.promo_fim];
+  const out = { ...muda, promo_inicio: a, promo_fim: b };
+  if (p.promo_cmp_modo === 'anterior') [out.promo_cmp_inicio, out.promo_cmp_fim] = cmpPromo(a, b);
+  const atual = dash.params();
+  if (Object.keys(out).some((k) => atual[k] !== out[k])) dash.setParams(out);
+}
 selPromo.addEventListener('change', () => {
-  const [a, b] = periodoDe(presets[Number(selPromo.value)]);
-  dash.setParams({ promo_inicio: a, promo_fim: b });
+  const modo = selPromo.value;
+  if (modo === 'pers') { const p = dash.params(); promoEl('promo-ini').value = p.promo_inicio; promoEl('promo-fim').value = p.promo_fim; }
+  aplicaPromo({ promo_per: modo });
 });
+['promo-ini', 'promo-fim'].forEach((id) => promoEl(id).addEventListener('change', () => {
+  const a = promoEl('promo-ini').value, b = promoEl('promo-fim').value;
+  if (a && b && a <= b) aplicaPromo({ promo_per: 'pers', promo_inicio: a, promo_fim: b });
+}));
+promoEl('sel-promo-cmp').addEventListener('change', (e) => {
+  const m = e.target.value, p = dash.params();
+  if (m === 'pers') { const [x, y] = cmpPromo(p.promo_inicio, p.promo_fim); aplicaPromo({ promo_cmp_modo: m, promo_cmp_inicio: x, promo_cmp_fim: y }); }
+  else aplicaPromo({ promo_cmp_modo: m });
+});
+['promo-cmp-ini', 'promo-cmp-fim'].forEach((id) => promoEl(id).addEventListener('change', () => {
+  const a = promoEl('promo-cmp-ini').value, b = promoEl('promo-cmp-fim').value;
+  if (a && b && a <= b) aplicaPromo({ promo_cmp_modo: 'pers', promo_cmp_inicio: a, promo_cmp_fim: b });
+}));
+const dataBR = (d) => (d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '—');
 const syncPromoSel = () => {
-  const { promo_inicio: a, promo_fim: b } = dash.params();
-  const i = presets.findIndex((p) => { const [x, y] = periodoDe(p); return x === a && y === b; });
-  if (i >= 0) selPromo.value = String(i);
+  aplicaPromo();
+  const p = dash.params();
+  const modo = p.promo_per || 'pers';
+  selPromo.value = modo;
+  promoEl('promo-pers').hidden = modo !== 'pers';
+  promoEl('promo-ini').value = p.promo_inicio || ''; promoEl('promo-fim').value = p.promo_fim || '';
+  const h = hojeBR(); ['promo-ini', 'promo-fim', 'promo-cmp-ini', 'promo-cmp-fim'].forEach((id) => { promoEl(id).max = h; });
+  const cm = p.promo_cmp_modo || 'nenhum';
+  promoEl('sel-promo-cmp').value = cm;
+  promoEl('promo-cmp-pers').hidden = cm !== 'pers';
+  promoEl('promo-cmp-ini').value = p.promo_cmp_inicio || ''; promoEl('promo-cmp-fim').value = p.promo_cmp_fim || '';
+  root.querySelectorAll('#tb-promos .k-pcmp').forEach((th) => { th.hidden = cm === 'nenhum'; });
+  const thc = root.querySelector('#tb-promos th[data-field="captado_cmp"]');
+  if (thc) thc.textContent = cm === 'nenhum' ? 'Comparativo' : `${dataBR(p.promo_cmp_inicio)}–${dataBR(p.promo_cmp_fim)}`;
+  promoEl('promo-nota').textContent = `${dataBR(p.promo_inicio)} a ${dataBR(p.promo_fim)}` + (cm === 'nenhum' ? '' : ` × ${dataBR(p.promo_cmp_inicio)} a ${dataBR(p.promo_cmp_fim)}`);
 };
 // mesmos períodos para coleções e logística
 const ligaPeriodo = (sel, pIni, pFim) => {
@@ -319,6 +367,7 @@ function tabela(tb, rows, fmts, tom = {}) {
     const tr = document.createElement('tr');
     tr.dataset.key = r[key];
     ths.forEach((th) => {
+      if (th.hidden) return;
       const f = th.dataset.field;
       const td = document.createElement('td');
       if (th.classList.contains('n')) td.className = 'n';
@@ -454,9 +503,14 @@ function desenharPlano() {
 function desenharPromos() {
   syncPromoSel();
   const q = busca;
-  tabela(document.getElementById('tb-promos'), linhas('promos').filter((r) => !q || String(r.promocao).toLowerCase().includes(q)), {
+  const cmpOn = (dash.params().promo_cmp_modo || 'nenhum') !== 'nenhum';
+  const base = new Map((cmpOn ? linhas('promos_cmp') : []).map((x) => [String(x.promocao).toUpperCase(), x]));
+  const vr = (a, b) => (a != null && b ? a / b - 1 : null);
+  const rowsP = linhas('promos').map((r) => { const c = base.get(String(r.promocao).toUpperCase()); return { ...r, captado_cmp: c ? c.captado : null, var_captado_cmp: vr(r.captado, c?.captado), var_pedidos_cmp: vr(r.pedidos, c?.pedidos) }; });
+  tabela(document.getElementById('tb-promos'), rowsP.filter((r) => !q || String(r.promocao).toLowerCase().includes(q)), {
+    captado_cmp: 'brl0', var_captado_cmp: 'delta', var_pedidos_cmp: 'delta',
     captado_hoje: 'brl0', captado: 'brl0', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', desconto_sobre_de: 'pct', desconto_concedido: 'brl0', lucro_bruto: 'brl0', margem_bruta: 'pct',
-  });
+  }, { var_captado_cmp: (r) => r.var_captado_cmp, var_pedidos_cmp: (r) => r.var_pedidos_cmp });
   tabela(document.getElementById('tb-vendedores'), linhas('vendedores').filter((r) => !q || (String(r.codigo) + ' ' + String(r.vendedor || '')).toLowerCase().includes(q)), {
     captado: 'brl0', pedidos: 'int', pecas: 'int', ticket_medio: 'brl0', margem_bruta: 'pct',
   });

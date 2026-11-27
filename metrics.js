@@ -111,33 +111,48 @@ export function resultadoPromocoes(inicio, fim) {
     if (!p.primeiro || o.criado < p.primeiro) p.primeiro = o.criado;
     if (!p.ultimo || o.criado > p.ultimo) p.ultimo = o.criado;
   };
+  // Promoção e cupom com o mesmo nome (WELCOME, VOLTA...) e cupons digitados em caixas diferentes
+  // (EXTRA30, Extra30, extra30) viram uma linha só; no mesmo pedido, cada item entra uma vez.
+  const chave = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase().replace(/\s+/g, ' ');
+  const nomes = new Map(); // chave -> { promo: nome original da promoção, cupom: código }
   for (const { o, data } of pedidosNoPeriodo(i, f)) {
     if (o.status === 'canceled' || !o.detalhe) continue;
-    const nomes = Object.entries(o.promos || {});
-    for (const [id, nome] of nomes) {
+    const porChave = new Map(); // chave -> { itens: Set, promo, cupom }
+    const junta = (k, itens, tipo, nome) => {
+      const g = porChave.get(k) || { itens: new Set(), promo: false, cupom: false };
+      itens.forEach((it) => g.itens.add(it));
+      g[tipo] = true;
+      porChave.set(k, g);
+      const n = nomes.get(k) || {};
+      if (tipo === 'promo' && !n.promo) n.promo = nome;
+      if (tipo === 'cupom' && !n.cupom) n.cupom = String(nome).trim().toUpperCase();
+      nomes.set(k, n);
+    };
+    for (const [id, nome] of Object.entries(o.promos || {})) {
       if (config.promoIgnorar.test(nome)) continue;
       let itens = o.itens.filter((it) => it.promos.includes(id));
       if (!itens.length) itens = o.itens; // promoção do pedido (frete, brinde, código de vendedor)
-      const p = get(nome, 'promoção');
+      junta(chave(nome), itens, 'promo', nome);
+    }
+    if (o.cupom) junta(chave(o.cupom), o.itens, 'cupom', o.cupom);
+    for (const [k, g] of porChave) {
+      const p = get(k, null);
+      p.tem_promo = p.tem_promo || g.promo; p.tem_cupom = p.tem_cupom || g.cupom;
+      const itens = [...g.itens];
       p.b.bases.add(o.base);
       somaItens(p.b, itens);
       if (data === hoje) p.hoje += itens.reduce((s, it) => s + it.preco * it.q, 0);
       marca(p, o, data);
     }
-    if (o.cupom) {
-      const p = get(`Cupom: ${o.cupom}`, 'cupom');
-      p.b.bases.add(o.base);
-      somaItens(p.b, o.itens);
-      if (data === hoje) p.hoje += o.itens.reduce((s, it) => s + it.preco * it.q, 0);
-      marca(p, o, data);
-    }
   }
   return [...promos.entries()]
-    .map(([promocao, p]) => {
+    .map(([k, p]) => {
       const x = fecha(p.b);
+      const n = nomes.get(k) || {};
+      const promocao = p.tem_promo ? (p.tem_cupom && n.cupom && chave(n.promo) === k ? n.cupom : n.promo) : `Cupom: ${n.cupom || k}`;
       return {
         promocao,
-        tipo: p.tipo,
+        tipo: p.tem_promo && p.tem_cupom ? 'promoção + cupom' : p.tem_promo ? 'promoção' : 'cupom',
         pedidos: x.pedidos,
         pecas: x.pecas,
         captado: x.captado,

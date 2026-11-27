@@ -66,3 +66,6 @@
 .bf-card { overflow: hidden; }
 .bf .bf-tablebox { overflow-x: auto; }
 .bf button.bf-btn { border: 0; cursor: pointer; } .bf button.bf-btn:disabled { opacity: .5; cursor: default; }
+.bf-datas { display: inline-flex; align-items: center; gap: var(--cds-pad-xs); font-size: var(--cds-font-size-body); color: var(--color-fg-muted); }
+.bf-datas[hidden], input[hidden] { display: none !important; }
+.bf-datas input, input.bf-ctl[type="date"] { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-xs) var(--cds-pad-sm); }
