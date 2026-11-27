@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { carregarLojas, importarLojas, vendaLojas, statusLojas } from './lojas_venda.js';
 import { lojasPage } from './lojas-page.js';
 import { recordeCaptacao } from './recorde.js';
+import { lerCampanhas, gravarCampanhas } from './campanhas.js';
 import { ga4EntradaDetalhe, ga4NovosRecorrentes, midiaPorDia, ga4Canais, ga4Origens, ga4Paginas, ga4Funil, ga4TempoReal, metaCampanhas, statusMidia } from './midia.js';
 import { googleAdsCampanhas, statusGoogleAds, urlConectar, concluirConexao, googleAdsTemCliente } from './googleads.js';
 import { carregarMatch, importarEstoqueErp, matchResumo, matchDivergencias, matchCsv, statusMatch, TIPOS_DIVERGENCIA } from './estoque_match.js';
@@ -456,6 +457,22 @@ painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {
   const f = acharArquivo(rel);
   if (!f) return res.status(404).send('Arquivo do site não encontrado no servidor: ' + rel);
   res.sendFile(f);
+});
+// ---------- v2 (E-commerce Intelligence): mesma base, nova organização em /painel/v2/ ----------
+const ARQUIVOS_V2 = ['index.html', 'v2.js', 'v2.css'];
+painel.get(['/v2', '/v2/', '/v2/:arquivo'], (req, res, next) => {
+  if (req.path === '/v2') return res.redirect(301, '/painel/v2/');
+  const nome = req.params.arquivo || 'index.html';
+  if (!ARQUIVOS_V2.includes(nome)) return next();
+  const f = [path.join(raiz, 'v2', nome), path.join(pastaSite, 'v2', nome)].find((x) => fs.existsSync(x));
+  if (!f) return res.status(404).send('Arquivo da v2 não encontrado no servidor: ' + nome);
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(f);
+});
+// Campanhas comerciais: cadastro permanente (DATA_DIR/campanhas.json). Leitura para todos; gravação só admin.
+painel.get('/api-campanhas', (req, res) => res.json(lerCampanhas()));
+painel.post('/api-campanhas', exigirAdmin, express.json({ limit: '300kb' }), (req, res) => {
+  try { res.json({ ok: true, campanhas: gravarCampanhas(req.body) }); } catch (err) { res.status(400).json({ ok: false, erro: err.message }); }
 });
 app.use('/painel', (req, res, next) => (req.originalUrl === '/painel' ? res.redirect(301, '/painel/') : next()), painel);
 

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="pt-BR" translate="no" class="notranslate">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="google" content="notranslate">
+<base href="/painel/">
+<title>ÁGUA DE COCO · E-commerce Intelligence</title>
+<script>
+  // Abre na Visão Executiva (mês vigente) quando não há aba no endereço; aplica o modo salvo antes de desenhar.
+  (function () {
+    if (!location.hash) history.replaceState(null, '', location.pathname + location.search + '#exec');
+    var m = 'gestao'; try { m = localStorage.getItem('v2_modo') || 'gestao'; } catch (e) {}
+    document.documentElement.setAttribute('data-modo', m);
+  })();
+</script>
+<link rel="stylesheet" href="tema.css">
+<link rel="stylesheet" href="estilo.css">
+<link rel="stylesheet" href="v2/v2.css">
+<script src="d3.min.js"></script>
+<script src="dash.js"></script>
+</head>
+<body>
+<div class="bf v2">
+  <!-- Navegação lateral (desktop) / barra inferior (mobile) -->
+  <aside class="v2-side" id="v2-side" aria-label="Áreas do painel">
+    <div class="v2-brand">
+      <span class="v2-brand-mark">ÁGUA DE COCO</span>
+      <span class="v2-brand-sub">E-commerce Intelligence</span>
+    </div>
+    <nav class="v2-areas">
+      <button class="v2-area" data-area="exec"><span class="v2-n">01</span><span class="v2-t">Visão Executiva</span></button>
+      <button class="v2-area" data-area="comercial"><span class="v2-n">02</span><span class="v2-t">Comercial</span></button>
+      <button class="v2-area" data-area="estoque"><span class="v2-n">03</span><span class="v2-t">Estoque</span></button>
+      <button class="v2-area" data-area="operacoes"><span class="v2-n">04</span><span class="v2-t">Operações</span></button>
+      <button class="v2-area" data-area="marketing"><span class="v2-n">05</span><span class="v2-t">Marketing &amp; Digital</span></button>
+      <div class="v2-areas-sep"></div>
+      <button class="v2-area v2-area-sec" data-area="campanhas"><span class="v2-n">·</span><span class="v2-t">Campanhas</span></button>
+      <button class="v2-area v2-area-sec" data-area="dados"><span class="v2-n">·</span><span class="v2-t">Gestão de dados</span></button>
+    </nav>
+    <div class="v2-side-foot">
+      <span id="quem"></span>
+      <a href="/sair">Sair</a>
+      <a href="/painel/" class="v2-old">Painel anterior</a>
+    </div>
+    <button class="v2-collapse" id="v2-collapse" aria-label="Recolher menu" title="Recolher menu">‹</button>
+  </aside>
+
+  <main class="v2-main">
+    <!-- Cabeçalho: título da área, filtros globais, modo e atualização -->
+    <header class="bf-head v2-head">
+      <div class="v2-head-row">
+        <div class="v2-head-title">
+          <span class="v2-kicker" id="v2-kicker">Central de Performance Comercial e Operacional</span>
+          <h1 class="v2-h1" id="v2-titulo">Visão Executiva</h1>
+        </div>
+        <div class="v2-head-ctl">
+          <div class="v2-modo" role="group" aria-label="Modo de visualização">
+            <button data-modo="exec">Executivo</button>
+            <button data-modo="gestao">Gestão</button>
+          </div>
+          <button class="v2-ico" id="v2-apresentar" title="Apresentação em tela cheia" aria-label="Apresentação em tela cheia">⛶</button>
+          <button class="v2-ico" id="v2-pdf" title="Exportar a página em PDF" aria-label="Exportar a página em PDF">PDF</button>
+          <button class="v2-ico v2-only-mobile" id="v2-filtros-btn" aria-expanded="false" aria-controls="v2-filtros">Filtros</button>
+        </div>
+      </div>
+      <div class="v2-filtros" id="v2-filtros">
+        <label class="v2-f">Período
+          <select id="v2-periodo" aria-label="Período"></select>
+        </label>
+        <span class="v2-f v2-custom" id="v2-custom" hidden>
+          <input type="date" id="v2-de" aria-label="De"> <span>a</span> <input type="date" id="v2-ate" aria-label="Até">
+          <button class="v2-chip" id="v2-aplicar">Aplicar</button>
+        </span>
+        <span class="v2-f-note" id="v2-f-note"></span>
+        <span class="v2-upd">Pedidos VTEX às <b class="dash-skeleton" data-source="status" data-field="ultima_sincronizacao" data-row="0" id="st-sync">—</b> · a cada 5 min</span>
+      </div>
+      <nav class="bf-tabs v2-sub" role="tablist" id="v2-sub">
+        <button role="tab" data-tab="exec" id="tab-exec" data-area-of="exec">Resumo</button>
+        <button role="tab" data-tab="curva" id="tab-curva" data-area-of="comercial">Curva do dia</button>
+        <button role="tab" data-tab="planobf" id="tab-planobf" data-area-of="comercial">Plano por canal</button>
+        <button role="tab" data-tab="plano" id="tab-plano" data-area-of="comercial">Meta da campanha</button>
+        <button role="tab" data-tab="promos" id="tab-promos" data-area-of="comercial">Promoções</button>
+        <button role="tab" data-tab="margem" id="tab-margem" data-area-of="comercial">Margem e preço</button>
+        <button role="tab" data-tab="colecoes" id="tab-colecoes" data-area-of="comercial">Coleções e produtos</button>
+        <button role="tab" data-tab="estoque" id="tab-estoque" data-area-of="estoque">Estoque</button>
+        <button role="tab" data-tab="match" id="tab-match" data-area-of="estoque">Match ERP × VTEX</button>
+        <button role="tab" data-tab="faturado" id="tab-faturado" data-area-of="operacoes">Pedidos e faturamento</button>
+        <button role="tab" data-tab="logistica" id="tab-logistica" data-area-of="operacoes">Logística e omnichannel</button>
+        <button role="tab" data-tab="atendimento" id="tab-atendimento" data-area-of="operacoes">Atendimento</button>
+        <button role="tab" data-tab="midia" id="tab-midia" data-area-of="marketing">Mídia e site</button>
+        <button role="tab" data-tab="campanhas" id="tab-campanhas" data-area-of="campanhas">Calendário de campanhas</button>
+        <button role="tab" data-tab="dados" id="tab-dados" data-area-of="dados">Fontes e importações</button>
+      </nav>
+    </header>
+
+    <!-- 01 VISÃO EXECUTIVA -->
+    <section class="bf-page v2-exec" data-page="exec" id="exec">
+      <!-- Faixa de indicadores prioritários -->
+      <div class="v2-kpis" id="v2-kpis" data-source="mes_resumo meta_resumo ate_ontem curva_dia faturado_dia pbf_projecao">
+        <article class="v2-kpi v2-kpi-xl" id="k-captado">
+          <header><span class="v2-k-l">Receita captada · mês</span><span class="v2-src" title="VTEX, pedidos não cancelados, todos os canais">VTEX</span></header>
+          <div class="v2-k-v" data-v>—</div>
+          <div class="v2-k-meta" data-m></div>
+          <div class="v2-bar" data-bar><i></i><b></b></div>
+          <footer class="v2-k-f" data-f></footer>
+        </article>
+        <article class="v2-kpi v2-kpi-xl" id="k-liquido">
+          <header><span class="v2-k-l">Faturamento líquido · mês</span><span class="v2-src" title="Relatório 3351 do ERP: vendido − devolvido">ERP 3351</span></header>
+          <div class="v2-k-v" data-v>—</div>
+          <div class="v2-k-meta" data-m></div>
+          <div class="v2-bar" data-bar><i></i><b></b></div>
+          <footer class="v2-k-f" data-f></footer>
+        </article>
+        <article class="v2-kpi" id="k-meta">
+          <header><span class="v2-k-l">Atingimento da meta</span><span class="v2-src">faturado líquido</span></header>
+          <div class="v2-k-v" data-v>—</div>
+          <footer class="v2-k-f" data-f></footer>
+        </article>
+        <article class="v2-kpi" id="k-cresc">
+          <header><span class="v2-k-l">Crescimento vs 2025</span><span class="v2-src">mesmo dia da semana</span></header>
+          <div class="v2-k-v" data-v>—</div>
+          <footer class="v2-k-f" data-f></footer>
+        </article>
+        <article class="v2-kpi" id="k-proj">
+          <header><span class="v2-k-l">Projeção de fechamento</span><span class="v2-src" title="Faturado líquido do site + app: realizado + plano restante × desempenho do mesmo dia da semana">curva</span></header>
+          <div class="v2-k-v" data-v>—</div>
+          <footer class="v2-k-f" data-f></footer>
+        </article>
+      </div>
+
+      <div class="v2-grid">
+        <!-- Insights executivos -->
+        <article class="v2-card v2-span-12 v2-insights" id="v2-insights" data-source="mes_resumo meta_resumo ate_ontem resumo_dia afaturar_resumo entrega_ped catalogo est_resumo curva_dia">
+          <header class="v2-card-h"><h2>Leitura do período</h2><span class="v2-src">automática, a partir dos dados abaixo</span></header>
+          <ul class="v2-ins" data-ins></ul>
+          <p class="bf-take v2-take" id="resumo-topo"><span class="bf-take-txt" data-take></span></p>
+        </article>
+
+        <!-- Evolução das metas -->
+        <article class="v2-card v2-span-7 v2-ord-metas" id="v2-metas" data-source="meta_resumo ate_ontem faturado_dia">
+          <header class="v2-card-h"><h2>Evolução das metas</h2><span class="v2-src" id="v2-metas-src"></span></header>
+          <div class="v2-metas" data-metas></div>
+          <div class="bf-chart v2-chart-sm" id="v2-ch-metas" data-source="faturado_dia"></div>
+        </article>
+
+        <!-- Hoje -->
+        <article class="v2-card v2-span-5 v2-ord-hoje" id="v2-hoje" data-source="mes_resumo resumo_dia curva_hora">
+          <header class="v2-card-h"><h2>Hoje</h2><span class="v2-src" data-hoje-quando></span></header>
+          <div class="v2-mini" data-hoje></div>
+          <div class="bf-chart v2-chart-sm" id="v2-ch-hora" data-source="curva_hora"></div>
+        </article>
+
+        <!-- Evolução comercial diária -->
+        <article class="v2-card v2-span-12 v2-ord-evol" id="v2-evol" data-source="curva_dia faturado_dia">
+          <header class="v2-card-h"><h2>Evolução diária das vendas</h2><span class="v2-src">mês vigente · captado VTEX e faturado líquido ERP</span></header>
+          <div class="bf-chart" id="v2-ch-evol" data-source="curva_dia faturado_dia"></div>
+        </article>
+
+        <!-- Mix comercial -->
+        <article class="v2-card v2-span-6 v2-ord-mix" id="v2-mix" data-source="mes_resumo curva_dia lojas_venda">
+          <header class="v2-card-h"><h2>Mix comercial</h2><span class="v2-src">mês vigente</span></header>
+          <div class="v2-hbars" data-mix></div>
+        </article>
+        <article class="v2-card v2-span-6 v2-ord-mix" id="v2-col" data-source="colecao">
+          <header class="v2-card-h"><h2>Principais coleções</h2><span class="v2-src" data-col-per></span></header>
+          <div class="v2-hbars" data-col></div>
+        </article>
+
+        <!-- Radar operacional -->
+        <article class="v2-card v2-span-12 v2-ord-radar" id="v2-radar" data-source="afaturar_resumo entrega_ped meta_resumo resumo_dia catalogo est_resumo atend_dia midia_dia status">
+          <header class="v2-card-h"><h2 data-radar-t>Radar operacional</h2><span class="v2-src">regras fixas, dados reais · passe o mouse em cada item para ver a regra</span></header>
+          <div class="v2-radar" data-radar></div>
+        </article>
+
+        <!-- Todos os indicadores do cabeçalho anterior (nada removido) -->
+        <details class="v2-card v2-span-12 v2-detalhes" id="v2-todos">
+          <summary><h2>Todos os indicadores do mês</h2><span class="v2-src">cards do painel anterior, com os mesmos critérios</span></summary>
+          @@STRIP@@
+        </details>
+      </div>
+    </section>
+
+    @@SECTIONS@@
+
+    <!-- CAMPANHAS -->
+    <section class="bf-page" data-page="campanhas" id="campanhas" hidden>
+      <div class="v2-grid">
+        <article class="v2-card v2-span-12">
+          <header class="v2-card-h"><h2>Calendário comercial</h2><span class="v2-src">campanhas cadastradas · a campanha escolhida no filtro de período aplica as datas dela às análises</span></header>
+          <div class="v2-camp-bar">
+            <button class="v2-chip" data-camp-f="todas" aria-pressed="true">Todas</button>
+            <button class="v2-chip" data-camp-f="vigente">Vigentes</button>
+            <button class="v2-chip" data-camp-f="futura">Futuras</button>
+            <button class="v2-chip" data-camp-f="encerrada">Encerradas</button>
+            <span class="v2-grow"></span>
+            <button class="bf-btn" id="v2-camp-nova" hidden>Nova campanha</button>
+          </div>
+          <div class="v2-camps" id="v2-camps"></div>
+        </article>
+      </div>
+      <dialog class="v2-dlg" id="v2-camp-dlg">
+        <form method="dialog" id="v2-camp-form">
+          <h2 id="v2-camp-dlg-t">Campanha</h2>
+          <div class="v2-form">
+            <label class="v2-span-2">Nome<input name="nome" required></label>
+            <label>Início<input name="inicio" type="date" required></label>
+            <label>Fim<input name="fim" type="date" required></label>
+            <label>Comparar com: início<input name="comp_inicio" type="date"></label>
+            <label>Comparar com: fim<input name="comp_fim" type="date"></label>
+            <label>Meta de captado (R$)<input name="meta_captado" inputmode="decimal"></label>
+            <label>Meta de faturamento líquido (R$)<input name="meta_faturamento" inputmode="decimal"></label>
+            <label>Supermeta de faturamento (R$)<input name="supermeta" inputmode="decimal"></label>
+            <label>Meta de peças<input name="meta_pecas" inputmode="numeric"></label>
+            <label>Margem planejada (%)<input name="margem_planejada" inputmode="decimal"></label>
+            <label>Investimento planejado (R$)<input name="investimento" inputmode="decimal"></label>
+            <label>Estoque inicial (peças)<input name="estoque_inicial" inputmode="numeric"></label>
+            <label class="v2-span-2">Mecânicas promocionais (uma por linha: nome; início; fim)<textarea name="mecanicas" rows="4"></textarea></label>
+            <label class="v2-span-2">Coleções participantes (separe por vírgula)<input name="colecoes"></label>
+            <label class="v2-span-2">Observações estratégicas<textarea name="observacoes" rows="3"></textarea></label>
+          </div>
+          <p class="v2-form-msg" id="v2-camp-msg"></p>
+          <div class="v2-form-act">
+            <button value="cancel" class="v2-chip" formnovalidate>Cancelar</button>
+            <button value="ok" class="bf-btn" id="v2-camp-salvar">Salvar</button>
+          </div>
+        </form>
+      </dialog>
+    </section>
+
+    <!-- GESTÃO DE DADOS -->
+    <section class="bf-page" data-page="dados" id="dados" hidden>
+      <div class="v2-grid">
+        <article class="v2-card v2-span-12">
+          <header class="v2-card-h"><h2>Fontes de dados</h2><span class="v2-src">última atualização de cada fonte</span></header>
+          <div class="v2-fontes" id="v2-fontes" data-source="status"></div>
+        </article>
+        <article class="v2-card v2-span-12">
+          <header class="v2-card-h"><h2>Importações e ferramentas</h2><span class="v2-src">só para administradores</span></header>
+          <div class="v2-acoes" id="v2-acoes">
+            <a class="bf-btn" id="btn-importar" data-source="status" target="_blank" rel="noopener" hidden>Importar 3351</a>
+          </div>
+          <p class="bf-sub" id="v2-acoes-nota"></p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barra inferior no celular -->
+  <nav class="v2-bottom" aria-label="Áreas">
+    <button data-area="exec"><b>01</b>Executiva</button>
+    <button data-area="comercial"><b>02</b>Comercial</button>
+    <button data-area="estoque"><b>03</b>Estoque</button>
+    <button data-area="operacoes"><b>04</b>Operações</button>
+    <button data-area="marketing"><b>05</b>Marketing</button>
+    <button data-area="mais" id="v2-mais"><b>···</b>Mais</button>
+  </nav>
+</div>
+<script src="calculos.js"></script>
+<script src="app.js"></script>
+<script src="plano_bf.js"></script>
+<script src="midia_painel.js"></script>
+<script src="v2/v2.js"></script>
+<script>
+fetch('api/eu', { credentials: 'same-origin' }).then((r) => r.ok ? r.json() : null).then((u) => { if (u) { document.getElementById('quem').textContent = u.email; window.V2_USUARIO = u; document.dispatchEvent(new Event('v2-usuario')); } });
+</script>
+</body>
+</html>
