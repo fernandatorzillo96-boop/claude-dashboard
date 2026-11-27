@@ -286,8 +286,8 @@ function buildServer(s = new McpServer({ name: 'vtex-bf26', version: '1.0.0' }))
   s.registerTool('bf_recorde_captacao', {
     title: 'Recorde de captação (últimos 2 anos)',
     description: 'Maiores dias, horas e meses de captado da VTEX nos últimos 2 anos (limite da plataforma). Com iniciar = true, começa ou retoma a varredura em segundo plano; chame de novo para ver o progresso.',
-    inputSchema: { iniciar: z.boolean().optional(), top: z.number().int().min(1).max(50).optional() }, annotations: ro,
-  }, async ({ iniciar, top }) => json(recordeCaptacao({ iniciar, top })));
+    inputSchema: { iniciar: z.boolean().optional(), top: z.number().int().min(1).max(50).optional(), dia: z.string().optional() }, annotations: ro,
+  }, async ({ iniciar, top, dia }) => json(recordeCaptacao({ iniciar, top, dia })));
 
   s.registerTool('bf_status', {
     title: 'Status da sincronização',

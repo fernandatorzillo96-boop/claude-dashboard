@@ -69,8 +69,13 @@ async function rodar() {
   rodando = false;
 }
 
-export function recordeCaptacao({ iniciar = false, top = 10 } = {}) {
+export function recordeCaptacao({ iniciar = false, top = 10, dia = null } = {}) {
   const d = carregar();
+  if (dia) {
+    const hs = []; let ac = 0, ap = 0;
+    for (let h = 0; h < 24; h++) { const v = d.horas[dia + ' ' + String(h).padStart(2, '0')] || { captado: 0, pedidos: 0 }; ac += v.captado; ap += v.pedidos; hs.push({ hora: h, captado: Math.round(v.captado * 100) / 100, pedidos: v.pedidos, acumulado: Math.round(ac * 100) / 100, pedidos_acum: ap }); }
+    return { dia, total: d.dias[dia] || null, horas: hs };
+  }
   if (iniciar && !rodando) rodar();
   const hoje = hojeLocal();
   const ini = somaDias(hoje, -729);
