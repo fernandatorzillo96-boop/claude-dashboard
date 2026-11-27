@@ -787,7 +787,12 @@ export function vendasPorDepartamento(inicio, fim) {
   const out = [...g.entries()].map(([departamento, e]) => { const r = fecha(e.b), p = fecha(e.p); tot += r.captado; return { departamento, vendedores: e.vendedores, captado: r.captado, pedidos: r.pedidos, pecas: r.pecas, ticket_medio: r.ticket_medio, margem_bruta: r.margem_bruta,
     pedidos_prateleira: p.pedidos, captado_prateleira: p.captado, pct_pedidos_prateleira: r.pedidos ? r4(p.pedidos / r.pedidos) : null, pct_captado_prateleira: r.captado ? r4(p.captado / r.captado) : null, inicio: i, fim: f }; });
   out.forEach((x) => { x.share = tot ? r4(x.captado / tot) : null; });
-  const ordem = ['Inside Sales', 'Personal Shopper', 'Lojas físicas', 'Sem código'];
+  // formas de pagamento de cada departamento (e o site sem vendedor numa linha à parte)
+  const pg = pagamentosPorDepartamento(inicio, fim);
+  out.forEach((x) => { x.pagamentos = pg.filter((y) => y.departamento === x.departamento).map(({ forma, grupo, pedidos, valor_pago, pct_pedidos, pct_valor, pedidos_ainda_sem_pagamento }) => ({ forma, grupo, pedidos, valor_pago, pct_pedidos, pct_valor, pedidos_ainda_sem_pagamento })); });
+  const site = pg.filter((y) => y.departamento === 'Site (sem vendedor)');
+  if (site.length) out.push({ departamento: 'Site (sem vendedor)', pedidos: site[0].pedidos_departamento, inicio: i, fim: f, pagamentos: site.map(({ forma, grupo, pedidos, valor_pago, pct_pedidos, pct_valor, pedidos_ainda_sem_pagamento }) => ({ forma, grupo, pedidos, valor_pago, pct_pedidos, pct_valor, pedidos_ainda_sem_pagamento })) });
+  const ordem = ['Inside Sales', 'Personal Shopper', 'Lojas físicas', 'Sem código', 'Site (sem vendedor)'];
   return out.sort((a, b) => ordem.indexOf(a.departamento) - ordem.indexOf(b.departamento));
 }
 // Formas de pagamento por departamento de vendedor (pedidos com código) e do site (sem código de vendedor).
