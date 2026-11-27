@@ -1,5 +1,5 @@
 // Match de estoque: estoque das lojas no ERP (arquivo "Estoque") × estoque na VTEX, por loja e SKU.
-// O SKU é casado pelo código reduzido do ERP (cd_produto) = RefId do SKU na VTEX.
+// O SKU é casado pelo código reduzido do ERP (cd_produto) = "Código de referência do SKU" na VTEX (RefId do cadastro do SKU).
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -103,7 +103,7 @@ let cacheRefs = null, cacheN = -1;
 function refsVtex() {
   const n = Object.keys(state.catalog).length;
   if (!cacheRefs || n !== cacheN) {
-    cacheRefs = new Set(Object.values(state.catalog).map((c) => c && c.refId).filter(Boolean).map(String));
+    cacheRefs = new Set(Object.values(state.catalog).flatMap((c) => (c ? [c.refSku, c.refId] : [])).filter(Boolean).map(String));
     for (const r of est.vtex?.refIds || []) cacheRefs.add(r);
     cacheN = n;
   }

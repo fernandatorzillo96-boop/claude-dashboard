@@ -312,7 +312,13 @@ export async function sweepEstoque({ comCatalogo = false } = {}) {
       // Só os warehouses com estoque, em formato compacto (o catálogo tem ~75 mil SKUs × 30 warehouses).
       const bs = (inv?.balance || []).filter((b) => !b.hasUnlimitedQuantity && ((b.totalQuantity || 0) > 0 || (b.reservedQuantity || 0) > 0))
         .map((b) => [b.warehouseId, b.totalQuantity || 0, b.reservedQuantity || 0]);
-      if (bs.length) porSku[id] = [cat?.refId || null, ativo ? 1 : 0, bs];
+      // Chave do match com o ERP: "Código de referência do SKU" (RefId do cadastro do SKU, catálogo pvt).
+      // Lido uma vez por SKU com estoque e guardado no catálogo; sem ele, usa o RefId de AlternateIds.
+      if (bs.length && cat && cat.refSku === undefined) {
+        const sk = await vtexGet(`/api/catalog/pvt/stockkeepingunit/${id}`);
+        cat.refSku = sk && sk.RefId ? String(sk.RefId).trim() : (sk ? null : undefined);
+      }
+      if (bs.length) porSku[id] = [cat?.refSku || cat?.refId || null, ativo ? 1 : 0, bs];
       for (const b of inv?.balance || []) {
         const k = b.warehouseId;
         if (!wh[k]) wh[k] = { warehouse_id: k, warehouse: b.warehouseName || k, total: 0, reservado: 0, disponivel: 0, disponivel_ativo: 0, disponivel_sem_foto: 0, disponivel_sem_foto_ativo: 0, skus_com_estoque: 0, ilimitado: 0 };
