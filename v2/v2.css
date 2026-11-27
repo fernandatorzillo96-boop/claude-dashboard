@@ -262,7 +262,8 @@ body { padding: 0; -webkit-font-smoothing: antialiased; }
   .v2-head-row { align-items: center; flex-wrap: nowrap; }
   .v2-head-ctl { gap: 6px; }
   .v2-modo button { padding: 5px 10px; font-size: 11px; }
-  #v2-apresentar, #v2-pdf { display: none; }
+  #v2-apresentar { display: none; }
+  #v2-pdf { padding: 5px 9px; font-size: 11px; }
   .v2-only-mobile { display: inline-block; }
   .v2-filtros { display: none; padding-top: 10px; }
   .v2-filtros.aberto { display: flex; }
