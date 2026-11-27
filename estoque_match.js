@@ -200,3 +200,74 @@ export function statusMatch() {
     estoque_vtex_match_em: est.vtex?.atualizado_em || null,
   };
 }
+
+// ---------- Saúde do estoque (ERP): cobertura, giro e grade quebrada ----------
+// Grade: letras (P, M, G) ou numeração (36, 38, 40, 42). Uma referência está com a grade quebrada numa loja quando
+// tem estoque de parte dos tamanhos da grade que ela tem no cadastro, mas não de todos.
+const GRADES = { letras: ['P', 'M', 'G'], numeros: ['36', '38', '40', '42'] };
+const tamBase = (t) => String(t ?? '').split('/')[0].trim().toUpperCase().replace(/^0+(?=\d)/, '');
+export function estoqueSaude({ inicio, fim, grade = 'todas' } = {}) {
+  const erp = est.erp;
+  if (!erp) return [];
+  // tamanhos de grade de cada referência (pelo cadastro do arquivo)
+  const tamRef = {}, refDe = {};
+  for (const [cd, a] of Object.entries(erp.attrs || {})) {
+    const ref = a && a[0]; if (!ref) continue;
+    const t = tamBase(a[2]);
+    refDe[cd] = [ref, t];
+    (tamRef[ref] ||= new Set()).add(t);
+  }
+  const gradeDe = (ref) => {
+    const ts = tamRef[ref] || new Set();
+    for (const [nome, g] of Object.entries(GRADES)) { const tem = g.filter((x) => ts.has(x)); if (tem.length >= 2) return [nome, tem]; }
+    return null;
+  };
+  // venda das lojas no período (base comercial, Varejo) para cobertura e giro
+  const dias = inicio && fim ? Math.round((Date.parse(fim + 'T12:00:00Z') - Date.parse(inicio + 'T12:00:00Z')) / 864e5) + 1 : null;
+  let venda = {};
+  try { for (const x of vendaLojasRef(inicio, fim)) venda[x.empresa] = x; } catch {}
+  const out = [];
+  const tot = { pecas: 0, refs: 0, quebradas: 0, pecas_quebradas: 0, vendidas: 0 };
+  for (const [empS, itens] of Object.entries(erp.itens || {})) {
+    const emp = Number(empS);
+    let pecas = 0;
+    const porRef = {};
+    for (const [cd, q] of Object.entries(itens)) {
+      if (q <= 0) continue;
+      pecas += q;
+      const rt = refDe[cd]; if (!rt) continue;
+      const e = (porRef[rt[0]] ||= { tams: new Set(), q: 0 });
+      e.tams.add(rt[1]); e.q += q;
+    }
+    let refs = 0, quebradas = 0, pq = 0;
+    for (const [ref, e] of Object.entries(porRef)) {
+      const g = gradeDe(ref); if (!g) continue;
+      if (grade !== 'todas' && g[0] !== grade) continue;
+      refs++;
+      const presentes = g[1].filter((t) => e.tams.has(t)).length;
+      if (presentes > 0 && presentes < g[1].length) { quebradas++; pq += e.q; }
+    }
+    const v = venda[emp];
+    const vendidas = v ? (v.pecas_liquidas ?? v.pecas ?? 0) : null;
+    out.push({
+      empresa: emp, loja: erp.lojas?.[emp] || nomeLoja(emp), estoque_pecas: pecas,
+      refs_com_grade: refs, refs_grade_quebrada: quebradas, pct_refs_grade_quebrada: refs ? Math.round((quebradas / refs) * 10000) / 10000 : null,
+      pecas_em_grade_quebrada: pq, pct_pecas_grade_quebrada: pecas ? Math.round((pq / pecas) * 10000) / 10000 : null,
+      pecas_vendidas: vendidas, giro_periodo: vendidas != null && pecas ? Math.round((vendidas / pecas) * 1000) / 1000 : null,
+      cobertura_dias: vendidas && dias ? Math.round((pecas / (vendidas / dias)) * 10) / 10 : null, dias_periodo: dias, inicio: inicio || null, fim: fim || null,
+    });
+    tot.pecas += pecas; tot.refs += refs; tot.quebradas += quebradas; tot.pecas_quebradas += pq; if (vendidas != null) tot.vendidas += vendidas;
+  }
+  out.sort((a, b) => a.empresa - b.empresa);
+  const comVenda = out.filter((x) => x.pecas_vendidas != null);
+  const estLojasComVenda = comVenda.reduce((t, x) => t + x.estoque_pecas, 0);
+  out.push({ empresa: 0, loja: 'Total', estoque_pecas: tot.pecas, refs_com_grade: tot.refs, refs_grade_quebrada: tot.quebradas,
+    pct_refs_grade_quebrada: tot.refs ? Math.round((tot.quebradas / tot.refs) * 10000) / 10000 : null, pecas_em_grade_quebrada: tot.pecas_quebradas,
+    pct_pecas_grade_quebrada: tot.pecas ? Math.round((tot.pecas_quebradas / tot.pecas) * 10000) / 10000 : null,
+    pecas_vendidas: comVenda.length ? tot.vendidas : null, giro_periodo: estLojasComVenda ? Math.round((tot.vendidas / estLojasComVenda) * 1000) / 1000 : null,
+    cobertura_dias: tot.vendidas && dias ? Math.round((estLojasComVenda / (tot.vendidas / dias)) * 10) / 10 : null, dias_periodo: dias, inicio: inicio || null, fim: fim || null,
+    arquivo: erp.nome_arquivo || null, importado_em: erp.importado_em || null });
+  return out;
+}
+let vendaLojasRef = () => [];
+export function usarVendaLojas(fn) { vendaLojasRef = (i, f) => fn(i, f, 'loja'); }

@@ -310,3 +310,31 @@ body { padding: 0; -webkit-font-smoothing: antialiased; }
   details.v2-detalhes:not([open]) { display: none; }
   .bf-tablebox { max-height: none !important; overflow: visible !important; }
 }
+
+/* ---------- v2.1: vendedores, saúde do estoque, cenários, CAC e elasticidade ---------- */
+.v2-kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.v2-kpis-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.v2-inj { margin-bottom: 16px; }
+.v2-inj .v2-kpis { margin-bottom: 8px; }
+.v2-deps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; margin-bottom: 10px; }
+.v2-dep { font: inherit; text-align: left; background: #fff; border: 1px solid var(--v2-linha); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; cursor: pointer; color: var(--v2-texto); }
+.v2-dep:hover { border-color: var(--v2-bege); }
+.v2-dep[aria-pressed="true"] { border-color: var(--v2-grafite); box-shadow: inset 0 0 0 1px var(--v2-grafite); }
+.v2-dep .v2-k-v { font-size: 22px; }
+.v2-dep-f { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--v2-mudo); }
+.v2-dep-f b { color: var(--v2-texto); }
+.v2-cen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 20px; align-items: start; }
+.v2-cen-ctl { display: grid; gap: 14px; }
+.v2-cen-ctl .v2-f { flex-wrap: wrap; font-size: 12px; color: var(--v2-mudo); }
+.v2-cen-range input { accent-color: var(--v2-grafite); width: 160px; }
+.v2-cen-range b { color: var(--v2-texto); min-width: 42px; }
+.v2-cen-out { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.v2-cen-out div { display: flex; flex-direction: column; gap: 3px; background: var(--v2-areia); border-radius: 12px; padding: 14px; min-width: 0; }
+.v2-cen-out span { font-size: 11px; color: var(--v2-mudo); }
+.v2-cen-out b { font-size: 18px; font-weight: 600; }
+.v2-cen-out .v2-cen-big { font-size: 22px; }
+.v2-cen-out small { font-size: 11px; color: var(--v2-mudo); }
+:root[data-modo="gestao"] .v2-ord-cen { order: 7; }
+:root[data-modo="exec"] .v2-ord-cen { order: 4; }
+@media (max-width: 1180px) { .v2-cen { grid-template-columns: 1fr; } .v2-kpis-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .v2-cen-out { grid-template-columns: 1fr 1fr; } .v2-kpis-2 { grid-template-columns: 1fr; } }

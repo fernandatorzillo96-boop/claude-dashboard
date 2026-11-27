@@ -13,9 +13,12 @@ let dados = null;
 let rodando = false;
 let erro = null;
 
+// v2: pedidos contados pelo pedido-mãe (sem o sufixo -01, -02), o mesmo critério do painel.
+const VERSAO = 2;
 function carregar() {
   if (dados) return dados;
   try { dados = JSON.parse(fs.readFileSync(ARQ, 'utf8')); } catch { dados = { dias: {}, horas: {} }; }
+  if (dados.v !== VERSAO) dados = { v: VERSAO, dias: {}, horas: {} };
   return dados;
 }
 function gravar() {
@@ -51,15 +54,20 @@ async function rodar() {
       for (let t = a.getTime(); t < b.getTime(); t += 6 * 3600 * 1000) await listar(new Date(t), new Date(t + 6 * 3600 * 1000), lst);
       const reg = { captado: 0, pedidos: 0, cancelados: 0 };
       for (let h = 0; h < 24; h++) delete d.horas[dia + ' ' + String(h).padStart(2, '0')];
+      const bases = new Set(), cancelados = new Set();
+      lst.sort((a, b) => String(a.creationDate).localeCompare(String(b.creationDate)));
       for (const o of lst) {
-        if (o.status === 'canceled') { reg.cancelados++; continue; }
+        const base = String(o.orderId || '').replace(/-\d+$/, '');
+        if (o.status === 'canceled') { cancelados.add(base); continue; }
         const v = (o.totalValue || 0) / 100;
-        reg.captado += v; reg.pedidos++;
+        reg.captado += v;
         const l = local(o.creationDate);
         const k = l.data + ' ' + String(l.hora).padStart(2, '0');
         const hh = (d.horas[k] ||= { captado: 0, pedidos: 0 });
-        hh.captado += v; hh.pedidos++;
+        hh.captado += v;
+        if (!bases.has(base)) { bases.add(base); reg.pedidos++; hh.pedidos++; }
       }
+      reg.cancelados = [...cancelados].filter((b) => !bases.has(b)).length;
       reg.captado = Math.round(reg.captado * 100) / 100;
       d.dias[dia] = reg;
       d.atualizado = new Date().toISOString();
@@ -100,7 +108,7 @@ export function recordeCaptacao({ iniciar = false, top = 10, dia = null, inicio 
   for (const x of dias) { const m = (meses[x.data.slice(0, 7)] ||= { mes: x.data.slice(0, 7), captado: 0, pedidos: 0, dias: 0 }); m.captado += x.captado; m.pedidos += x.pedidos; m.dias++; }
   const ord = (k) => (a, b) => b[k] - a[k];
   return {
-    criterio: 'Captado = valor total dos pedidos não cancelados (com frete), todos os canais, pela data de criação no horário de Brasília. A VTEX só devolve pedidos dos últimos 2 anos.',
+    criterio: 'Captado = valor total dos pedidos não cancelados (com frete), todos os canais, pela data de criação no horário de Brasília. Pedidos contados pelo pedido-mãe (sem o sufixo -01, -02), como no painel. A VTEX só devolve pedidos dos últimos 2 anos.',
     periodo: { inicio: ini, fim: somaDias(hoje, -1) },
     progresso: { rodando, dias_lidos: lidos, dias_total: total, atualizado: d.atualizado || null, erro },
     top_dias: dias.sort(ord('captado')).slice(0, top),
@@ -108,4 +116,10 @@ export function recordeCaptacao({ iniciar = false, top = 10, dia = null, inicio 
     top_horas: horas.sort(ord('captado')).slice(0, top),
     top_meses: Object.values(meses).map((m) => ({ ...m, captado: r2(m.captado) })).sort(ord('captado')).slice(0, 6),
   };
+}
+
+// Varredura automática: 1 min depois de subir (refaz tudo se a versão mudou) e a cada 6 h (relê os últimos dias).
+if (!process.env.RECORDE_SEM_AUTO) {
+  setTimeout(() => { if (!rodando) rodar(); }, 60e3).unref?.();
+  setInterval(() => { if (!rodando) rodar(); }, 6 * 3600e3).unref?.();
 }

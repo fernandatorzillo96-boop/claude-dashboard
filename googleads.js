@@ -33,7 +33,7 @@ export function urlConectar(redirectUri) {
   const state = crypto.randomBytes(16).toString('hex');
   pendentes.set(state, Date.now() + 15 * 60e3);
   return 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
-    client_id: process.env.GOOGLE_ADS_CLIENT_ID, redirect_uri: redirectUri, response_type: 'code',
+    client_id: String(process.env.GOOGLE_ADS_CLIENT_ID || "").trim(), redirect_uri: redirectUri, response_type: 'code',
     scope: 'https://www.googleapis.com/auth/adwords', access_type: 'offline', prompt: 'consent', state,
   });
 }
@@ -43,7 +43,7 @@ export async function concluirConexao(code, state, redirectUri) {
   if (!exp || exp < Date.now()) throw new Error('Link de conexão expirado. Clique em Conectar Google Ads de novo.');
   const r = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ code, client_id: process.env.GOOGLE_ADS_CLIENT_ID, client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET, redirect_uri: redirectUri, grant_type: 'authorization_code' }),
+    body: new URLSearchParams({ code, client_id: String(process.env.GOOGLE_ADS_CLIENT_ID || "").trim(), client_secret: String(process.env.GOOGLE_ADS_CLIENT_SECRET || "").trim(), redirect_uri: redirectUri, grant_type: 'authorization_code' }),
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error('O Google recusou a conexão: ' + (j.error_description || j.error || r.status));
@@ -60,7 +60,7 @@ async function token() {
   if (tokenAtual && tokenAtual.exp > Date.now() + 60e3) return tokenAtual.token;
   const r = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: process.env.GOOGLE_ADS_CLIENT_ID, client_secret: process.env.GOOGLE_ADS_CLIENT_SECRET, refresh_token: salvo.refresh_token, grant_type: 'refresh_token' }),
+    body: new URLSearchParams({ client_id: String(process.env.GOOGLE_ADS_CLIENT_ID || "").trim(), client_secret: String(process.env.GOOGLE_ADS_CLIENT_SECRET || "").trim(), refresh_token: salvo.refresh_token, grant_type: 'refresh_token' }),
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {

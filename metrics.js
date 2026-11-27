@@ -691,7 +691,18 @@ function codigoVendedor(o) {
   if (/codigovendedor/i.test(m.utmiCampaign || '') && m.utmiPart) return { cod: String(m.utmiPart).trim().toUpperCase(), nome: '', campo: 'utmi (aspai)' };
   return null;
 }
-export function vendasPorVendedor(inicio, fim) {
+// Departamento pelo código do vendedor: 300 a 399 = Inside Sales; começa com 64 = Personal Shopper; demais = Lojas físicas.
+export function departamentoDoCodigo(cod) {
+  const c = String(cod || '').trim().toUpperCase();
+  if (!c || c.startsWith('(')) return 'Sem código';
+  if (/^3\d\d$/.test(c)) return 'Inside Sales';
+  if (/^64/.test(c)) return 'Personal Shopper';
+  return 'Lojas físicas';
+}
+// Pedido feito pela prateleira infinita (UTM do link das vendedoras).
+const ehPrateleira = (o) => { const m = o.mkt || {}; return ['utmCampaign', 'utmSource', 'utmMedium', 'utmiCampaign', 'utmiPart'].some((k) => /prateleira/i.test(String(m[k] || ''))); };
+
+function agregaVendedores(inicio, fim) {
   const [i, f] = periodo(inicio, fim);
   const nomes = {};
   for (const o of Object.values(state.orders)) { const c = codigoVendedor(o); if (c && c.nome && !nomes[c.cod]) nomes[c.cod] = c.nome; }
@@ -703,13 +714,40 @@ export function vendasPorVendedor(inicio, fim) {
     if (!temPromo && !cv) continue;
     const k = cv ? cv.cod : ((o.v || 1) >= 5 ? '(sem código)' : '(relendo)');
     const nome = cv ? (nomes[cv.cod] || '') : (k === '(relendo)' ? 'Ainda relendo o pedido' : 'Promoção de vendedor sem código no pedido');
-    if (!map.has(k)) map.set(k, { codigo: k, nome, campos: new Set(), b: novoBalde() });
+    if (!map.has(k)) map.set(k, { codigo: k, nome, campos: new Set(), b: novoBalde(), p: novoBalde() });
     const x = map.get(k);
     if (cv) x.campos.add(cv.campo);
     acumula(x.b, o);
+    if (ehPrateleira(o)) acumula(x.p, o);
   }
-  return [...map.values()].map((x) => { const r = fecha(x.b); return { codigo: x.codigo, vendedor: x.nome, captado: r.captado, pedidos: r.pedidos, pecas: r.pecas, ticket_medio: r.ticket_medio, margem_bruta: r.margem_bruta, campo: [...x.campos].join(', '), inicio: i, fim: f }; })
-    .sort((a, b) => b.captado - a.captado);
+  return { i, f, linhas: [...map.values()] };
+}
+const r4 = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+export function vendasPorVendedor(inicio, fim) {
+  const { i, f, linhas } = agregaVendedores(inicio, fim);
+  return linhas.map((x) => {
+    const r = fecha(x.b), p = fecha(x.p);
+    return { codigo: x.codigo, vendedor: x.nome, departamento: departamentoDoCodigo(x.codigo), captado: r.captado, pedidos: r.pedidos, pecas: r.pecas, ticket_medio: r.ticket_medio, margem_bruta: r.margem_bruta,
+      pedidos_prateleira: p.pedidos, captado_prateleira: p.captado, pct_pedidos_prateleira: r.pedidos ? r4(p.pedidos / r.pedidos) : null, pct_captado_prateleira: r.captado ? r4(p.captado / r.captado) : null,
+      campo: [...x.campos].join(', '), inicio: i, fim: f };
+  }).sort((a, b) => b.captado - a.captado);
+}
+export function vendasPorDepartamento(inicio, fim) {
+  const { i, f, linhas } = agregaVendedores(inicio, fim);
+  const g = new Map();
+  let tot = 0;
+  for (const x of linhas) {
+    const d = departamentoDoCodigo(x.codigo);
+    const e = g.get(d) || { b: novoBalde(), p: novoBalde(), vendedores: 0 };
+    for (const [dst, src] of [[e.b, x.b], [e.p, x.p]]) for (const k of Object.keys(src)) { if (k === 'bases') src.bases.forEach((v) => dst.bases.add(v)); else dst[k] += src[k]; }
+    e.vendedores += x.codigo.startsWith('(') ? 0 : 1;
+    g.set(d, e);
+  }
+  const out = [...g.entries()].map(([departamento, e]) => { const r = fecha(e.b), p = fecha(e.p); tot += r.captado; return { departamento, vendedores: e.vendedores, captado: r.captado, pedidos: r.pedidos, pecas: r.pecas, ticket_medio: r.ticket_medio, margem_bruta: r.margem_bruta,
+    pedidos_prateleira: p.pedidos, captado_prateleira: p.captado, pct_pedidos_prateleira: r.pedidos ? r4(p.pedidos / r.pedidos) : null, pct_captado_prateleira: r.captado ? r4(p.captado / r.captado) : null, inicio: i, fim: f }; });
+  out.forEach((x) => { x.share = tot ? r4(x.captado / tot) : null; });
+  const ordem = ['Inside Sales', 'Personal Shopper', 'Lojas físicas', 'Sem código'];
+  return out.sort((a, b) => ordem.indexOf(a.departamento) - ordem.indexOf(b.departamento));
 }
 // Amostra dos campos de marketing dos pedidos com a promoção "Código de Vendedor" (para conferir onde vem o código).
 export function amostraCamposVendedor(n = 15) {

@@ -616,6 +616,126 @@
     $('#v2-acoes-nota').textContent = st.url_importacao ? '' : 'As importações aparecem só para administradores.';
   }
 
+
+  // ---------- Vendedores por departamento ----------
+  let depSel = 'todos';
+  function desenharVendedores() {
+    const p = dash.params();
+    $('#dep-per').textContent = p.promo_inicio ? `${dc(p.promo_inicio)} a ${dc(p.promo_fim)}` : '';
+    const deps = B.linhas('deptos');
+    $('#v2-deps').innerHTML = deps.map((d) => `
+      <button class="v2-dep" data-dep="${esc(d.departamento)}" aria-pressed="${depSel === d.departamento}">
+        <span class="v2-k-l">${esc(d.departamento)}</span>
+        <b class="v2-k-v">${F.brl(d.captado)}</b>
+        <span class="v2-dep-f"><span>${F.pct(d.share)} do total com código</span><span>${F.int(d.pedidos)} pedidos · TM ${F.brl0(d.ticket_medio)}</span><span>${F.int(d.vendedores)} vendedores · MB ${F.pct(d.margem_bruta)}</span>
+        <span>Prateleira infinita: <b>${F.pct(d.pct_pedidos_prateleira)}</b> dos pedidos · ${F.brl(d.captado_prateleira)}</span></span>
+      </button>`).join('') || '<p class="bf-sub">Sem pedidos com código de vendedor no período.</p>';
+    $$('[data-dep]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.dep === depSel)));
+    const q = ($('#vend-busca').value || '').toLowerCase(), so = $('#vend-prat').checked, min = Number($('#vend-min').value) || 0;
+    const rows = B.linhas('vendedores').filter((r) => (depSel === 'todos' || r.departamento === depSel) && (!so || r.pedidos_prateleira > 0) && r.pedidos >= min
+      && (!q || (String(r.codigo) + ' ' + String(r.vendedor || '')).toLowerCase().includes(q)));
+    $('#vend-n').textContent = `${rows.length} vendedor(es) · ${F.brl(soma(rows, 'captado'))} · ${F.int(soma(rows, 'pedidos'))} pedidos`;
+    B.tabela($('#tb-v2-vend'), rows, { captado: 'brl0', pedidos: 'int', ticket_medio: 'brl0', margem_bruta: 'pct', pedidos_prateleira: 'int', pct_pedidos_prateleira: 'pct', captado_prateleira: 'brl0' });
+  }
+  document.addEventListener('click', (e) => { const b = e.target.closest('#vendedores [data-dep]'); if (!b) return; depSel = depSel === b.dataset.dep && b.dataset.dep !== 'todos' ? 'todos' : b.dataset.dep; desenharVendedores(); });
+  ['#vend-busca', '#vend-prat', '#vend-min'].forEach((s) => $(s).addEventListener('input', desenharVendedores));
+
+  // ---------- Saúde do estoque ----------
+  $('#saude-grade').addEventListener('change', (e) => dash.setParams({ est_grade: e.target.value }));
+  $('#saude-ord').addEventListener('change', () => desenharSaude());
+  function desenharSaude() {
+    const p = dash.params();
+    $('#saude-grade').value = p.est_grade || 'todas';
+    const rows = B.linhas('est_saude');
+    const tot = rows.find((x) => x.empresa === 0);
+    const lojas = rows.filter((x) => x.empresa !== 0);
+    const ord = $('#saude-ord').value;
+    lojas.sort((a, b) => (b[ord] ?? -1) - (a[ord] ?? -1));
+    B.tabela($('#tb-saude'), tot ? [...lojas, tot] : lojas, { estoque_pecas: 'int', pecas_vendidas: 'int', giro_periodo: 'dec', cobertura_dias: 'dec', refs_com_grade: 'int', refs_grade_quebrada: 'int', pct_refs_grade_quebrada: 'pct', pct_pecas_grade_quebrada: 'pct' });
+    $('#saude-src').textContent = tot ? `${tot.arquivo || 'estoque do ERP'} · importado ${F.dt(tot.importado_em)} · vendas ${dc(tot.inicio)} a ${dc(tot.fim)}` : 'importe o estoque do ERP em Gestão de dados';
+    // estoque disponível VTEX × venda média diária de peças (captado VTEX, últimos 30 dias fechados)
+    const cat = B.linhas('catalogo')[0];
+    const h = hoje(), ini30 = somaDias(h, -30);
+    const d30 = B.linhas('dia').filter((x) => x.data >= ini30 && x.data < h);
+    const pd = d30.length ? soma(d30, 'pecas') / d30.length : null;
+    const covV = cat && pd ? cat.estoque_disponivel / pd : null;
+    const k = (rot, v, f, src) => `<article class="v2-kpi"><header><span class="v2-k-l">${rot}</span><span class="v2-src">${src}</span></header><div class="v2-k-v">${v}</div><footer class="v2-k-f">${f}</footer></article>`;
+    $('#saude-kpis').innerHTML = [
+      k('Cobertura das lojas', tot && tot.cobertura_dias != null ? B.nf1.format(tot.cobertura_dias) + ' dias' : '—', `<span>estoque ÷ venda média diária (Varejo)</span>`, 'ERP + base comercial'),
+      k('Giro no período', tot && tot.giro_periodo != null ? B.nf1.format(tot.giro_periodo * 100) + '%' : '—', `<span>${F.int(tot?.pecas_vendidas)} peças vendidas sobre ${F.int(tot?.estoque_pecas)} em estoque</span>`, 'ERP + base comercial'),
+      k('Grade quebrada', tot ? F.pct(tot.pct_refs_grade_quebrada) : '—', `<span>${F.int(tot?.refs_grade_quebrada)} de ${F.int(tot?.refs_com_grade)} referências·loja</span><span>${F.pct(tot?.pct_pecas_grade_quebrada)} das peças</span>`, 'estoque do ERP'),
+      k('Cobertura VTEX (todos os canais)', covV != null ? B.nf0.format(covV) + ' dias' : '—', `<span>${F.int(cat?.estoque_disponivel)} peças disponíveis ÷ ${pd != null ? B.nf0.format(pd) : '—'} peças/dia (últimos 30 dias captados)</span>`, 'VTEX'),
+    ].join('');
+  }
+
+  // ---------- Simulador de cenários ----------
+  ['#cen-base', '#cen-fator', '#cen-dev'].forEach((s) => $(s).addEventListener('input', () => cenario()));
+  function cenario() {
+    const mr = B.linhas('meta_resumo')[0];
+    const out = $('#cen-out');
+    if (!mr) { out.innerHTML = ''; return; }
+    const fator = Number($('#cen-fator').value) / 100, dev = (Number($('#cen-dev').value) || 0) / 100;
+    $('#cen-fator-v').textContent = Math.round(fator * 100) + '%';
+    const { fd } = dadosMes();
+    const rest = fd.filter((x) => x.data > mr.ate);
+    const fech = fd.filter((x) => x.data <= mr.ate && n(x.liquido) != null);
+    const baseDia = $('#cen-base').value === 'ritmo' ? (fech.length ? mr.realizado / fech.length : 0) : null;
+    const base = baseDia != null ? baseDia * rest.length : soma(rest, 'meta');
+    const extra = base * fator * (1 - dev);
+    const fim = mr.realizado + extra;
+    const c = (v, m) => (m ? `<b class="${tom(v / m - 1)}">${F.pct(v / m)}</b>` : '—');
+    out.innerHTML = `
+      <div><span>Fechamento projetado</span><b class="v2-cen-big">${F.brl(fim)}</b><small>${F.brl(mr.realizado)} realizado + ${F.brl(extra)} em ${rest.length} dia(s)</small></div>
+      <div><span>Meta do mês</span><b>${c(fim, mr.meta_mes)}</b><small>${fim >= mr.meta_mes ? 'sobra ' + F.brl(fim - mr.meta_mes) : 'faltariam ' + F.brl(mr.meta_mes - fim)}</small></div>
+      <div><span>Supermeta</span><b>${c(fim, mr.super_mes)}</b><small>${fim >= mr.super_mes ? 'sobra ' + F.brl(fim - mr.super_mes) : 'faltariam ' + F.brl(mr.super_mes - fim)}</small></div>
+      <div><span>Por dia no cenário</span><b>${rest.length ? F.brl(extra / rest.length) : '—'}</b><small>meta pede ${F.brl(mr.ritmo_necessario)}/dia · supermeta ${F.brl(mr.ritmo_super)}/dia</small></div>`;
+  }
+
+  // ---------- CAC (Marketing) e elasticidade (Margem e preço): cards da v2 dentro das abas existentes ----------
+  const injeta = (pagina, id, html) => { let el = document.getElementById(id); if (!el) { el = document.createElement('div'); el.id = id; el.className = 'v2-grid v2-inj'; const pg = document.querySelector(`.bf-page[data-page="${pagina}"]`); const ref = pg.querySelector('.bf-bar'); ref ? ref.after(el) : pg.prepend(el); } el.innerHTML = html; };
+  function desenharCac() {
+    const md = B.linhas('midia_dia'), nv = B.linhas('ga4_novos');
+    const inv = soma(md, 'investimento_total');
+    const nov = nv.find((x) => x.tipo === 'new'), ret = nv.find((x) => x.tipo === 'returning');
+    const p = dash.params();
+    const comprasNovos = nov ? nov.atual_compras : null;
+    const cac = inv && comprasNovos ? inv / comprasNovos : null;
+    const rec = soma(md, 'receita_ga4');
+    const k = (rot, v, f) => `<article class="v2-kpi"><header><span class="v2-k-l">${rot}</span></header><div class="v2-k-v">${v}</div><footer class="v2-k-f">${f}</footer></article>`;
+    injeta('midia', 'v2-cac', `<article class="v2-card v2-span-12"><header class="v2-card-h"><h2>Eficiência de aquisição</h2><span class="v2-src">${dc(p.md_inicio)} a ${dc(p.md_fim)} · investimento Google + Meta · compras do GA4 (sem bots)</span></header>
+      <div class="v2-kpis v2-kpis-4">
+        ${k('CAC (novos clientes)', cac != null ? F.brl0(cac) : '—', `<span>${F.brl(inv)} ÷ ${F.int(comprasNovos)} compras de usuários novos</span>`)}
+        ${k('Custo por novo usuário', nov && nov.atual_usuarios && inv ? 'R$ ' + B.nf1.format(inv / nov.atual_usuarios).replace('.', ',') : '—', `<span>${F.int(nov?.atual_usuarios)} usuários novos</span>`)}
+        ${k('ROAS (GA4)', inv ? B.nf1.format(rec / inv) + '×' : '—', `<span>${F.brl(rec)} de receita GA4</span>`)}
+        ${k('Compras de recorrentes', F.int(ret?.atual_compras), `<span>${F.brl(ret?.atual_receita)} · novos: ${F.brl(nov?.atual_receita)}</span>`)}
+      </div>
+      <p class="bf-sub">CAC = investimento em mídia paga ÷ compras feitas por usuários novos no GA4. É uma aproximação: o GA4 marca como "novo" o usuário (navegador), não o CPF, e a mídia também influencia compras de recorrentes.</p></article>`);
+  }
+  function regressao(xs, ys) {
+    const n0 = xs.length; if (n0 < 5) return null;
+    const mx = xs.reduce((a, b) => a + b, 0) / n0, my = ys.reduce((a, b) => a + b, 0) / n0;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (let i = 0; i < n0; i++) { sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) ** 2; syy += (ys[i] - my) ** 2; }
+    if (!sxx || !syy) return null;
+    return { b: sxy / sxx, r2: (sxy * sxy) / (sxx * syy), n: n0 };
+  }
+  function desenharElasticidade() {
+    const h = hoje();
+    const cd = B.linhas('curva_dia').filter((x) => x.data < h && n(x.pecas) > 0 && n(x.preco_medio) > 0);
+    const viz = cd.filter((x) => n(x.pecas_2025) > 0 && n(x.preco_medio_2025) > 0);
+    const e1 = regressao(viz.map((x) => Math.log(x.preco_medio / x.preco_medio_2025)), viz.map((x) => Math.log(x.pecas / x.pecas_2025)));
+    const e2 = regressao(cd.map((x) => Math.log(x.preco_medio)), cd.map((x) => Math.log(x.pecas)));
+    const fmtE = (e) => (e ? B.nf1.format(e.b).replace('-', '−') : '—');
+    const ler = (e) => (!e ? 'dados insuficientes' : e.r2 < 0.2 ? 'relação fraca: o preço explica pouco do volume' : e.b < -1 ? 'elástica: 1% de queda no preço médio veio com mais de 1% de peças' : e.b < 0 ? 'inelástica: o volume reage menos que o preço' : 'sem relação negativa clara (outros fatores dominam)');
+    const k = (rot, e, f) => `<article class="v2-kpi"><header><span class="v2-k-l">${rot}</span></header><div class="v2-k-v">${fmtE(e)}</div><footer class="v2-k-f"><span>${ler(e)}</span><span>${e ? `R² ${B.nf1.format(e.r2 * 100)}% · ${e.n} dias` : ''}</span>${f}</footer></article>`;
+    injeta('margem', 'v2-elast', `<article class="v2-card v2-span-12"><header class="v2-card-h"><h2>Elasticidade-preço aparente</h2><span class="v2-src">captado VTEX por dia, dias fechados desde 01/10/2026</span></header>
+      <div class="v2-kpis v2-kpis-2">
+        ${k('Contra 2025 (mesmo dia da semana)', e1, '<span>variação de peças × variação de preço médio vs 2025</span>')}
+        ${k('Entre os dias de 2026', e2, '<span>peças × preço médio de cada dia</span>')}
+      </div>
+      <p class="bf-sub">Inclinação de log(peças) sobre log(preço médio). É uma leitura descritiva: promoções, mídia, frete e calendário mudam junto com o preço, então não é o efeito causal do preço. Quanto mais negativo, mais o volume acompanha as quedas de preço.</p></article>`);
+  }
+
   // Com <base href="/painel/">, '#aba' viraria /painel/#aba (o painel anterior): mantém o endereço da v2.
   dash.setLink = (nome) => history.replaceState(null, '', location.pathname + location.search + '#' + nome);
   if (location.pathname.indexOf('/v2') < 0) history.replaceState(null, '', '/painel/v2/' + location.hash);
@@ -624,7 +744,11 @@
   setTimeout(() => window.scrollTo(0, 0), 0);
 
   window.BF_ABAS = Object.assign(window.BF_ABAS || {}, {
-    exec: desenharExec,
+    exec: () => { desenharExec(); try { cenario(); } catch (e) { console.error('v2 cenario', e); } },
+    vendedores: desenharVendedores,
+    saude: desenharSaude,
+    midia: ((orig) => () => { if (orig) orig(); try { desenharCac(); } catch (e) { console.error('v2 cac', e); } })((window.BF_ABAS || {}).midia),
+    margem: ((orig) => () => { if (orig) orig(); try { desenharElasticidade(); } catch (e) { console.error('v2 elast', e); } })((window.BF_ABAS || {}).margem),
     campanhas: desenharCampanhas,
     dados: desenharDados,
   });

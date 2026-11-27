@@ -84,7 +84,9 @@
         <button role="tab" data-tab="promos" id="tab-promos" data-area-of="comercial">Promoções</button>
         <button role="tab" data-tab="margem" id="tab-margem" data-area-of="comercial">Margem e preço</button>
         <button role="tab" data-tab="colecoes" id="tab-colecoes" data-area-of="comercial">Coleções e produtos</button>
+        <button role="tab" data-tab="vendedores" id="tab-vendedores" data-area-of="comercial">Vendedores</button>
         <button role="tab" data-tab="estoque" id="tab-estoque" data-area-of="estoque">Estoque</button>
+        <button role="tab" data-tab="saude" id="tab-saude" data-area-of="estoque">Cobertura, giro e grade</button>
         <button role="tab" data-tab="match" id="tab-match" data-area-of="estoque">Match ERP × VTEX</button>
         <button role="tab" data-tab="faturado" id="tab-faturado" data-area-of="operacoes">Pedidos e faturamento</button>
         <button role="tab" data-tab="logistica" id="tab-logistica" data-area-of="operacoes">Logística e omnichannel</button>
@@ -145,6 +147,21 @@
           <div class="bf-chart v2-chart-sm" id="v2-ch-metas" data-source="faturado_dia"></div>
         </article>
 
+        <!-- Simulador de cenários -->
+        <article class="v2-card v2-span-12 v2-ord-cen" id="v2-cen" data-source="meta_resumo faturado_dia pbf_projecao">
+          <header class="v2-card-h"><h2>Simulador de cenários · fechamento do mês</h2><span class="v2-src">faturado líquido · realizado até o último 3351 + dias restantes</span></header>
+          <div class="v2-cen">
+            <div class="v2-cen-ctl">
+              <label class="v2-f">Base dos dias restantes
+                <select id="cen-base"><option value="plano">Meta diária dos dias restantes</option><option value="ritmo">Média diária do mês até agora</option></select>
+              </label>
+              <label class="v2-f v2-cen-range">Desempenho sobre a base <input type="range" id="cen-fator" min="50" max="160" step="5" value="100"><b id="cen-fator-v">100%</b></label>
+              <label class="v2-f">Devoluções extras sobre o que falta <input type="number" id="cen-dev" min="0" max="50" step="1" value="0" style="width:64px">%</label>
+            </div>
+            <div class="v2-cen-out" id="cen-out"></div>
+          </div>
+        </article>
+
         <!-- Hoje -->
         <article class="v2-card v2-span-5 v2-ord-hoje" id="v2-hoje" data-source="mes_resumo resumo_dia curva_hora">
           <header class="v2-card-h"><h2>Hoje</h2><span class="v2-src" data-hoje-quando></span></header>
@@ -183,6 +200,58 @@
     </section>
 
     @@SECTIONS@@
+
+
+    <!-- VENDEDORES (código de vendedor por departamento) -->
+    <section class="bf-page" data-page="vendedores" id="vendedores" hidden>
+      <div class="v2-grid">
+        <article class="v2-card v2-span-12" data-source="deptos">
+          <header class="v2-card-h"><h2>Venda por departamento</h2><span class="v2-src" id="dep-per"></span></header>
+          <div class="v2-deps" id="v2-deps"></div>
+          <p class="bf-sub">Departamento pelo código do vendedor do pedido (campo OBS ou aspai): <b>Inside Sales</b> = códigos de 300 a 399; <b>Personal Shopper</b> = códigos que começam com 64; <b>Lojas físicas</b> = demais códigos. Prateleira infinita = pedido com UTM da prateleira. Captado VTEX, pedidos não cancelados, período do filtro.</p>
+        </article>
+        <article class="v2-card v2-span-12" data-source="vendedores">
+          <header class="v2-card-h"><h2>Vendedores</h2><span class="v2-src" id="vend-n"></span></header>
+          <div class="v2-camp-bar">
+            <button class="v2-chip" data-dep="todos" aria-pressed="true">Todos</button>
+            <button class="v2-chip" data-dep="Inside Sales">Inside Sales</button>
+            <button class="v2-chip" data-dep="Personal Shopper">Personal Shopper</button>
+            <button class="v2-chip" data-dep="Lojas físicas">Lojas físicas</button>
+            <label class="v2-f"><input type="checkbox" id="vend-prat"> só com prateleira infinita</label>
+            <label class="v2-f">Mín. pedidos <input type="number" id="vend-min" min="0" value="0" style="width:64px"></label>
+            <span class="v2-grow"></span>
+            <input class="bf-search" id="vend-busca" type="search" placeholder="Buscar vendedor ou código" aria-label="Buscar vendedor">
+          </div>
+          <div class="bf-tablebox aberta">
+            <table class="bf-table" id="tb-v2-vend" data-row-key="codigo">
+              <thead><tr><th data-field="departamento">Departamento</th><th data-field="codigo">Código</th><th data-field="vendedor">Vendedor</th><th data-field="captado" class="n">Captado</th><th data-field="pedidos" class="n">Pedidos</th>
+              <th data-field="ticket_medio" class="n">TM</th><th data-field="margem_bruta" class="n">MB</th><th data-field="pedidos_prateleira" class="n">Pedidos prateleira</th><th data-field="pct_pedidos_prateleira" class="n">% pedidos prateleira</th><th data-field="captado_prateleira" class="n">Captado prateleira</th></tr></thead><tbody></tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- SAÚDE DO ESTOQUE -->
+    <section class="bf-page" data-page="saude" id="saude" hidden>
+      <div class="v2-kpis v2-kpis-4" id="saude-kpis" data-source="est_saude catalogo dia"></div>
+      <div class="v2-grid">
+        <article class="v2-card v2-span-12" data-source="est_saude">
+          <header class="v2-card-h"><h2>Por loja</h2><span class="v2-src" id="saude-src"></span></header>
+          <div class="v2-camp-bar">
+            <label class="v2-f">Grade <select id="saude-grade"><option value="todas">P/M/G e 36 a 42</option><option value="letras">Só P, M, G</option><option value="numeros">Só 36, 38, 40, 42</option></select></label>
+            <label class="v2-f">Ordenar <select id="saude-ord"><option value="pct_refs_grade_quebrada">% grade quebrada</option><option value="cobertura_dias">Cobertura</option><option value="giro_periodo">Giro</option><option value="estoque_pecas">Estoque</option></select></label>
+          </div>
+          <div class="bf-tablebox aberta">
+            <table class="bf-table" id="tb-saude" data-row-key="empresa">
+              <thead><tr><th data-field="loja">Loja</th><th data-field="estoque_pecas" class="n">Estoque (peças)</th><th data-field="pecas_vendidas" class="n">Vendidas no período</th><th data-field="giro_periodo" class="n">Giro</th><th data-field="cobertura_dias" class="n">Cobertura (dias)</th>
+              <th data-field="refs_com_grade" class="n">Refs com grade</th><th data-field="refs_grade_quebrada" class="n">Grade quebrada</th><th data-field="pct_refs_grade_quebrada" class="n">% refs quebradas</th><th data-field="pct_pecas_grade_quebrada" class="n">% peças em grade quebrada</th></tr></thead><tbody></tbody>
+            </table>
+          </div>
+          <p class="bf-sub">Estoque e grade: último arquivo de estoque do ERP (lojas ON + OFF e e-commerce). Grade quebrada = referência com estoque em parte dos tamanhos da grade (P, M, G ou 36, 38, 40, 42) que ela tem no cadastro, mas não em todos. Vendidas = base comercial das lojas (Varejo), no período do filtro; giro = vendidas ÷ estoque atual; cobertura = estoque ÷ venda média diária. O CD do e-commerce não tem venda própria na base comercial, por isso fica sem giro e cobertura.</p>
+        </article>
+      </div>
+    </section>
 
     <!-- CAMPANHAS -->
     <section class="bf-page" data-page="campanhas" id="campanhas" hidden>
