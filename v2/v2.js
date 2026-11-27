@@ -98,22 +98,51 @@
       const pg = document.querySelector('.bf-page:not([hidden])') || document.querySelector('.v2-main');
       const titulo = ($('.v2-h1') || {}).textContent || 'Painel';
       const largura = 1100; // renderiza como tela de computador para caber no A4 deitado
+      const escala = 1.6;
+      let cortes = [], blocos = [];
       document.documentElement.classList.add('v2-gerando-pdf');
-      const canvas = await window.html2canvas(pg, { scale: 1.6, backgroundColor: '#ffffff', windowWidth: largura, useCORS: true, logging: false,
-        ignoreElements: (el) => el.classList && (el.classList.contains('bf-bar') || el.classList.contains('v2-bottom')) });
+      const canvas = await window.html2canvas(pg, { scale: escala, backgroundColor: '#ffffff', windowWidth: largura, useCORS: true, logging: false,
+        ignoreElements: (el) => el.classList && (el.classList.contains('bf-bar') || el.classList.contains('v2-bottom')),
+        onclone: (doc) => {
+          // mede, no layout de computador, onde cada quadro começa e termina, para cortar as páginas entre eles
+          const cl = doc.querySelector('.bf-page:not([hidden])') || doc.querySelector('.v2-main');
+          if (!cl) return;
+          const top = cl.getBoundingClientRect().top;
+          const y = (r) => [(r.top - top) * escala, (r.bottom - top) * escala];
+          // inteiros: não podem ser cortados no meio
+          blocos = [...cl.querySelectorAll('.bf-tile, .v2-kpi, .v2-dep, .bf-chart, svg, tr, h2, h3, p, .v2-mini > div, .v2-cen-out > div, .v2-hb-l, .v2-hb')]
+            .map((e) => y(e.getBoundingClientRect())).filter(([a0, b0]) => b0 - a0 > 2);
+          // bons lugares para virar a página: fim de cada quadro (melhor) e fim de cada linha de tabela
+          const cards = [...cl.querySelectorAll('.bf-card, .v2-card, .bf-tiles, .v2-kpis, .v2-grid > *, .bf-grid > *')].map((e) => ({ y: y(e.getBoundingClientRect())[1] + 6 * escala, peso: 2 }));
+          const linhas = [...cl.querySelectorAll('tr, .v2-mini > div')].map((e) => ({ y: y(e.getBoundingClientRect())[1], peso: 1 }));
+          cortes = [...cards, ...linhas].filter((c) => c.y > 0);
+        } });
       document.documentElement.classList.remove('v2-gerando-pdf');
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       const W = 297, H = 210, M = 8, cab = 10;
       const w = W - 2 * M, hPag = H - 2 * M - cab;
       const pxPorMm = canvas.width / w, fatia = Math.floor(hPag * pxPorMm);
+      const livre = (yy) => !blocos.some(([a0, b0]) => yy > a0 + 1 && yy < b0 - 1);
+      const proximoCorte = (y0) => {
+        const lim = y0 + fatia;
+        if (lim >= canvas.height) return canvas.height;
+        const ok = cortes.filter((c) => c.y > y0 + fatia * 0.25 && c.y <= lim && livre(c.y));
+        const card = ok.filter((c) => c.peso === 2 && c.y >= y0 + fatia * 0.5).sort((p1, p2) => p2.y - p1.y)[0];
+        if (card) return Math.round(card.y);
+        const qualquer = ok.sort((p1, p2) => p2.y - p1.y)[0];
+        return qualquer ? Math.round(qualquer.y) : lim;
+      };
       const quando = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      for (let y = 0, n = 0; y < canvas.height; y += fatia, n++) {
+      for (let y = 0, n = 0; y < canvas.height - 4; n++) {
+        const y1 = proximoCorte(y);
         if (n) doc.addPage();
-        const c = document.createElement('canvas'); c.width = canvas.width; c.height = Math.min(fatia, canvas.height - y);
-        c.getContext('2d').drawImage(canvas, 0, y, c.width, c.height, 0, 0, c.width, c.height);
-        doc.setFontSize(10); doc.text(`ÁGUA DE COCO · ${titulo} · ${quando}`, M, M + 4);
+        const c = document.createElement('canvas'); c.width = canvas.width; c.height = y1 - y;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(canvas, 0, y, c.width, c.height, 0, 0, c.width, c.height);
+        doc.setFontSize(10); doc.text(`ÁGUA DE COCO · ${titulo} · ${quando} · página ${n + 1}`, M, M + 4);
         doc.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', M, M + cab, w, c.height / pxPorMm);
+        y = y1;
       }
       const nome = `painel-${titulo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${hoje()}.pdf`;
       const blob = doc.output('blob');

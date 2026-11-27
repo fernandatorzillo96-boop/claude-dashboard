@@ -310,6 +310,9 @@ body { padding: 0; -webkit-font-smoothing: antialiased; }
   .v2-kpi-xl { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   details.v2-detalhes:not([open]) { display: none; }
   .bf-tablebox { max-height: none !important; overflow: visible !important; }
+  tr, .bf-tile, .v2-kpi, .bf-chart, svg { break-inside: avoid; page-break-inside: avoid; }
+  h2, h3, .v2-card-h, thead { break-after: avoid; page-break-after: avoid; }
+  thead { display: table-header-group; }
 }
 
 /* ---------- v2.1: vendedores, saúde do estoque, cenários, CAC e elasticidade ---------- */
