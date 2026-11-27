@@ -57,14 +57,16 @@ export function save(...keys) {
 }
 
 // Referência (modelo) de um item, para achar o Custo GEC.
+// Referência conhecida = tem custo GEC ou cadastro (coleção etc.) na base do ERP.
+const conhecida = (r) => r && (costByRef[r] !== undefined || atributosRef[r] !== undefined);
 export function referenciaDoItem(item) {
   const r = item.refId && (state.skuRef[item.refId] || bundledSkuRef[item.refId]);
-  if (r && costByRef[r] !== undefined) return r;
+  if (conhecida(r)) return r;
   const c = state.catalog[item.sku];
-  if (c && c.productRefId && costByRef[c.productRefId] !== undefined) return c.productRefId;
+  if (c && conhecida(c.productRefId)) return c.productRefId;
   if (c && c.refId) {
     const r2 = state.skuRef[c.refId] || bundledSkuRef[c.refId];
-    if (r2 && costByRef[r2] !== undefined) return r2;
+    if (conhecida(r2)) return r2;
   }
   return null;
 }
@@ -72,6 +74,6 @@ export function referenciaDoItem(item) {
 // CMV de uma linha de item: { cmv, exato }
 export function cmvDoItem(item) {
   const ref = referenciaDoItem(item);
-  if (ref) return { cmv: costByRef[ref] * item.q, exato: true, ref };
-  return { cmv: item.de * item.q * config.custoSobreDeEstimado, exato: false, ref: null };
+  if (ref && costByRef[ref] !== undefined) return { cmv: costByRef[ref] * item.q, exato: true, ref };
+  return { cmv: item.de * item.q * config.custoSobreDeEstimado, exato: false, ref };
 }
