@@ -464,8 +464,23 @@ const raiz = path.dirname(fileURLToPath(import.meta.url));
 const ARQUIVOS_SITE = ['index.html', 'app.js', 'calculos.js', 'dash.js', 'estilo.css', 'tema.css', 'plano_bf.js', 'midia_painel.js', 'data/plano_bf_canais.json', 'data/faturado_2025.json',
   'data/base_2025_por_hora.json', 'data/meta_diaria.json', 'data/plano_bf26_site_diario_v2.json', 'data/promocoes_bf25.json'];
 const acharArquivo = (rel) => [path.join(pastaSite, rel), path.join(raiz, 'site', path.basename(rel)), path.join(raiz, path.basename(rel))].find((f) => fs.existsSync(f));
-painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {
-  const rel = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+// Painel oficial = v2 (E-commerce Intelligence) em /painel/. O painel anterior fica em /painel/v1/.
+const v2Index = () => [path.join(raiz, 'v2', 'index.html'), path.join(pastaSite, 'v2', 'index.html')].find((x) => fs.existsSync(x));
+painel.get(['/', '/index.html'], (req, res, next) => {
+  const f = v2Index();
+  if (!f) return next();
+  res.set('Cache-Control', 'no-cache');
+  res.sendFile(f);
+});
+painel.get('/v1', (req, res) => {
+  if (!req.originalUrl.split('?')[0].endsWith('/')) return res.redirect(301, '/painel/v1/');
+  const f = acharArquivo('index.html');
+  if (!f) return res.status(404).send('Painel anterior não encontrado');
+  res.set('Cache-Control', 'no-cache');
+  res.type('html').send(fs.readFileSync(f, 'utf8').replace('<head>', '<head>\n<base href="/painel/">'));
+});
+painel.get(['/:arquivo', '/data/:arquivo'], (req, res, next) => {
+  const rel = req.path.replace(/^\//, '');
   if (!ARQUIVOS_SITE.includes(rel)) return next();
   const f = acharArquivo(rel);
   if (!f) return res.status(404).send('Arquivo do site não encontrado no servidor: ' + rel);
@@ -474,8 +489,8 @@ painel.get(['/', '/:arquivo', '/data/:arquivo'], (req, res, next) => {
 // ---------- v2 (E-commerce Intelligence): mesma base, nova organização em /painel/v2/ ----------
 const ARQUIVOS_V2 = ['index.html', 'v2.js', 'v2.css'];
 painel.get(['/v2', '/v2/', '/v2/:arquivo'], (req, res, next) => {
-  if (req.path === '/v2') return res.redirect(301, '/painel/v2/');
-  const nome = req.params.arquivo || 'index.html';
+  if (req.path === '/v2' || req.path === '/v2/' || req.params.arquivo === 'index.html') return res.redirect(301, '/painel/');
+  const nome = req.params.arquivo;
   if (!ARQUIVOS_V2.includes(nome)) return next();
   const f = [path.join(raiz, 'v2', nome), path.join(pastaSite, 'v2', nome)].find((x) => fs.existsSync(x));
   if (!f) return res.status(404).send('Arquivo da v2 não encontrado no servidor: ' + nome);

@@ -738,7 +738,6 @@
 
   // Com <base href="/painel/">, '#aba' viraria /painel/#aba (o painel anterior): mantém o endereço da v2.
   dash.setLink = (nome) => history.replaceState(null, '', location.pathname + location.search + '#' + nome);
-  if (location.pathname.indexOf('/v2') < 0) history.replaceState(null, '', '/painel/v2/' + location.hash);
   try { history.scrollRestoration = 'manual'; } catch {}
   window.addEventListener('load', () => window.scrollTo(0, 0));
   setTimeout(() => window.scrollTo(0, 0), 0);

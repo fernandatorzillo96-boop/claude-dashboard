@@ -160,7 +160,7 @@
       Object.entries(DATASETS).forEach(([id, def]) => { if (usa(def).some((k) => mudaram.includes(k))) buscar(id); });
       avisar();
     },
-    setLink(nome) { history.replaceState(null, '', '#' + nome); },
+    setLink(nome) { history.replaceState(null, '', location.pathname + location.search + '#' + nome); },
     refresh: todos,
     colors: ['--serie-a', '--serie-b', '--serie-c', '--serie-d'].map((v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim()),
   };
