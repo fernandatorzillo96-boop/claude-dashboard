@@ -165,13 +165,16 @@ function filtroPeriodo(cfg) {
     const cl = document.createElement('label'); cl.className = 'bf-ctl';
     cl.innerHTML = 'Comparar com <select aria-label="Comparar com"><option value="nenhum">Sem comparativo</option><option value="anterior">Período anterior (mesmo nº de dias)</option><option value="pers">Personalizado</option></select>';
     d1.after(cl); csel = cl.querySelector('select');
+    if (c.ly) csel.querySelector('[value="anterior"]').after(new Option('Mesmo período de 2025 (mesmo dia da semana)', 'ly'));
     d2 = datas('Comparativo'); cl.after(d2); [i2, f2] = d2.querySelectorAll('input');
+    if (c.min) [i2, f2].forEach((el) => { el.min = c.min; });
   }
   const aplica = (muda = {}) => {
     const p = { ...dash.params(), ...muda };
     const [a, b] = periodoRapido(p[cfg.per] || 'pers') || [p[cfg.ini], p[cfg.fim]];
     const out = { ...muda, [cfg.ini]: a, [cfg.fim]: b };
     if (c && p[c.modo] === 'anterior') [out[c.ini], out[c.fim]] = anterior(a, b);
+    if (c && p[c.modo] === 'ly') [out[c.ini], out[c.fim]] = [diaMais(a, -364), diaMais(b, -364)];
     const at = dash.params();
     if (Object.keys(out).some((k) => at[k] !== out[k])) dash.setParams(out);
   };
@@ -200,7 +203,7 @@ function filtroPeriodo(cfg) {
     },
     ativo: () => !!c && (dash.params()[c.modo] || 'nenhum') !== 'nenhum',
     rotulo: () => { const p = dash.params(); return `${dataBR(p[cfg.ini])}${p[cfg.fim] !== p[cfg.ini] ? '–' + dataBR(p[cfg.fim]) : ''}`; },
-    rotuloCmp: () => { const p = dash.params(); return c ? `${dataBR(p[c.ini])}${p[c.fim] !== p[c.ini] ? '–' + dataBR(p[c.fim]) : ''}` : ''; },
+    rotuloCmp: () => { const p = dash.params(); const ano = (d) => (d && d.slice(0, 4) !== hojeBR().slice(0, 4) ? '/' + d.slice(2, 4) : ''); return c ? `${dataBR(p[c.ini])}${p[c.fim] !== p[c.ini] ? '–' + dataBR(p[c.fim]) : ''}${ano(p[c.fim])}` : ''; },
   };
   return api;
 }

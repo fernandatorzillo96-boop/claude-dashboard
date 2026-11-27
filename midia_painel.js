@@ -132,13 +132,21 @@ const _resumo = {
 };
 dash.calc('midia_resumo', _resumo);
 // O mesmo resumo no período de comparação.
-dash.calc('midia_roi_dia_cmp', { inputs: ['midia_dia_cmp', 'dia', 'lojas_venda'], fn: _roiDia.fn });
+dash.calc('midia_roi_dia_cmp', {
+  inputs: ['midia_dia_cmp', 'dia', 'lojas_venda', 'vtex_cmp_h'],
+  fn: (md, dia, lojas, vh) => {
+    const tem = new Set(dia.map((x) => x.data));
+    const extra = new Map();
+    for (const x of vh) { if (!x || !x.data25 || tem.has(x.data25)) continue; const e = extra.get(x.data25) || { data: x.data25, captado: 0, pedidos: 0 }; e.captado += Number(x.captado) || 0; e.pedidos += Number(x.pedidos) || 0; extra.set(x.data25, e); }
+    return _roiDia.fn(md, [...dia, ...extra.values()], lojas);
+  },
+});
 dash.calc('midia_resumo_cmp', { inputs: ['midia_roi_dia_cmp', 'midia_dia_cmp'], fn: _resumo.fn });
 
 (function () {
   const B = window.BF;
   if (!B) return;
-  const fMd = B.filtroPeriodo({ sel: 'sel-md', ini: 'md_inicio', fim: 'md_fim', per: 'md_per', cmp: { ini: 'md_cmp_inicio', fim: 'md_cmp_fim', modo: 'md_cmp_modo' } });
+  const fMd = B.filtroPeriodo({ sel: 'sel-md', ini: 'md_inicio', fim: 'md_fim', per: 'md_per', cmp: { ini: 'md_cmp_inicio', fim: 'md_cmp_fim', modo: 'md_cmp_modo', ly: true, min: '2024-11-28' } });
   // Comparativo nos cards do topo: valor do período comparado e a variação.
   const CMP = [['investimento_total', 'brl', null], ['roi_site', 'dec', true], ['meta_roas', 'dec', true], ['custo_por_pedido', 'brl0', false], ['sessoes', 'int', true]];
   function comparativoCards() {
@@ -149,6 +157,13 @@ dash.calc('midia_resumo_cmp', { inputs: ['midia_roi_dia_cmp', 'midia_dia_cmp'], 
       if (!el) { el = document.createElement('div'); el.className = 'bf-delta md-cmp'; t.append(el); }
       el.hidden = !on || !CMP[i];
       if (!on || !CMP[i]) return;
+      if (i === 4) {
+        const ds = a.sessoes != null && b.sessoes ? a.sessoes / b.sessoes - 1 : null;
+        const s1 = document.createElement('span'); s1.textContent = B.F.delta(ds); if (ds != null) B.tomDelta(s1, ds);
+        el.textContent = '';
+        el.append(s1, ` sessões vs ${fMd.rotuloCmp()} · conversão ${B.F.pct(b.conversao_vtex)} (pedidos VTEX) · ${B.F.pct(b.conversao_ga4)} no GA4`);
+        return;
+      }
       const [f, fmt, maiorMelhor] = CMP[i];
       const v = a[f], w = b[f];
       const d = v != null && w ? v / w - 1 : null;

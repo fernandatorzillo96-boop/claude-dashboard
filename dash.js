@@ -49,6 +49,7 @@
     uf_md: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_inicio}}', fim: '{{md_fim}}' } },
     uf_md_cmp: { tool: 'bf_vendas_por_estado', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
     midia_dia_cmp: { tool: 'bf_midia_por_dia', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
+    vtex_cmp_h: { tool: 'bf_recorde_captacao', args: { inicio: '{{md_cmp_inicio}}', fim: '{{md_cmp_fim}}' } },
     plano_canais: { file: 'data/plano_bf_canais.json' },
     faturado25: { file: 'data/faturado_2025.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
