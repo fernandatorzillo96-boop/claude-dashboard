@@ -134,7 +134,7 @@
     if (selP.value === 'custom') { $('#v2-de').value = a || ''; $('#v2-ate').value = b || ''; }
     const alinhados = PARAMS.every(([x, y]) => p[x] === a && p[y] === b);
     $('#v2-f-note').textContent = (a ? dc(a) + (b && b !== a ? ' a ' + dc(b) : '') : '') +
-      (alinhados ? '' : ' · algumas abas estão com outro período (escolha de novo para alinhar)') +
+      (alinhados ? '' : ' · há abas com outro período') +
       (a && a < ACOMPANHA_DESDE ? ' · pedidos VTEX disponíveis a partir de 01/10/2026' : '');
   }
   const aplicarPeriodo = (a, b) => {
@@ -188,7 +188,7 @@
         metaMes ? `Meta do mês <b>${F.brl(metaMes)}</b> · ${F.pct(mes.captado_mes / metaMes)}` : '',
         superMes ? `Supermeta ${F.pct(mes.captado_mes / superMes)}` : '',
         g != null ? `<span class="${tom(g)}">${F.delta(g)}</span> vs 2025` : '',
-      ].filter(Boolean).join('<span>·</span>'));
+      ].filter(Boolean).map((x) => '<span>' + x + '</span>').join(''));
     }
     // Faturamento líquido
     const el2 = $('#k-liquido');
@@ -202,7 +202,7 @@
         `Meta do mês <b>${F.brl(mr.meta_mes)}</b> · ${F.pct(mr.pct_meta_mes)}`,
         `Supermeta ${F.pct(mr.pct_super_mes)}`,
         g != null ? `<span class="${tom(g)}">${F.delta(g)}</span> vs 2025` : '',
-      ].filter(Boolean).join('<span>·</span>'));
+      ].filter(Boolean).map((x) => '<span>' + x + '</span>').join(''));
       // Atingimento
       const el3 = $('#k-meta');
       set(el3, '[data-v]', `<span class="${tom(mr.pct_meta_ate_dia - 1)}">${F.pct(mr.pct_meta_mes)}</span>`);
@@ -388,7 +388,7 @@
     const cat = B.linhas('catalogo')[0];
     if (cat && n(cat.estoque_sem_foto_ativo) != null) it.push({ t: 'Estoque ativo sem foto', v: F.int(cat.estoque_sem_foto_ativo) + ' peças', d: `${F.int(cat.skus_sem_foto_ativos_com_estoque)} SKUs ativos com estoque e sem imagem na VTEX`,
       nivel: cat.estoque_sem_foto_ativo > 0 ? 'atencao' : 'ok', regra: 'Atenção quando há peças disponíveis em SKUs ativos sem nenhuma foto (não vendem no site).', area: 'Catálogo / E-commerce', aba: 'estoque' });
-    const er = B.linhas('est_resumo').filter((x) => x.no_erp && x.na_vtex && x.skus_comparados);
+    const er = B.linhas('est_resumo').filter((x) => x.no_erp && x.na_vtex && x.skus_comparados >= 100);
     if (er.length) {
       const pm = soma(er, 'skus_iguais') / soma(er, 'skus_comparados');
       const piores = er.slice().sort((a, b) => a.pct_match - b.pct_match).slice(0, 2).map((x) => `${x.loja.replace(/^Loja /, '')} ${F.pct(x.pct_match)}`).join(' · ');
@@ -404,7 +404,7 @@
     }
     const md = B.linhas('midia_dia');
     const inv = soma(md, 'investimento_total'), rec = soma(md, 'receita_ga4');
-    if (inv > 0) it.push({ t: 'Retorno de mídia (GA4)', v: B.nf1.format(rec / inv) + '×', d: `${F.brl(rec)} de receita GA4 para ${F.brl(inv)} investidos (Google + Meta)`, nivel: 'info',
+    if (inv > 0) it.push({ t: 'Retorno de mídia (GA4)', v: B.nf1.format(rec / inv) + '×', d: `${F.brl(rec)} de receita GA4 para ${F.brl(inv)} investidos (Google + Meta) · ${dc(dash.params().md_inicio)} a ${dc(dash.params().md_fim)}`, nivel: 'info',
       regra: 'Informativo: receita GA4 ÷ investimento total no período da mídia. Sem meta de ROAS cadastrada.', area: 'Mídia', aba: 'midia' });
     const st = B.linhas('status')[0];
     if (st) for (const [k, nome] of [['ultimo_erro', 'Sincronização VTEX'], ['google_ads_erro', 'Google Ads'], ['ga4_erro', 'GA4'], ['meta_erro', 'Meta Ads'], ['octadesk_erro', 'Octadesk']]) {
@@ -535,7 +535,8 @@
     for (const c of lista) realizado(c).then((r) => {
       const el = box.querySelector(`.v2-camp[data-id="${CSS.escape(c.id)}"] [data-real]`); if (!el) return;
       if (!r) { el.innerHTML = '<div><span>Realizado</span><b>—</b></div>'; return; }
-      const at = (v, m) => (m ? ` · <span class="${tom(v / m - 1)}">${F.pct(v / m)}</span>` : '');
+      const fechou = statusCamp(c) === 'encerrada';
+      const at = (v, m) => (m ? ` · <span class="${fechou ? tom(v / m - 1) : ''}">${F.pct(v / m)}</span>` : '');
       el.innerHTML = [
         `<div><span>Captado${r.parcial ? ' (desde 01/10/2026)' : ''} até ${dc(r.ate)}</span><b>${F.brl(r.captado)}${at(r.captado, c.meta_captado)}</b></div>`,
         `<div><span>Faturado líquido</span><b>${F.brl(r.liquido)}${at(r.liquido, c.meta_faturamento)}</b></div>`,
@@ -614,6 +615,13 @@
     for (const [u, t] of links) if (B.okUrl(u)) { const a = document.createElement('a'); a.className = 'bf-btn'; a.dataset.v2Acao = '1'; a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.textContent = t; ac.append(a); }
     $('#v2-acoes-nota').textContent = st.url_importacao ? '' : 'As importações aparecem só para administradores.';
   }
+
+  // Com <base href="/painel/">, '#aba' viraria /painel/#aba (o painel anterior): mantém o endereço da v2.
+  dash.setLink = (nome) => history.replaceState(null, '', location.pathname + location.search + '#' + nome);
+  if (location.pathname.indexOf('/v2') < 0) history.replaceState(null, '', '/painel/v2/' + location.hash);
+  try { history.scrollRestoration = 'manual'; } catch {}
+  window.addEventListener('load', () => window.scrollTo(0, 0));
+  setTimeout(() => window.scrollTo(0, 0), 0);
 
   window.BF_ABAS = Object.assign(window.BF_ABAS || {}, {
     exec: desenharExec,
