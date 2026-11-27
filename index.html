@@ -78,6 +78,9 @@
       <div class="bf-tile"><div class="bf-lbl">Ticket médio</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="ticket_medio" data-k="ticket_medio" data-fmt="brl0">—</div>
         <div class="bf-delta"><span class="k-cmp">2025</span>: <span data-source="resumo_dia" data-field="ticket_medio_cmp" data-k="ticket_medio_cmp" data-fmt="brl0">—</span></div></div>
+      <div class="bf-tile"><div class="bf-lbl">Peças por pedido (PA)</div>
+        <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="pa" data-k="pa" data-fmt="dec2">—</div>
+        <div class="bf-delta"><span class="k-cmp">2025</span>: <span data-source="resumo_dia" data-field="pa_cmp" data-k="pa_cmp" data-fmt="dec2" id="pa-cmp">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">Margem bruta</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="margem_bruta" data-k="margem_bruta" data-fmt="pct">—</div>
         <div class="bf-delta">Desconto médio s/ DE: <span data-source="resumo_dia" data-field="desconto_sobre_de" data-k="desconto_sobre_de" data-fmt="pct">—</span></div></div>
@@ -129,22 +132,6 @@
               <th data-field="v2025" class="n">2025</th><th data-field="out26" class="n">Out/26</th><th data-field="real" class="n">Realizado 2026</th><th data-field="plano" class="n">Plano nov/26</th>
               <th data-field="d_2025" class="n">Δ vs 2025</th><th data-field="d_out26" class="n">Δ vs out</th><th data-field="d_plano" class="n">Δ vs plano</th>
               <th data-field="share_2025" class="n">Share 2025</th><th data-field="share_out26" class="n">Share out</th><th data-field="share_real" class="n">Share real.</th><th data-field="share_plano" class="n">Share plano</th>
-            </tr></thead><tbody></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="bf-card bf-wide" id="card-pbf-tend">
-        <h2>Tendência outubro → novembro: o plano ou a curva?</h2>
-        <p class="bf-sub">Mesmos dias do mês da tabela acima. Quanto novembro andou sobre outubro em 2025, no plano (sobre out/26) e no realizado 2026; e o novembro/26 implícito na curva de 2025 (out/26 × nov/25 ÷ out/25). Se o plano está longe do implícito, a premissa do plano é que mudou; se o realizado está longe do implícito, o comportamento deste ano é que mudou.</p>
-        <p class="bf-take" id="pbf-tend-leitura"></p>
-        <div class="bf-tablebox aberta pbf-ind">
-          <table class="bf-table" id="tb-pbf-tend" data-source="pbf_tendencia" data-row-key="chave">
-            <thead><tr>
-              <th data-field="indicador">Indicador</th><th data-field="canal">Canal</th>
-              <th data-field="out25" class="n">Out/25</th><th data-field="nov25" class="n">Nov/25</th><th data-field="var_2025" class="n">Nov/25 vs out/25</th>
-              <th data-field="out26" class="n">Out/26</th><th data-field="plano" class="n">Plano nov/26</th><th data-field="var_plano" class="n">Plano vs out/26</th>
-              <th data-field="real" class="n">Realizado nov/26</th><th data-field="var_real" class="n">Real vs out/26</th>
-              <th data-field="implicito" class="n">Nov/26 pela curva 2025</th><th data-field="plano_vs_implicito" class="n">Plano vs curva</th><th data-field="real_vs_implicito" class="n">Real vs curva</th>
             </tr></thead><tbody></tbody>
           </table>
         </div>

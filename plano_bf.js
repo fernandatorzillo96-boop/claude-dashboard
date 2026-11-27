@@ -417,6 +417,7 @@ dash.calc('pbf_etapas', {
 
   function tabelaTendencia() {
     const tb = document.getElementById('tb-pbf-tend');
+    if (!tb) return; // quadro retirado do painel
     const rows = B.linhas('pbf_tendencia');
     const ths = [...tb.querySelectorAll('th')];
     tb.tBodies[0].replaceChildren(...rows.map((x) => {

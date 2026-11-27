@@ -19,6 +19,7 @@ const F = {
   int: (v) => (vazio(v) ? '—' : nf0.format(v)),
   txt: (v) => (vazio(v) ? '—' : String(v)),
   dec: (v) => (vazio(v) ? '—' : nf1.format(v)),
+  dec2: (v) => (vazio(v) ? '—' : nf2.format(v)),
   horas: (v) => (vazio(v) ? '—' : nf1.format(v) + ' h'),
   dias: (v) => (vazio(v) ? '—' : nf1.format(v) + ' d.u.'),
   diasc: (v) => (vazio(v) ? '—' : nf1.format(v) + ' dias'),
@@ -449,6 +450,12 @@ function desenharCurva() {
     preencher(el, r[f]);
     if (el.dataset.fmt === 'delta') tomDelta(el, r[f]);
   });
+  // PA do dia comparado: a varredura da VTEX não traz peças; para 2025 usa o dia inteiro do plano.
+  const paC = document.getElementById('pa-cmp');
+  if (r && paC && r.pa_cmp == null && cmpSel.modo === 'ly364') {
+    const cd = linhas('curva_dia').find((x) => x.data === r.data);
+    paC.textContent = cd && cd.pecas_2025 && cd.pedidos_2025 ? F.dec2(cd.pecas_2025 / cd.pedidos_2025) + ' (dia inteiro)' : '—';
+  }
   const c = cores();
   const elH = document.getElementById('ch-hora');
   if (!falhou(elH, 'hora')) {

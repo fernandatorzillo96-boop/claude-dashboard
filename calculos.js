@@ -147,7 +147,7 @@ const aplicaComparacao = (m, hora, cmp) => {
   const porHora = new Map(fonte.map((x) => [n(x.hora), x]));
   for (let h = 0; h < 24; h++) {
     const x = porHora.get(h);
-    m.set(dia + '|' + h, { data26: dia, data25: alvo, hora: h, captado: x ? n(x.captado) : 0, pedidos: x ? n(x.pedidos) : 0 });
+    m.set(dia + '|' + h, { data26: dia, data25: alvo, hora: h, captado: x ? n(x.captado) : 0, pedidos: x ? n(x.pedidos) : 0, pecas: x && x.pecas != null ? n(x.pecas) : null });
   }
   return m;
 };
@@ -220,6 +220,7 @@ dash.calc('resumo_dia', {
       const lc = baseCmp.filter((x) => x.data26 === d && n(x.hora) <= ate);
       const csum = (f) => lc.reduce((t, x) => t + n(x[f]) * (n(x.hora) === ate ? fr : 1), 0);
       const capC = csum('captado'), pedC = Math.round(csum('pedidos'));
+      const pecC = lc.some((x) => x.pecas != null) ? Math.round(csum('pecas')) : null;
       return {
         data: d, ate_hora: ate,
         captado: r(cap), captado_2025: r(cap25), var_captado: cap25 ? p(cap / cap25 - 1) : null,
@@ -228,6 +229,7 @@ dash.calc('resumo_dia', {
         data_cmp: (lc[0] && lc[0].data25) || null,
         captado_cmp: r(capC), var_captado_cmp: capC ? p(cap / capC - 1) : null,
         pedidos_cmp: pedC, var_pedidos_cmp: pedC ? p(ped / pedC - 1) : null, ticket_medio_cmp: pedC ? r(capC / pedC) : null,
+        pa: ped ? r(pec / ped) : null, pa_cmp: pecC != null && pedC ? r(pecC / pedC) : null,
         pecas: pec, margem_bruta: cap ? p((cap - cmv) / cap) : null, desconto_sobre_de: de ? p(1 - cap / de) : null,
       };
     });

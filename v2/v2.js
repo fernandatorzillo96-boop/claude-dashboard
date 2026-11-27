@@ -186,7 +186,7 @@
   }
   const aplicarPeriodo = (a, b) => {
     if (!a || !b || b < a) return;
-    const p = { promo_per: 'pers', col_per: 'pers', log_per: 'pers', at_per: 'pers', md_per: 'pers' }; PARAMS.forEach(([x, y]) => { p[x] = a; p[y] = b; });
+    const p = { pg_inicio: a, pg_fim: b, promo_per: 'pers', col_per: 'pers', log_per: 'pers', at_per: 'pers', md_per: 'pers' }; PARAMS.forEach(([x, y]) => { p[x] = a; p[y] = b; });
     dash.setParams(p);
     sincronizarPeriodo();
   };
@@ -314,36 +314,70 @@
     }
   }
 
+  // Resumo do período escolhido no filtro do topo: um dia (com a curva hora a hora) ou um intervalo.
   function hojeCard() {
-    const mes = B.linhas('mes_resumo')[0];
-    const rd = B.linhas('resumo_dia').filter((x) => x.data === hoje())[0];
+    const p = dash.params();
+    const h = hoje();
+    let a = p.pg_inicio || p.promo_inicio || h, b = p.pg_fim || p.promo_fim || h;
+    if (b > h) b = h;
+    if (a > b) a = b;
     const box = $('#v2-hoje [data-hoje]');
-    if (!mes) return;
     const it = (rot, v, sub) => `<div><span>${rot}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
-    const tk = mes.pedidos_hoje ? mes.captado_hoje / mes.pedidos_hoje : null;
+    const dl = (v) => `<span class="${tom(v)}">${F.delta(v)}</span>`;
+    const umDia = a === b;
+    const dias = B.linhas('dia').filter((x) => x.data >= a && x.data <= b);
+    const cds = B.linhas('curva_dia').filter((x) => x.data >= a && x.data <= b);
+    const rds = new Map(B.linhas('resumo_dia').map((x) => [x.data, x]));
+    const cap = soma(dias, 'captado'), ped = soma(dias, 'pedidos'), pec = soma(dias, 'pecas'), cmv = soma(dias, 'cmv'), de = soma(dias, 'valor_de'), sale = soma(dias, 'captado_sale');
+    // 2025 no mesmo dia da semana; no dia de hoje, só até a mesma hora
+    let cap25 = 0, ped25 = 0, pec25 = 0, pecOk = true;
+    for (const x of cds) {
+      const rd = rds.get(x.data);
+      if (x.data === h && rd) { cap25 += n(rd.captado_2025) || 0; ped25 += n(rd.pedidos_2025) || 0; pecOk = false; }
+      else { cap25 += n(x.captado_2025) || 0; ped25 += n(x.pedidos_2025) || 0; pec25 += n(x.pecas_2025) || 0; }
+    }
+    const fat = B.linhas('faturado_dia').filter((x) => x.data >= a && x.data <= b && n(x.liquido) != null);
+    const tk = ped ? cap / ped : null, tk25 = ped25 ? cap25 / ped25 : null;
+    const pa = ped ? pec / ped : null, pa25 = pecOk && ped25 && pec25 ? pec25 / ped25 : null;
+    const paTxt = (v) => F.dec2(v);
+    const rdD = umDia ? rds.get(a) : null;
+    const pa25Dia = umDia && a === h ? (() => { const c = cds[0]; return c && c.pecas_2025 && c.pedidos_2025 ? c.pecas_2025 / c.pedidos_2025 : null; })() : pa25;
+    $('#v2-hoje .v2-card-h h2').textContent = umDia ? (a === h ? 'Hoje' : dc(a)) : 'Resumo do período';
     box.innerHTML = [
-      it('Venda captada', F.brl(mes.captado_hoje), rd ? `<span class="${tom(rd.var_captado)}">${F.delta(rd.var_captado)}</span> vs 2025 mesma hora` : ''),
-      it('Pedidos', F.int(mes.pedidos_hoje), rd ? `<span class="${tom(rd.var_pedidos)}">${F.delta(rd.var_pedidos)}</span> vs 2025` : ''),
-      it('Ticket médio', F.brl0(tk), rd && rd.ticket_medio_2025 ? `2025: ${F.brl0(rd.ticket_medio_2025)}` : ''),
-      it('% SALE', F.pct(mes.pct_sale_hoje), `2025: ${F.pct(mes.pct_sale_hoje_2025)}`),
-      it('Margem bruta', rd ? F.pct(rd.margem_bruta) : '—', rd ? `desconto s/ DE ${F.pct(rd.desconto_sobre_de)}` : ''),
-      it('Faturado líquido', F.brl(mes.faturado_liquido_dia), `3351 de ${mes.faturado_dia ? dc(mes.faturado_dia) : '—'}`),
+      it('Venda captada', F.brl(cap), cap25 ? `${dl(cap / cap25 - 1)} vs 2025${a === h || b === h ? ' (hoje até a mesma hora)' : ''}` : ''),
+      it('Pedidos', F.int(ped), ped25 ? `${dl(ped / ped25 - 1)} vs 2025` : ''),
+      it('Ticket médio', F.brl0(tk), tk25 ? `2025: ${F.brl0(tk25)}` : ''),
+      it('Peças por pedido (PA)', paTxt(pa), pa25Dia ? `2025: ${paTxt(pa25Dia)}${pa25 == null ? ' (dia inteiro)' : ''}` : ''),
+      it('% SALE', F.pct(cap ? sale / cap : null), ''),
+      it('Margem bruta', F.pct(cap ? (cap - cmv) / cap : null), de ? `desconto s/ DE ${F.pct(1 - cap / de)}` : ''),
+      it('Faturado líquido', fat.length ? F.brl(soma(fat, 'liquido')) : '—', fat.length ? `3351 · ${fat.length} dia(s) importado(s)` : 'sem 3351 importado no período'),
     ].join('');
-    set($('#v2-hoje'), '[data-hoje-quando]', rd ? `até ${rd.ate_hora}h · ${dc(rd.data)}` : '');
-    const ch = B.linhas('curva_hora').filter((x) => x.data === hoje());
+    set($('#v2-hoje'), '[data-hoje-quando]', umDia ? (rdD ? `até ${rdD.ate_hora}h · ${dc(a)}` : dc(a)) : `${dc(a)} a ${dc(b)} · ${dias.length} dia(s)`);
     const el = $('#v2-ch-hora'); const c = B.cores();
-    if (ch.length && !B.falhou(el, 'hora')) {
-      const ate = rd ? rd.ate_hora : 23;
+    if (umDia) {
+      el.hidden = false;
+      const ch = B.linhas('curva_hora').filter((x) => x.data === a);
+      if (ch.length && !B.falhou(el, 'hora')) {
+        const ate = rdD ? rdD.ate_hora : 23;
+        B.combo(el, {
+          cats: ch.map((x) => x.hora), label: (hh) => hh + 'h', tipTitle: (i) => 'até ' + ch[i].hora + 'h59', bars: [],
+          lines: [
+            { name: a === h ? 'Hoje' : dc(a), vals: ch.map((x) => (x.hora <= ate ? x.acumulado : null)), color: c.a, width: 2.5 },
+            ...(ch[0].data_recorde ? [{ name: `Recorde (${dc(ch[0].data_recorde)})`, vals: ch.map((x) => x.acumulado_recorde), color: c.c, dash: '6 3' }] : []),
+            { name: '2025', vals: ch.map((x) => x.acumulado_2025), color: c.mudo, dash: '5 4' },
+          ],
+          fmtY: F.brl, fmtTip: F.brl0, height: 190,
+        });
+      } else el.innerHTML = '';
+    } else if (cds.length) {
+      el.hidden = false;
       B.combo(el, {
-        cats: ch.map((x) => x.hora), label: (h) => h + 'h', tipTitle: (i) => 'até ' + ch[i].hora + 'h59', bars: [],
-        lines: [
-          { name: 'Hoje', vals: ch.map((x) => (x.hora <= ate ? x.acumulado : null)), color: c.a, width: 2.5 },
-          ...(ch[0].data_recorde ? [{ name: `Recorde (${dc(ch[0].data_recorde)})`, vals: ch.map((x) => x.acumulado_recorde), color: c.c, dash: '6 3' }] : []),
-          { name: '2025', vals: ch.map((x) => x.acumulado_2025), color: c.mudo, dash: '5 4' },
-        ],
+        cats: cds.map((x) => x.data), label: B.dataCurta, tipTitle: (i) => dc(cds[i].data),
+        bars: [{ name: 'Captado', vals: cds.map((x) => n(x.captado)), color: c.a }],
+        lines: [{ name: '2025 (mesmo dia da semana)', vals: cds.map((x) => n(x.captado_2025)), color: c.mudo, dash: '5 4' }],
         fmtY: F.brl, fmtTip: F.brl0, height: 190,
       });
-    }
+    } else el.hidden = true;
   }
 
   function evolucao() {
