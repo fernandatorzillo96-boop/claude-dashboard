@@ -68,6 +68,7 @@
   let params = { ...PADRAO };
   try { params = { ...params, ...JSON.parse(localStorage.getItem('painel_params') || '{}') }; } catch {}
   const estado = {}; // id -> { status, data, error }
+  const seq = {};
   const calcs = new Map(); // id -> { inputs, fn }
   const ouvintes = [];
   let agendado = false;
@@ -116,6 +117,7 @@
   async function buscar(id) {
     const def = DATASETS[id];
     const atual = estado[id];
+    const meu = (seq[id] = (seq[id] || 0) + 1); // só a resposta do pedido mais recente vale
     if (!atual || atual.status !== 'ok') estado[id] = { status: 'loading' };
     avisar();
     try {
@@ -126,12 +128,15 @@
         url = 'api/' + def.tool + (Object.keys(a).length ? '?args=' + encodeURIComponent(JSON.stringify(a)) : '');
       }
       const r = await fetch(url, { credentials: 'same-origin', cache: def.file ? 'default' : 'no-store' });
+      if (seq[id] !== meu) return;
       if (r.status === 401) return sair();
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erro || 'HTTP ' + r.status);
       let data = await r.json();
+      if (seq[id] !== meu) return;
       if (!Array.isArray(data)) { if (data && typeof data === 'object') data = [data]; else throw new Error('Resposta inesperada'); }
       estado[id] = { status: 'ok', data, v: Math.random() };
     } catch (e) {
+      if (seq[id] !== meu) return;
       console.error('dados', id, e);
       estado[id] = atual && atual.status === 'ok' ? atual : { status: 'error', error: String(e) };
     }
