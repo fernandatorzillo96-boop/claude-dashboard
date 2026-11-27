@@ -631,6 +631,8 @@
   dash.onData(() => { marcarArea(); sincronizarPeriodo(); });
   document.addEventListener('v2-usuario', () => { if (B.aba() === 'campanhas') desenharCampanhas(); });
   montarPeriodo();
+  // primeira abertura da v2: começa no mês vigente
+  if (ls.get('v2_periodo_ini', '') !== mesAtual()) { ls.set('v2_periodo_ini', mesAtual()); aplicarPeriodo(mesAtual() + '-01', fimMes(mesAtual())); }
   carregarCampanhas();
   marcarArea();
   B.desenhar();
