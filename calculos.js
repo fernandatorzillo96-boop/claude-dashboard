@@ -117,6 +117,12 @@ dash.calc('afaturar_resumo', {
   },
 });
 
+// Agora no horário de Brasília: data (AAAA-MM-DD), hora e fração da hora já passada.
+const agoraBR = () => {
+  const t = new Date(Date.now() - 3 * 3600e3);
+  return { data: t.toISOString().slice(0, 10), hora: t.getUTCHours(), frac: (t.getUTCMinutes() + t.getUTCSeconds() / 60) / 60 };
+};
+
 dash.calc('curva_hora', {
   title: 'Curva por hora × 2025',
   inputs: ['hora', 'base25'],
@@ -139,11 +145,18 @@ dash.calc('curva_hora', {
       const temOntem = dias.includes(d1);
       for (let h = 0; h < 24; h++) {
         const x = real.get(d + '|' + h), y = ly.get(d + '|' + h), z = real.get(d1 + '|' + h);
+        // Hoje, na hora em andamento, as comparações contam só a parte da hora já passada (mesmo minuto).
+        const ag = agoraBR();
+        const fr = d === ag.data && h === ag.hora ? ag.frac : 1;
         a += x ? n(x.captado) : 0;
-        b += y ? n(y.captado) : 0;
-        o += z ? n(z.captado) : 0;
-        const w = dr ? real.get(dr + '|' + h) : null;
-        rc += w ? n(w.captado) : 0;
+        const by = y ? n(y.captado) : 0, bz = z ? n(z.captado) : 0;
+        const w = dr ? real.get(dr + '|' + h) : null, bw = w ? n(w.captado) : 0;
+        if (fr < 1) {
+          out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: by, captado_ontem: bz, acumulado: r(a),
+            acumulado_2025: r(b + by * fr), acumulado_ontem: temOntem ? r(o + bz * fr) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc + bw * fr) : null, data_recorde: dr, parcial: true });
+        }
+        b += by; o += bz; rc += bw;
+        if (fr < 1) continue;
         out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: y ? n(y.captado) : 0, captado_ontem: z ? n(z.captado) : 0, acumulado: r(a), acumulado_2025: r(b), acumulado_ontem: temOntem ? r(o) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc) : null, data_recorde: dr });
       }
     }
@@ -165,7 +178,11 @@ dash.calc('resumo_dia', {
       const ate = Math.max(...h.map((x) => n(x.hora)));
       const l = base25.filter((x) => x.data26 === d && n(x.hora) <= ate);
       const cap = sum(h, 'captado'), ped = sum(h, 'pedidos'), pec = sum(h, 'pecas'), cmv = sum(h, 'cmv'), de = sum(h, 'valor_de');
-      const cap25 = sum(l, 'captado'), ped25 = sum(l, 'pedidos');
+      // Hoje, a hora em andamento de 2025 entra só até o mesmo minuto.
+      const ag = agoraBR();
+      const fr = d === ag.data && ate === ag.hora ? ag.frac : 1;
+      const wsum = (f) => l.reduce((t, x) => t + n(x[f]) * (n(x.hora) === ate ? fr : 1), 0);
+      const cap25 = wsum('captado'), ped25 = Math.round(wsum('pedidos'));
       return {
         data: d, ate_hora: ate,
         captado: r(cap), captado_2025: r(cap25), var_captado: cap25 ? p(cap / cap25 - 1) : null,

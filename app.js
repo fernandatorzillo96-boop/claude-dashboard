@@ -341,7 +341,7 @@ function desenharCurva() {
     const ch = linhas('curva_hora').filter((x) => x.data === diaSel);
     const ate = r ? r.ate_hora : 23;
     combo(elH, {
-      cats: ch.map((x) => x.hora), label: (h) => h + 'h', tipTitle: (i) => `${dataCurta(diaSel)} · até ${ch[i].hora}h59`,
+      cats: ch.map((x) => x.hora), label: (h) => h + 'h', tipTitle: (i) => `${dataCurta(diaSel)} · ${ch[i].parcial ? 'até agora (' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) + ', comparações no mesmo minuto)' : 'até ' + ch[i].hora + 'h59'}`,
       bars: [],
       lines: [
         { name: '2026', vals: ch.map((x) => (x.hora <= ate ? x.acumulado : null)), color: c.a, width: 2.5 },
