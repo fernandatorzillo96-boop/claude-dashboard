@@ -67,6 +67,58 @@ let diaSel = null;
 const selDia = document.getElementById('sel-dia');
 selDia.addEventListener('change', () => { diaSel = selDia.value; desenhar(); });
 
+// ---------- com o que comparar o dia ----------
+const selCmp = document.getElementById('sel-cmp');
+const cmpData = document.getElementById('cmp-data');
+const somaD = (d, k) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + k); return t.toISOString().slice(0, 10); };
+const DIAS_SEM = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+const dataLonga = (d) => d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(2, 4)}` : '—';
+function alvoComparacao(d, modo, p) {
+  if (!d) return null;
+  if (modo === 'ly365') return String(Number(d.slice(0, 4)) - 1) + d.slice(4);
+  if (modo === 'ontem') return somaD(d, -1);
+  if (modo === 'sem') return somaD(d, -7);
+  if (modo === 'data') return p.cmp_data || null;
+  if (modo === 'rec') {
+    const top = dash.data('rec_top');
+    const t0 = top.status === 'ok' && Array.isArray(top.data) ? top.data[0] : null;
+    const dias = t0 && Array.isArray(t0.top_dias) ? t0.top_dias : [];
+    return (dias.find((x) => x.data < d) || {}).data || null;
+  }
+  return somaD(d, -364);
+}
+selCmp.addEventListener('change', () => {
+  const modo = selCmp.value;
+  cmpData.hidden = modo !== 'data';
+  if (modo === 'data' && !dash.params().cmp_data) { cmpData.value = somaD(diaSel || hojeBR(), -364); dash.setParams({ cmp_modo: modo, cmp_data: cmpData.value }); }
+  else dash.setParams({ cmp_modo: modo });
+  if (modo === 'data') cmpData.focus();
+  desenhar();
+});
+cmpData.addEventListener('change', () => { if (cmpData.value) { dash.setParams({ cmp_data: cmpData.value }); desenhar(); } });
+function sincronizaComparacao() {
+  const p = dash.params();
+  const modo = p.cmp_modo || 'ly364';
+  selCmp.value = modo;
+  cmpData.hidden = modo !== 'data';
+  cmpData.max = somaD(hojeBR(), -1);
+  if (p.cmp_data) cmpData.value = p.cmp_data;
+  const alvo = alvoComparacao(diaSel, modo, p);
+  if (diaSel && (p.cmp_dia !== diaSel || p.cmp_alvo !== alvo)) dash.setParams({ cmp_dia: diaSel, cmp_alvo: alvo });
+  const nomes = { ly364: 'o mesmo dia da semana de 2025', ly365: 'a mesma data de 2025', ontem: 'o dia anterior', sem: 'o mesmo dia da semana passada', rec: 'o recorde dos últimos 2 anos', data: 'a data escolhida' };
+  const curto = alvo ? dataLonga(alvo) : '—';
+  root.querySelectorAll('#curva .k-cmp').forEach((el) => { el.textContent = curto; });
+  const nota = document.getElementById('nota-dia');
+  if (nota) {
+    const doPainel = alvo && linhas('hora').some((x) => x.data === alvo);
+    const fonte = !alvo || doPainel ? '' : ' Esse dia vem da varredura de pedidos da VTEX (valor com frete).';
+    nota.textContent = alvo
+      ? `Comparado com ${nomes[modo]}: ${DIAS_SEM[new Date(alvo + 'T12:00:00Z').getUTCDay()]}, ${dataLonga(alvo)}, até a mesma hora.${fonte}`
+      : (modo === 'rec' ? 'Carregando o recorde…' : 'Escolha a data para comparar.');
+  }
+  return { alvo, curto, modo };
+}
+
 // ---------- período das promoções ----------
 const selPromo = document.getElementById('sel-promo');
 const ontem = () => { const d = new Date(Date.now() - 27 * 3600e3); return d.toISOString().slice(0, 10); };
@@ -326,6 +378,7 @@ function desenharCurva() {
     selDia.replaceChildren(...datas.map((d, i) => new Option((i === 0 ? 'Hoje, ' : '') + dataCurta(d) + ' (' + ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(d + 'T12:00:00Z').getUTCDay()] + ')', d)));
   }
   selDia.value = diaSel || '';
+  const cmpSel = sincronizaComparacao();
   const r = rd.find((x) => x.data === diaSel);
   root.querySelectorAll('#curva [data-k], #curva .k-ate').forEach((el) => {
     if (!r) return;
@@ -348,7 +401,7 @@ function desenharCurva() {
         { name: ch.length ? `Dia anterior (${dataCurta(ch[0].data_ontem)})` : 'Dia anterior', vals: ch.map((x) => x.acumulado_ontem), color: c.b, width: 1.8 },
         ...(ch.length && ch[0].data_recorde
           ? [{ name: `Recorde (${dataCurta(ch[0].data_recorde)})`, vals: ch.map((x) => x.acumulado_recorde), color: c.c, dash: '6 3', width: 2 }] : []),
-        { name: '2025 (mesmo dia da semana)', vals: ch.map((x) => x.acumulado_2025), color: c.mudo, dash: '5 4' },
+        { name: cmpSel.modo === 'ly364' ? `2025 (mesmo dia da semana, ${cmpSel.curto})` : `Comparação (${cmpSel.curto})`, vals: ch.map((x) => x.acumulado_cmp), color: c.mudo, dash: '5 4' },
       ],
       fmtY: F.brl, fmtTip: F.brl0,
     });

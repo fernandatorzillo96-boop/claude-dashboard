@@ -57,18 +57,27 @@
   <section class="bf-page" data-page="curva" id="curva">
     <div class="bf-bar">
       <label class="bf-ctl">Dia <select id="sel-dia" aria-label="Dia" data-source="resumo_dia"></select></label>
+      <label class="bf-ctl">Comparar com <select id="sel-cmp" aria-label="Comparar com">
+        <option value="ly364">Mesmo dia da semana de 2025</option>
+        <option value="ly365">Mesma data de 2025</option>
+        <option value="ontem">Dia anterior</option>
+        <option value="sem">Mesmo dia da semana passada</option>
+        <option value="rec">Recorde dos últimos 2 anos</option>
+        <option value="data">Escolher uma data…</option>
+      </select></label>
+      <input type="date" id="cmp-data" class="bf-ctl" aria-label="Data para comparar" min="2024-11-28" hidden>
       <span class="bf-note" id="nota-dia">Comparado com o mesmo dia da semana de 2025 (364 dias antes), até a mesma hora.</span>
     </div>
     <div class="bf-tiles">
       <div class="bf-tile"><div class="bf-lbl">Captado até <span data-source="resumo_dia" data-field="ate_hora" class="k-ate" data-k="ate_hora">—</span>h</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="captado" data-k="captado">—</div>
-        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_captado" data-k="var_captado" data-fmt="delta">—</span> vs 2025 (<span data-source="resumo_dia" data-field="captado_2025" data-k="captado_2025" data-fmt="brl">—</span>)</div></div>
+        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_captado_cmp" data-k="var_captado_cmp" data-fmt="delta">—</span> vs <span class="k-cmp">2025</span> (<span data-source="resumo_dia" data-field="captado_cmp" data-k="captado_cmp" data-fmt="brl">—</span>)</div></div>
       <div class="bf-tile"><div class="bf-lbl">Pedidos</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="pedidos" data-k="pedidos" data-fmt="int">—</div>
-        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_pedidos" data-k="var_pedidos" data-fmt="delta">—</span> vs 2025 (<span data-source="resumo_dia" data-field="pedidos_2025" data-k="pedidos_2025" data-fmt="int">—</span>)</div></div>
+        <div class="bf-delta"><span data-source="resumo_dia" data-field="var_pedidos_cmp" data-k="var_pedidos_cmp" data-fmt="delta">—</span> vs <span class="k-cmp">2025</span> (<span data-source="resumo_dia" data-field="pedidos_cmp" data-k="pedidos_cmp" data-fmt="int">—</span>)</div></div>
       <div class="bf-tile"><div class="bf-lbl">Ticket médio</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="ticket_medio" data-k="ticket_medio" data-fmt="brl0">—</div>
-        <div class="bf-delta">2025: <span data-source="resumo_dia" data-field="ticket_medio_2025" data-k="ticket_medio_2025" data-fmt="brl0">—</span></div></div>
+        <div class="bf-delta"><span class="k-cmp">2025</span>: <span data-source="resumo_dia" data-field="ticket_medio_cmp" data-k="ticket_medio_cmp" data-fmt="brl0">—</span></div></div>
       <div class="bf-tile"><div class="bf-lbl">Margem bruta</div>
         <div class="bf-big dash-skeleton" data-source="resumo_dia" data-field="margem_bruta" data-k="margem_bruta" data-fmt="pct">—</div>
         <div class="bf-delta">Desconto médio s/ DE: <span data-source="resumo_dia" data-field="desconto_sobre_de" data-k="desconto_sobre_de" data-fmt="pct">—</span></div></div>

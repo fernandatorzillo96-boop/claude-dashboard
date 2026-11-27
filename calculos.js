@@ -134,14 +134,32 @@ const base2025Horas = (base25, vtex25h) => {
   for (const x of v) m.set(x.data26 + '|' + n(x.hora), x);
   return m;
 };
+// Comparação escolhida no filtro (só para o dia selecionado): troca as horas de "2025" pelas do dia escolhido.
+// Dia de 2026 que o painel já tem: usa as horas do painel (mesmo critério, sem frete); senão a varredura da VTEX.
+const aplicaComparacao = (m, hora, cmp) => {
+  const p = (typeof dash !== 'undefined' && dash.params) ? dash.params() : {};
+  const dia = p.cmp_dia, alvo = p.cmp_alvo;
+  if (!dia || !alvo) return m;
+  const n = (x) => Number(x) || 0;
+  const doPainel = hora.filter((x) => x.data === alvo);
+  const daVarredura = (Array.isArray(cmp) ? cmp : []).filter((x) => x.data25 === alvo);
+  const fonte = doPainel.length ? doPainel : daVarredura;
+  const porHora = new Map(fonte.map((x) => [n(x.hora), x]));
+  for (let h = 0; h < 24; h++) {
+    const x = porHora.get(h);
+    m.set(dia + '|' + h, { data26: dia, data25: alvo, hora: h, captado: x ? n(x.captado) : 0, pedidos: x ? n(x.pedidos) : 0 });
+  }
+  return m;
+};
 
 dash.calc('curva_hora', {
   title: 'Curva por hora × 2025',
-  inputs: ['hora', 'base25', 'vtex25h'],
-  fn: (hora, base25, vtex25h) => {
+  inputs: ['hora', 'base25', 'vtex25h', 'cmp_h'],
+  fn: (hora, base25, vtex25h, cmp_h) => {
     const n = (x) => Number(x) || 0;
     const r = (x) => Math.round(x * 100) / 100;
     const ly = base2025Horas(base25, vtex25h);
+    const cm = aplicaComparacao(new Map(ly), hora, cmp_h);
     const real = new Map(hora.map((x) => [x.data + '|' + n(x.hora), x]));
     const dias = [...new Set(hora.map((x) => x.data))].sort();
     const out = [];
@@ -151,7 +169,7 @@ dash.calc('curva_hora', {
     const recordeAntes = (d) => { let best = null; for (const k of dias) if (k < d && (best == null || totDia[k] > totDia[best])) best = k; return best; };
     const ontem = (d) => { const t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); return t.toISOString().slice(0, 10); };
     for (const d of dias) {
-      let a = 0, b = 0, o = 0, rc = 0;
+      let a = 0, b = 0, o = 0, rc = 0, cc = 0;
       const d1 = ontem(d);
       const dr = recordeAntes(d);
       const temOntem = dias.includes(d1);
@@ -163,13 +181,14 @@ dash.calc('curva_hora', {
         a += x ? n(x.captado) : 0;
         const by = y ? n(y.captado) : 0, bz = z ? n(z.captado) : 0;
         const w = dr ? real.get(dr + '|' + h) : null, bw = w ? n(w.captado) : 0;
+        const q = cm.get(d + '|' + h), bq = q ? n(q.captado) : 0;
         if (fr < 1) {
           out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: by, captado_ontem: bz, acumulado: r(a),
-            acumulado_2025: r(b + by * fr), acumulado_ontem: temOntem ? r(o + bz * fr) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc + bw * fr) : null, data_recorde: dr, parcial: true });
+            acumulado_2025: r(b + by * fr), acumulado_cmp: r(cc + bq * fr), acumulado_ontem: temOntem ? r(o + bz * fr) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc + bw * fr) : null, data_recorde: dr, parcial: true });
         }
-        b += by; o += bz; rc += bw;
+        b += by; o += bz; rc += bw; cc += bq;
         if (fr < 1) continue;
-        out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: y ? n(y.captado) : 0, captado_ontem: z ? n(z.captado) : 0, acumulado: r(a), acumulado_2025: r(b), acumulado_ontem: temOntem ? r(o) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc) : null, data_recorde: dr });
+        out.push({ data: d, hora: h, captado: x ? n(x.captado) : 0, captado_2025: y ? n(y.captado) : 0, captado_ontem: z ? n(z.captado) : 0, acumulado: r(a), acumulado_2025: r(b), acumulado_cmp: r(cc), acumulado_ontem: temOntem ? r(o) : null, data_ontem: d1, acumulado_recorde: dr ? r(rc) : null, data_recorde: dr });
       }
     }
     return out;
@@ -178,9 +197,11 @@ dash.calc('curva_hora', {
 
 dash.calc('resumo_dia', {
   title: 'Dia × 2025 até a mesma hora',
-  inputs: ['hora', 'base25', 'vtex25h'],
-  fn: (hora, base25raw, vtex25h) => {
-    const base25 = [...base2025Horas(base25raw, vtex25h).values()];
+  inputs: ['hora', 'base25', 'vtex25h', 'cmp_h'],
+  fn: (hora, base25raw, vtex25h, cmp_h) => {
+    const lyMap = base2025Horas(base25raw, vtex25h);
+    const base25 = [...lyMap.values()];
+    const baseCmp = [...aplicaComparacao(new Map(lyMap), hora, cmp_h).values()];
     const n = (x) => Number(x) || 0;
     const r = (x) => Math.round(x * 100) / 100;
     const p = (x) => (x == null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
@@ -196,11 +217,17 @@ dash.calc('resumo_dia', {
       const fr = d === ag.data && ate === ag.hora ? ag.frac : 1;
       const wsum = (f) => l.reduce((t, x) => t + n(x[f]) * (n(x.hora) === ate ? fr : 1), 0);
       const cap25 = wsum('captado'), ped25 = Math.round(wsum('pedidos'));
+      const lc = baseCmp.filter((x) => x.data26 === d && n(x.hora) <= ate);
+      const csum = (f) => lc.reduce((t, x) => t + n(x[f]) * (n(x.hora) === ate ? fr : 1), 0);
+      const capC = csum('captado'), pedC = Math.round(csum('pedidos'));
       return {
         data: d, ate_hora: ate,
         captado: r(cap), captado_2025: r(cap25), var_captado: cap25 ? p(cap / cap25 - 1) : null,
         pedidos: ped, pedidos_2025: ped25, var_pedidos: ped25 ? p(ped / ped25 - 1) : null,
         ticket_medio: ped ? r(cap / ped) : null, ticket_medio_2025: ped25 ? r(cap25 / ped25) : null,
+        data_cmp: (lc[0] && lc[0].data25) || null,
+        captado_cmp: r(capC), var_captado_cmp: capC ? p(cap / capC - 1) : null,
+        pedidos_cmp: pedC, var_pedidos_cmp: pedC ? p(ped / pedC - 1) : null, ticket_medio_cmp: pedC ? r(capC / pedC) : null,
         pecas: pec, margem_bruta: cap ? p((cap - cmv) / cap) : null, desconto_sobre_de: de ? p(1 - cap / de) : null,
       };
     });

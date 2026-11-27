@@ -51,6 +51,8 @@
     faturado25: { file: 'data/faturado_2025.json' },
     base25: { file: 'data/base_2025_por_hora.json' },
     vtex25h: { tool: 'bf_recorde_captacao', args: { inicio: '2025-10-01', fim: '2026-01-05' } },
+    cmp_h: { tool: 'bf_recorde_captacao', args: { inicio: '{{cmp_alvo}}', fim: '{{cmp_alvo}}' } },
+    rec_top: { tool: 'bf_recorde_captacao', args: { top: 50 } },
     meta: { file: 'data/meta_diaria.json' },
     plano: { file: 'data/plano_bf26_site_diario_v2.json' },
     promos25: { file: 'data/promocoes_bf25.json' },
@@ -59,6 +61,7 @@
     promo_inicio: '2026-11-01', promo_fim: '2026-11-30', col_inicio: '2026-11-01', col_fim: '2026-11-30',
     log_inicio: '2026-11-01', log_fim: '2026-11-30', at_inicio: '2026-11-01', at_fim: '2026-11-30',
     sla_dias: 1, est_loja: null, est_tipo: null, md_inicio: '2026-11-01', md_fim: '2026-11-30', md_pagina: '/Sistema/buscavazia', md_det: 'origem', est_grade: 'todas',
+    cmp_modo: 'ly364', cmp_data: null, cmp_dia: null, cmp_alvo: null,
   };
   const ATUALIZA_MIN = 5;
 
@@ -125,8 +128,8 @@
       const r = await fetch(url, { credentials: 'same-origin', cache: def.file ? 'default' : 'no-store' });
       if (r.status === 401) return sair();
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erro || 'HTTP ' + r.status);
-      const data = await r.json();
-      if (!Array.isArray(data)) throw new Error('Resposta inesperada');
+      let data = await r.json();
+      if (!Array.isArray(data)) { if (data && typeof data === 'object') data = [data]; else throw new Error('Resposta inesperada'); }
       estado[id] = { status: 'ok', data, v: Math.random() };
     } catch (e) {
       console.error('dados', id, e);
